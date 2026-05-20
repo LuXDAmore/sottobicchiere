@@ -1,0 +1,178 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "fix/**"
+  pull_request:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NUXT_SITE_URL: ${{ vars.NUXT_SITE_URL || 'https://www.wegree.com' }}
+  NUXT_APP_BASE_URL: ${{ vars.NUXT_APP_BASE_URL || '/' }}
+  NUXT_APP_ENV: ${{ vars.NUXT_APP_ENV || 'production' }}
+  NUXT_SITE_ENV: ${{ vars.NUXT_SITE_ENV || 'production' }}
+  NUXT_SITE_NAME: ${{ vars.NUXT_SITE_NAME || 'WeGree' }}
+  NUXT_SITE_DESCRIPTION: ${{ vars.NUXT_SITE_DESCRIPTION || 'B2B telematic auction marketplace | WeGree' }}
+  NUXT_COLORS: ${{ vars.NUXT_COLORS || '#1f9263,#4d6dab' }}
+  NUXT_PUBLIC_SITE_URL: ${{ vars.NUXT_PUBLIC_SITE_URL || 'https://www.wegree.com' }}
+  BLOB_READ_WRITE_TOKEN: ${{ vars.BLOB_READ_WRITE_TOKEN }}
+  DATABASE_URL: ${{ vars.DATABASE_URL }}
+  POSTGRES_URL: ${{ vars.POSTGRES_URL }}
+  NUXT_BETTER_AUTH_SECRET: ${{ secrets.NUXT_BETTER_AUTH_SECRET }}
+  REDIS_URL: ${{ vars.REDIS_URL }}
+
+jobs:
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm typecheck
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    environment: production
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm lint
+
+  test-unit:
+    name: test-unit
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment: production
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm prepare
+        continue-on-error: true
+      - run: pnpm test:unit
+        continue-on-error: true
+
+  test-nuxt:
+    name: test-nuxt
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment: production
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm prepare
+        continue-on-error: true
+      - run: pnpm test:nuxt
+        continue-on-error: true
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment: production
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Validate production env wiring
+        continue-on-error: true
+        run: |
+          required=(BLOB_READ_WRITE_TOKEN DATABASE_URL POSTGRES_URL NUXT_BETTER_AUTH_SECRET REDIS_URL)
+          missing=0
+          for key in "${required[@]}"; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing required env: $key (check Environment=production secrets/vars)"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ]
+      - run: pnpm prepare
+        continue-on-error: true
+      - name: Run coverage (minimum 10%, progressive target 75%)
+        continue-on-error: true
+        run: pnpm test:coverage
+      - uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2
+        with:
+          files: ./coverage/lcov.info
+          flags: unit
+          fail_ci_if_error: false
+          if_ci_failed: warn
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  test-e2e:
+    name: test-e2e
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment: production
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm prepare
+        continue-on-error: true
+      - run: pnpm test:e2e
+        continue-on-error: true
+
+  build:
+    name: build
+    environment: production
+    needs:
+      - typecheck
+      - lint
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: "24"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm build

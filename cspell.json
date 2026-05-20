@@ -1,0 +1,49 @@
+{
+    "version": "0.2",
+    "ignorePaths": [],
+    "dictionaryDefinitions": [
+        {
+            "name": "custom-dictionary",
+            "path": "./.cspell/custom-dictionary.txt",
+            "addWords": true
+        }
+    ],
+    "dictionaries": [
+        "custom-dictionary"
+    ],
+    "words": [
+        "accredia",
+        "ameta",
+        "Axerve",
+        "changelogen",
+        "Chatta",
+        "choco",
+        "dxlbvfagvfz",
+        "hgpjcytdfhapy",
+        "inmemory",
+        "iovox",
+        "mgmt",
+        "MSIE",
+        "natf",
+        "noembed",
+        "nuxi",
+        "ofetch",
+        "quimmo",
+        "unwatch",
+        "vueuse",
+        "zxjya"
+    ],
+    "ignoreWords": [
+        "Udcs",
+        "attiv",
+        "disponibil",
+        "morev",
+        "msdc",
+        "msdo",
+        "notizi",
+        "nuov",
+        "richiest",
+        "transli"
+    ],
+    "import": []
+}

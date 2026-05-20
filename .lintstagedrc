@@ -1,0 +1,5 @@
+{
+    "*.{vue,ts,js}": "pnpm eslint-fix",
+    "*.css": "pnpm stylelint-fix-css",
+    "*.scss": "pnpm stylelint-fix-scss"
+}

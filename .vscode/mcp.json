@@ -1,0 +1,13 @@
+{
+	"inputs": [],
+	"servers": {
+		"nuxt-ui": {
+			"type": "http",
+			"url": "https://ui.nuxt.com/mcp"
+		},
+		"nuxt-docs": {
+			"type": "http",
+			"url": "https://nuxt.com/mcp"
+		}
+	}
+}

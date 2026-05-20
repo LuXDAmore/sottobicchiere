@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(update-config)",
+      "Bash(Get-ChildItem -Directory -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Name)"
+    ]
+  }
+}

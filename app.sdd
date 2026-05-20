@@ -1,0 +1,98 @@
+Spec: WeGree Application
+Platform: TypeScript/Nuxt 4/Nitro
+
+Purpose:
+  Define the top-level SpecDD contract for the WeGree B2B telematic auction marketplace.
+  Keep implementation bounded by source-adjacent specs, product MVP documentation, and existing Nuxt conventions.
+
+Structure:
+  app: Nuxt client application, pages, layouts, stores, composables, middleware, and UI utilities.
+  server: Nitro API, database schema, server utilities, tasks, middleware, plugins, and routes.
+  shared: Cross-runtime TypeScript types and pure utilities shared by app, server, and tests.
+  test: Vitest and Playwright tests.
+  docs: Human-facing architecture, product, QA, and operational documentation.
+  scripts: Repository automation and local operational scripts.
+  public: Static assets served by Nuxt.
+
+Owns:
+  package.json
+  nuxt.config.ts
+  vitest.config.mts
+  playwright.config.ts
+  tsconfig.json
+  eslint.config.mjs
+  stylelint.config.cjs
+  app/
+  server/
+  shared/
+  test/
+  docs/
+  scripts/
+  public/
+
+Can modify:
+  package.json
+  nuxt.config.ts
+  vitest.config.mts
+  playwright.config.ts
+  tsconfig.json
+  eslint.config.mjs
+  stylelint.config.cjs
+  app/
+  server/
+  shared/
+  test/
+  docs/
+  scripts/
+  public/
+
+Can read:
+  README.md
+  TODO.md
+  docs/architecture.md
+  docs/database-schema.md
+  docs/moduli-business-aste.md
+  docs/modulo-mobiliare-flusso-compratore.md
+  docs/cauzioni-stati-flusso.md
+  docs/integrazione-zucchetti-01machinery.md
+  docs/qa-mvp-status.md
+
+Must:
+  Use Nuxt 4, Nitro, Vue 3, TypeScript, Nuxt UI, NuxtHub, Neon PostgreSQL, Better Auth, Stripe, Resend, Vercel Redis, and Vercel Blob according to existing project configuration.
+  Preserve Italian-first product terminology defined by the documentation and existing UI copy.
+  Keep auction, lot, bid, deposit, payment, DM25, and Zucchetti behavior aligned with the MVP documents under docs/.
+  Maintain pseudonymized public auction payloads; public REST and realtime responses must not expose private identity data.
+  Update relevant .sdd specs, tests, TODO.md, and docs/agents-changelog.md in the same change when behavior or ownership changes.
+
+Must not:
+  Reintroduce Compra Subito/Buy Now into MVP flows unless a later spec explicitly changes the product scope.
+  Add Supabase as an application dependency or implementation path.
+  Bypass Better Auth server-side identity checks for protected user or backoffice behavior.
+  Bypass Ready-to-BUY, caution, authorization, or ban checks before accepting bids.
+  Expose legal names, internal user ids, fiscal data, or documents in public auction, lot, bid, or websocket payloads.
+  Perform broad refactors outside the nearest applicable spec authority.
+
+Depends on:
+  Nuxt 4
+  Nitro
+  Vue 3
+  TypeScript
+  Nuxt UI
+  NuxtHub
+  Neon PostgreSQL
+  Better Auth
+  Stripe
+  Resend
+  Vercel Redis
+  Vercel Blob
+
+Tasks:
+  [x] Add top-level SpecDD application contract.
+  [ ] Add narrower feature specs for bidding, deposits, payments, DM25, auth, backoffice, and Zucchetti before substantial changes in those areas.
+  [ ] Add component-level specs for buyer-facing auction and lot UI before major UI changes.
+  [ ] Add API-level specs for high-risk Nitro endpoints before changing request/response behavior.
+
+Done when:
+  The relevant ancestor spec chain can be resolved before editing code.
+  New implementation work has a nearest local spec that defines ownership, boundaries, and done criteria.
+  Code, tests, specs, TODO.md, and docs/agents-changelog.md remain aligned.

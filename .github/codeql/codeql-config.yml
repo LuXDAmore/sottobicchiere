@@ -1,0 +1,11 @@
+name: "CodeQL Config"
+
+paths-ignore:
+  - skills/**
+  - .agents/**
+  - .claude/**
+  - .continue/**
+  - docs/**
+  - .nuxt/**
+  - dist/**
+  - .output/**

@@ -1,0 +1,3 @@
+# Crawling disabled — QA phase in progress. Will be re-enabled before go-live.
+User-agent: *
+Disallow: /

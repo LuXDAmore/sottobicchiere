@@ -1,0 +1,43 @@
+# REWRITE BEGIN
+<IfModule mod_rewrite.c>
+
+    RewriteEngine On
+    RewriteBase /
+
+    # Force HTTPS
+    RewriteCond %{HTTPS} !on
+    RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Force 404 errors to 404 error page
+    ErrorDocument 404 /404.html
+
+    # Force SPA
+    RewriteRule ^index\.html$ - [L]
+
+</IfModule>
+
+# Cache BEGIN
+<IfModule mod_headers.c>
+
+    # YEAR
+    <FilesMatch "\.(webm|ogg|mp4|mp3|ico|pdf|flv|jpg|jpeg|png|gif|webp|swf|xml|woff|woff2|otf|ttf|svg|eot|json)$">
+        Header set Cache-Control "max-age=31536000"
+    </FilesMatch>
+
+    # WEEK
+    <FilesMatch "\.(br|gz|js|css)|iovox.js">
+        Header set Cache-Control "max-age=604800"
+    </FilesMatch>
+
+    # 2 HOURS
+    <FilesMatch "\.(x-html|html|htm|txt)$">
+        Header set Cache-Control "max-age=7200"
+    </FilesMatch>
+
+    # Service worker
+    <FilesMatch "\sw\.js$">
+        Header set Cache-Control "max-age=0, no-cache"
+    </FilesMatch>
+
+</IfModule>
+# Cache END

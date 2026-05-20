@@ -1,0 +1,393 @@
+/* stylelint-disable import-notation -- Tailwind non funziona così */
+@import "tailwindcss";
+@import "@nuxt/ui";
+/* stylelint-enable import-notation */
+
+/* ─────────────────────────────────────────────────────────────
+   WEGREE — Design System Tokens
+   Compatibile con Nuxt UI v4 + Tailwind CSS v4
+   ───────────────────────────────────────────────────────────── */
+
+@theme {
+
+    /* Typography */
+    --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+    --font-serif: "DM Serif Display", ui-serif, Georgia, serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+
+}
+@theme static {
+
+    /* ── WeGree Green — colore brand primario ──────────────────
+       Classi generate: bg-wegree-*, text-wegree-*, border-wegree-* */
+    --color-wegree-50: #EEF9F3;
+    --color-wegree-100: #D5F0E3;
+    --color-wegree-200: #AEE0C9;
+    --color-wegree-300: #78C9A7;
+    --color-wegree-400: #41AE82;
+    --color-wegree-500: #00A569;
+    --color-wegree-600: #008957;
+    --color-wegree-700: #0F5F3F;
+    --color-wegree-800: #0C4C33;
+    --color-wegree-900: #0A3F2B;
+    --color-wegree-950: #052418;
+
+    /* ── WeGree Navy — colore brand secondario ─────────────────
+       Valore ufficiale: #0F2940. */
+    --color-navy-50: #F3F5FB;
+    --color-navy-100: #E4E9F4;
+    --color-navy-200: #C8D2E9;
+    --color-navy-300: #9FB2D8;
+    --color-navy-400: #6F8EC4;
+    --color-navy-500: #4D6DAB;
+    --color-navy-600: #3A5290;
+    --color-navy-700: #2E4075;
+    --color-navy-800: #0F2940;
+    --color-navy-900: #0A1D2E;
+    --color-navy-950: #090F1C;
+
+
+    /* ── WeGree Gray — testo primario neutro ───────────────────
+       Valore ufficiale: #4A4A4A. */
+    --color-wegree-gray-50: #F7F7F7;
+    --color-wegree-gray-100: #EFEFEF;
+    --color-wegree-gray-200: #DCDCDC;
+    --color-wegree-gray-300: #B8B8B8;
+    --color-wegree-gray-400: #8F8F8F;
+    --color-wegree-gray-500: #4A4A4A;
+    --color-wegree-gray-600: #3E3E3E;
+    --color-wegree-gray-700: #333;
+    --color-wegree-gray-800: #242424;
+    --color-wegree-gray-900: #171717;
+    --color-wegree-gray-950: #0F0F0F;
+
+    /* ── WeGree Surface — sfondo chiaro brand ──────────────────
+       Valore ufficiale: #F4F6F8. */
+    --color-wegree-surface-50: #F9FAFB;
+    --color-wegree-surface-100: #F4F6F8;
+    --color-wegree-surface-200: #E9EEF3;
+    --color-wegree-surface-300: #D8E0E8;
+    --color-wegree-surface-400: #B8C5D2;
+    --color-wegree-surface-500: #93A5B8;
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SEMANTIC CSS VARIABLES — override Nuxt UI defaults
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+
+    --ui-radius: 0.5rem;
+    --ui-primary: var( --color-wegree-500 );
+
+    /* Shadow system */
+    --shadow-soft: 0 2px 8px rgba( 15 41 64 / 6% );
+    --shadow-md:   0 4px 20px rgba( 15 41 64 / 10% );
+    --shadow-lift: 0 8px 32px rgba( 15 41 64 / 14% );
+
+    /* VueFlow nodes */
+    --vf-node-color: var( --ui-color-primary-500 );
+    --vf-box-shadow: 0 1px 3px 0 color-mix( in oklab, var( --ui-color-primary-500 ) 20%, transparent );
+    --vf-node-bg: var( --ui-color-primary-50 );
+    --vf-node-text: var( --ui-color-primary-900 );
+    --vf-handle: var( --ui-color-primary-400 );
+    --vf-connection-path: var( --ui-color-primary-500 );
+
+    font-size: 16px;
+
+}
+
+:root,
+.light {
+
+    --ui-bg: #FFF;
+    --ui-bg-muted: var( --color-wegree-surface-100 );
+    --ui-bg-elevated: var( --color-wegree-surface-100 );
+    --ui-bg-accented: var( --color-wegree-surface-200 );
+    --ui-border: var( --color-wegree-surface-300 );
+    --ui-border-muted: var( --color-wegree-surface-200 );
+    --ui-text-highlighted: var( --color-navy-800 );
+    --ui-text: var( --color-wegree-gray-500 );
+    --ui-text-muted: var( --color-wegree-gray-500 );
+
+}
+
+.dark {
+
+    /* Warm near-black — mai puro #000 */
+    --ui-bg: #0F0F0F;
+    --ui-bg-elevated: #1A1A1A;
+    --ui-bg-muted: #161616;
+    --ui-bg-accented: #242424;
+    --ui-border: #2E2E2E;
+    --ui-border-muted: #1F1F1F;
+    --ui-text: #E8E3DB;
+    --ui-text-muted: #9E9A96;
+    --ui-text-highlighted: #F5F0E8;
+    --ui-text-toned: #C4BFBA;
+
+    /* Shadows più intense in dark */
+    --shadow-soft: 0 2px 8px rgba( 0 0 0 / 30% );
+    --shadow-md:   0 4px 20px rgba( 0 0 0 / 40% );
+    --shadow-lift: 0 8px 32px rgba( 0 0 0 / 50% );
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   UTILITY CLASSES
+   ───────────────────────────────────────────────────────────── */
+
+.font-serif {
+
+    font-family: var( --font-serif );
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   COUNTDOWN URGENCY STATES
+   ───────────────────────────────────────────────────────────── */
+
+.countdown--normal { color: var( --color-navy-300 ); }
+
+.countdown--warning { color: #EAB308; }
+
+.countdown--urgent {
+
+    color: #F59E0B;
+    animation: live-pulse 2s infinite;
+
+}
+
+.countdown--critical {
+
+    color: #EF4444;
+    animation: live-pulse 0.9s infinite;
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL STYLES
+   ───────────────────────────────────────────────────────────── */
+
+html {
+
+    /* scroll-behavior: smooth è omesso: Lenis gestisce lo smooth scroll lato JS.
+       Mantenerlo in CSS creerebbe un double-animation su anchor/scrollIntoView. */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    text-wrap: pretty;
+
+}
+
+html,
+body {
+
+    width: 100%;
+    height: 100%;
+
+}
+
+::selection {
+
+    color: #FFF;
+    background-color: var( --ui-primary );
+
+}
+
+button,
+a {
+
+    text-box-trim: trim-both;
+
+}
+
+button:not(.manual-sorting-handle, [disabled]),
+a {
+
+    cursor: pointer;
+
+}
+
+button:disabled,
+a[data-disabled],
+a[aria-disabled="true"] {
+
+    cursor: not-allowed !important;
+
+}
+
+
+.skip-link {
+
+    position: fixed;
+    top: .75rem;
+    left: .75rem;
+    z-index: 9999;
+    padding: .625rem .875rem;
+    color: #FFF;
+    background: var( --color-navy-800 );
+    border-radius: .5rem;
+    box-shadow: 0 10px 25px rgba( 15 41 64 / 25% );
+    opacity: 0;
+    transform: translateY( -150% );
+    transition: opacity .15s ease, transform .15s ease;
+
+}
+
+.skip-link:focus-visible {
+
+    opacity: 1;
+    outline: 3px solid var( --color-wegree-300 );
+    outline-offset: 3px;
+    transform: translateY( 0 );
+
+}
+
+:where(a, button, input, textarea, select, [role="button"], [tabindex]):focus-visible {
+
+    outline: 3px solid var( --color-wegree-400 );
+    outline-offset: 3px;
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TABLES
+   ───────────────────────────────────────────────────────────── */
+
+table {
+
+    white-space: nowrap;
+
+}
+
+table thead tr th::first-letter,
+table thead tr td::first-letter {
+
+    text-transform: uppercase;
+
+}
+
+table tr {
+
+    transition: background-color .15s ease-in-out;
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   LIVE DOT — aste in corso
+   ───────────────────────────────────────────────────────────── */
+
+.live-dot {
+
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #EF4444;
+    animation: live-pulse 1.2s infinite;
+
+}
+
+@keyframes live-pulse {
+
+    0%,
+    100% {
+
+        opacity: 1;
+    }
+
+    50% {
+
+        opacity: .35;
+    }
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PAGE TRANSITIONS (View Transitions API)
+   ───────────────────────────────────────────────────────────── */
+
+@view-transition {
+
+    navigation: auto;
+
+}
+
+::view-transition-image-pair(root) {
+
+    isolation: auto;
+
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+
+    display: block;
+    mix-blend-mode: normal;
+
+}
+
+::view-transition {
+
+    background-color: var( --ui-bg-inverted );
+    transition: background-color .4s cubic-bezier( .76, .32, .29, .99 ) .1s;
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   DRAWER (Vaul)
+   ───────────────────────────────────────────────────────────── */
+
+@media (hover: hover) and (pointer: fine) {
+
+    [data-vaul-drawer] {
+
+        user-select: auto !important;
+
+    }
+
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PRINT
+   ───────────────────────────────────────────────────────────── */
+
+@media print {
+
+    table {
+
+        break-inside: avoid;
+    }
+
+    table .actions-cell,
+    table .select-cell,
+    table button,
+    table a {
+
+        display: none;
+    }
+
+    table tr {
+
+        break-inside: avoid;
+    }
+
+    table thead {
+
+        display: table-header-group;
+    }
+
+    table tfoot {
+
+        display: table-footer-group;
+    }
+
+    @page {
+
+        margin: 0;
+        size: a4 landscape;
+
+    }
+
+}

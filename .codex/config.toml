@@ -1,0 +1,15 @@
+[mcp_servers.neon]
+type = "http"
+url = "https://mcp.neon.tech/mcp"
+
+[mcp_servers.vercel]
+type = "http"
+url = "https://mcp.vercel.com"
+
+[mcp_servers.nuxt]
+type = "http"
+url = "https://nuxt.com/mcp"
+
+[mcp_servers.nuxtui]
+type = "http"
+url = "https://ui.nuxt.com/mcp"

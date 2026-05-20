@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="WeGree">
+  <title>WeGree</title>
+
+  
+  <rect width="64" height="64" rx="14" fill="#1b2d4f"></rect>
+
+  
+  <text x="4" y="50" font-family="&#39;Plus Jakarta Sans&#39;, &#39;Trebuchet MS&#39;, Arial Black, sans-serif" font-weight="800" font-size="52" fill="#ffffff" letter-spacing="-2">W</text>
+
+  
+  <circle cx="54" cy="52" r="6" fill="#1f9263"></circle>
+</svg>

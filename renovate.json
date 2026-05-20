@@ -1,0 +1,23 @@
+{
+"enabled": false,
+    "extends": [
+        "github>nuxt/renovate-config-nuxt"
+    ],
+    "lockFileMaintenance": {
+        "enabled": true
+    },
+"ignorePaths": [
+      "docs/**"
+  ],
+    "packageRules": [
+        {
+            "matchDepTypes": [
+                "resolutions"
+            ],
+            "enabled": false
+        }
+    ],
+    "postUpdateOptions": [
+        "pnpmDedupe"
+    ]
+}

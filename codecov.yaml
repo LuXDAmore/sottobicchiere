@@ -1,0 +1,8 @@
+coverage:
+  status:
+    project:
+      default:
+        # 'auto' usa la copertura del commit base come riferimento
+        target: auto
+        # 'threshold' permette un calo massimo (es. 1%) prima di segnare rosso
+        threshold: 5%

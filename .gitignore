@@ -1,0 +1,122 @@
+# NX
+.nx/cache
+.nx/workspace-data
+
+# Nuxt dev/build outputs
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
+.dist
+
+.vercel_build_output
+.build-*
+.build
+.netlify
+configurations
+staticwebapp.config.*
+
+# Node dependencies
+node_modules
+vendor
+lib-cov
+lcov.info
+pids
+results
+.node_history
+
+# Logs
+logs
+*.log
+
+# Misc
+.fleet
+
+# Testing
+reports
+!app/**/reports
+coverage
+*.lcov
+.nyc_output
+
+# Intellij idea
+*.iml
+.idea
+
+# OSX
+# Misc
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+.Spotlight-V100
+.Trashes
+._*
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+*~
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+!env/*
+
+# Yarn
+.yarn/*
+!.yarn/cache
+!.yarn/unplugged
+!.yarn/patches
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+yarn-error.log
+
+# Temp directories
+.temp
+.tmp
+*.sql
+!server/db/migrations/postgresql/*.sql
+*.sqlite
+*.sqlite3
+.cache
+
+# Various
+ssl
+.idea
+nbproject
+public/uploads/*
+!public/uploads/.gitkeep
+.tsbuildinfo
+.eslintcache
+tsconfig.tsbuildinfo
+
+# MCP
+.cursor/mcp.json
+.cursor/rules/nx-rules.mdc
+.github/instructions/nx.instructions.md
+
+# Continue AI
+.continue/config.yaml
+
+# Release artifacts
+/release/
+.vercel
+.env*.local

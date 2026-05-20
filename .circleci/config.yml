@@ -1,0 +1,66 @@
+version: 2.1
+
+orbs:
+  codecov: codecov/codecov@5.4.3
+
+jobs:
+  ci:
+    docker:
+      - image: cimg/node:24.0
+    steps:
+      # Checkout repository
+      - checkout
+
+      # Enable corepack (ships pnpm)
+      - run:
+          name: Enable corepack
+          command: corepack enable
+
+      # Restore pnpm store cache
+      - restore_cache:
+          keys:
+            - pnpm-cache-v1-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-cache-v1-
+
+      # Install dependencies
+      - run:
+          name: Install Dependencies
+          command: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Save pnpm store cache
+      - save_cache:
+          key: pnpm-cache-v1-{{ checksum "pnpm-lock.yaml" }}
+          paths:
+            - ~/.pnpm-store
+
+      # Type-check
+      - run:
+          name: Typecheck
+          command: pnpm typecheck
+
+      # Lint
+      - run:
+          name: Lint
+          command: pnpm lint
+
+      # Unit & Nuxt tests with coverage
+      - run:
+          name: Tests
+          command: pnpm test:coverage
+
+      # Upload coverage to Codecov
+      - codecov/upload:
+          file: coverage/lcov.info
+          flags: unit
+
+      - store_test_results:
+          path: test-results
+
+      - store_artifacts:
+          path: coverage
+          destination: coverage
+
+workflows:
+  ci:
+    jobs:
+      - ci

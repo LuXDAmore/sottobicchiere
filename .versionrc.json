@@ -1,0 +1,52 @@
+{
+    "types": [
+        {
+            "type": "feat",
+            "hidden": false,
+            "section": "✨ Features"
+        },
+        {
+            "type": "fix",
+            "hidden": false,
+            "section": "🐛 Bug Fixes"
+        },
+        {
+            "type": "chore",
+            "hidden": false,
+            "section": "🏡 Chores"
+        },
+        {
+            "type": "docs",
+            "hidden": false,
+            "section": "📖 Documentation"
+        },
+        {
+            "type": "style",
+            "hidden": false,
+            "section": "🎨 Styling"
+        },
+        {
+            "type": "refactor",
+            "hidden": false,
+            "section": "♻️ Code Refactoring"
+        },
+        {
+            "type": "revert",
+            "hidden": false,
+            "section": "↩️ Reverts"
+        },
+        {
+            "type": "perf",
+            "hidden": false,
+            "section": "🔥 Performance Improvements"
+        },
+        {
+            "type": "test",
+            "hidden": false,
+            "section": "✅ Testing"
+        }
+    ],
+    "commitUrlFormat": "https://github.com/luxdamore/wegree/commit/{{hash}}",
+    "compareUrlFormat": "https://github.com/octocat/linguist/compare/{{previousTag}}...{{currentTag}}",
+    "issueUrlFormat": "https://github.com/LuXDAmore/wegree/issues/{{id}}"
+}
