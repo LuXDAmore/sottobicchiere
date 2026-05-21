@@ -26,6 +26,7 @@ export function useTableSocket() {
         , wsUrl = computed( () => {
 
             if( ! playerStore.tableSessionId || ! playerStore.playerId ) return null;
+
             const parameters = new URLSearchParams( {
                 color: playerStore.playerColor ?? '',
                 nickname: playerStore.playerNickname ?? '',
@@ -37,38 +38,37 @@ export function useTableSocket() {
 
         } )
 
-        , {
-            data, send: wsSend, status, open, close,
-        } = useWebSocket(
-        wsUrl as Ref<string>,
-        {
-            autoReconnect: {
-                delay: 2000,
-                retries: 5,
-            },
-            immediate: false,
-        }
+        , { send: wsSend, status, open, close } = useWebSocket(
+            wsUrl as Ref<string>,
+            {
+                autoReconnect: {
+                    delay: 2000,
+                    retries: 5,
+                },
+                immediate: false,
+                async onMessage( _ws, event ) {
+
+                    const text = typeof event.data === 'string'
+                        ? event.data
+                        : await ( event.data as Blob ).text();
+
+                    let message: ServerMessage;
+
+                    try {
+
+                        message = JSON.parse( text ) as ServerMessage;
+
+                    } catch{
+
+                        return;
+
+                    }
+
+                    handleMessage( message );
+
+                },
+            }
         );
-
-    watch( data, async raw => {
-
-        if( ! raw ) return;
-
-        const text = raw instanceof Blob ? await raw.text() : ( raw as string );
-        let message: ServerMessage;
-
-        try {
-
-            message = JSON.parse( text ) as ServerMessage;
-
-        } catch{
-
-            return;
-
-        }
-        handleMessage( message );
-
-    } );
 
     /**
      *

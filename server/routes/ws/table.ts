@@ -12,24 +12,6 @@ import {
     startGame,
 } from '../../utils/game-state';
 
-interface GamePeerContext {
-    tableSessionId: string;
-    playerId: string;
-    nickname: string;
-    color: string;
-}
-
-/**
- *
- * @param peer
- * @param peer.context
- */
-function context( peer: { context: Record<string, unknown> } ): GamePeerContext {
-
-    return peer.context as unknown as GamePeerContext;
-
-}
-
 /**
  *
  * @param tableSessionId
@@ -70,33 +52,26 @@ function broadcast(
 }
 
 export default defineWebSocketHandler( {
-    upgrade( request ) {
 
-        const url = new URL( request.url ?? '', 'http://x' )
+    open( peer ) {
+
+        const url = new URL( peer.request.url ?? '', 'http://x' )
             , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? ''
             , playerId = url.searchParams.get( 'playerId' ) ?? ''
             , nickname = url.searchParams.get( 'nickname' ) ?? ''
             , color = url.searchParams.get( 'color' ) ?? '';
 
-        if( ! tableSessionId || ! playerId || ! nickname || ! color )
-            throw new Response( 'Missing params', { status: 400 } );
+        if( ! tableSessionId || ! playerId || ! nickname || ! color ) {
 
-        const context_ = request.context as unknown as GamePeerContext;
+            emit( peer, {
+                message: 'Missing connection params',
+                type: 'error',
+            } );
+            return;
 
-        context_.tableSessionId = tableSessionId;
-        context_.playerId = playerId;
-        context_.nickname = nickname;
-        context_.color = color;
+        }
 
-    },
-
-    open( peer ) {
-
-        const {
-                tableSessionId, playerId, nickname, color,
-            } = context( peer )
-
-            , session = getOrCreateSession( tableSessionId );
+        const session = getOrCreateSession( tableSessionId );
 
         addPlayer( session, peer.id, {
             color,
@@ -114,6 +89,7 @@ export default defineWebSocketHandler( {
             },
             type: 'player:joined',
         } );
+
         emit( peer, {
             players: getPlayers( session ),
             type: 'players:sync',
@@ -138,7 +114,9 @@ export default defineWebSocketHandler( {
 
     message( peer, message ) {
 
-        const { tableSessionId, playerId } = context( peer )
+        const url = new URL( peer.request.url ?? '', 'http://x' )
+            , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? ''
+            , playerId = url.searchParams.get( 'playerId' ) ?? ''
             , session = getOrCreateSession( tableSessionId );
 
         let data: ClientMessage;
@@ -294,7 +272,8 @@ export default defineWebSocketHandler( {
 
     close( peer ) {
 
-        const { tableSessionId } = context( peer )
+        const url = new URL( peer.request.url ?? '', 'http://x' )
+            , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? ''
             , session = getOrCreateSession( tableSessionId )
 
             , player = removePlayer( session, peer.id );
@@ -308,7 +287,7 @@ export default defineWebSocketHandler( {
                     type: 'player:left',
                 } );
 
-            }, 100 );
+            }, 500 );
 
         }
 
@@ -321,4 +300,5 @@ export default defineWebSocketHandler( {
         console.error( '[ws/table]', error );
 
     },
+
 } );
