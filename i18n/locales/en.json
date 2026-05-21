@@ -34,7 +34,31 @@
         "games_title": "Games",
         "games_coming_soon": "Games coming soon",
         "games_description": "Multiplayer mini-games will be available soon. Stay connected!",
-        "leave": "Leave"
+        "leave": "Leave",
+        "connecting": "Connecting…",
+        "disconnected": "Connection lost, reconnecting…"
+    },
+    "game": {
+        "thumbs": {
+            "title": "Thumbs Up",
+            "description": "Vote 👍 or 👎 on opinion questions and challenge your friends!",
+            "players_range": "2+ players",
+            "waiting_title": "Ready to play?",
+            "waiting_description": "Wait for everyone to connect, then start the game.",
+            "start_button": "Start game",
+            "need_players": "You need at least 2 players to start.",
+            "round": "Round {n} of {total}",
+            "yes": "Yes",
+            "no": "No",
+            "waiting_others": "{voted}/{total} have voted",
+            "waiting_host": "Waiting for the host to advance to the next round…",
+            "scores": "Scores",
+            "next_round": "Next round →",
+            "show_results": "Show final results →",
+            "finished_title": "Game over!",
+            "play_again": "Play again",
+            "back_lobby": "Back to lobby"
+        }
     },
     "layout": {
         "toggle_theme": "Toggle light/dark theme"

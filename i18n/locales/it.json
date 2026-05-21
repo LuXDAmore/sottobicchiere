@@ -34,7 +34,31 @@
         "games_title": "Giochi",
         "games_coming_soon": "Giochi in arrivo",
         "games_description": "I minigiochi multiplayer saranno disponibili presto. Restate connessi!",
-        "leave": "Esci"
+        "leave": "Esci",
+        "connecting": "Connessione in corso…",
+        "disconnected": "Connessione persa, riconnessione…"
+    },
+    "game": {
+        "thumbs": {
+            "title": "Pollice Su",
+            "description": "Vota 👍 o 👎 su domande di opinione e sfida i tuoi amici!",
+            "players_range": "2+ giocatori",
+            "waiting_title": "Pronti a giocare?",
+            "waiting_description": "Aspetta che tutti si connettano, poi avvia il gioco.",
+            "start_button": "Inizia il gioco",
+            "need_players": "Servono almeno 2 giocatori per iniziare.",
+            "round": "Round {n} di {total}",
+            "yes": "Sì",
+            "no": "No",
+            "waiting_others": "{voted}/{total} hanno votato",
+            "waiting_host": "Aspetta che l'host avanzi al prossimo round…",
+            "scores": "Punteggi",
+            "next_round": "Prossimo round →",
+            "show_results": "Vedi risultati finali →",
+            "finished_title": "Fine del gioco!",
+            "play_again": "Gioca ancora",
+            "back_lobby": "Torna alla lobby"
+        }
     },
     "layout": {
         "toggle_theme": "Cambia tema chiaro/scuro"

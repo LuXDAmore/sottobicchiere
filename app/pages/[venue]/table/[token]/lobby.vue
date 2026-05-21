@@ -13,7 +13,6 @@
             </div>
 
             <div class="flex gap-3 items-center">
-                <!-- Player color badge -->
                 <div
                     class="flex gap-2 h-9 items-center px-3 rounded-full text-sm"
                     :style="{ backgroundColor: (playerStore.playerColor ?? '#6366F1') + '22', color: playerStore.playerColor ?? '#6366F1' }"
@@ -41,6 +40,19 @@
         <!-- Main content -->
         <main class="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
 
+            <!-- WebSocket status -->
+            <div
+                v-if="status !== 'OPEN'"
+                class="flex gap-2 items-center justify-center py-2 rounded-lg text-sm"
+                :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-500' : 'bg-error-500/10 text-error-500'"
+            >
+                <u-icon
+                    class="animate-spin size-4"
+                    name="i-lucide-loader-2"
+                />
+                {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
+            </div>
+
             <!-- Players section -->
             <section>
                 <div class="flex gap-2 items-center mb-3">
@@ -51,24 +63,13 @@
                     <h2 class="font-semibold text-highlighted text-sm">
                         {{ $t('lobby.players_title') }}
                     </h2>
-                    <span class="live-dot ml-auto" />
-                </div>
-
-                <!-- Players grid -->
-                <div
-                    v-if="pending"
-                    class="flex justify-center py-8"
-                >
-                    <u-icon
-                        class="animate-spin size-8 text-primary-500"
-                        name="i-lucide-loader-2"
+                    <span
+                        v-if="status === 'OPEN'"
+                        class="live-dot ml-auto"
                     />
                 </div>
 
-                <div
-                    v-else
-                    class="flex flex-wrap gap-2"
-                >
+                <div class="flex flex-wrap gap-2">
                     <div
                         v-for="player in players"
                         :key="player.id"
@@ -101,7 +102,7 @@
                 </div>
             </section>
 
-            <!-- Games section (scaffold) -->
+            <!-- Games section -->
             <section>
                 <div class="flex gap-2 items-center mb-3">
                     <u-icon
@@ -113,17 +114,26 @@
                     </h2>
                 </div>
 
-                <u-card :ui="{ body: 'flex flex-col items-center gap-3 p-8' }">
-                    <u-icon
-                        class="opacity-50 size-12 text-muted"
-                        name="i-lucide-construction"
+                <u-card
+                    class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
+                    :ui="{ body: 'flex items-center gap-4 p-4' }"
+                    @click="launchThumbs"
+                >
+                    <div class="bg-amber-500/15 flex items-center justify-center rounded-2xl shrink-0 size-14 text-3xl">
+                        👍
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-highlighted">
+                            {{ $t('game.thumbs.title') }}
+                        </p>
+                        <p class="mt-0.5 text-muted text-sm truncate">
+                            {{ $t('game.thumbs.description') }}
+                        </p>
+                    </div>
+                    <u-badge
+                        :label="$t('game.thumbs.players_range')"
+                        variant="subtle"
                     />
-                    <p class="font-semibold text-highlighted">
-                        {{ $t('lobby.games_coming_soon') }}
-                    </p>
-                    <p class="text-center text-muted text-sm">
-                        {{ $t('lobby.games_description') }}
-                    </p>
                 </u-card>
             </section>
 
@@ -151,36 +161,36 @@
 
     } );
 
-    // Fetch current players in the session
-    const { data: playersData, pending, refresh } = await useFetch(
-              () => `/api/${ venueSlug }/table/${ qrToken }/players`,
-              {
-                  lazy: true,
-                  server: false,
-              }
-          )
+    const {
+        players, gameState, status, open, close,
+    } = useTableSocket();
 
-          , players = computed( () => playersData.value ?? [] );
+    onMounted( () => open() );
+    onUnmounted( () => close() );
 
-    // Periodically refresh player list until WebSocket is implemented
-    let refreshInterval: ReturnType<typeof setInterval> | null = null;
+    // If game starts (server sends game:question), navigate to game page
+    watch( gameState, state => {
 
-    onMounted( () => {
-
-        refreshInterval = setInterval( () => refresh(), 10_000 );
-
-    } );
-    onUnmounted( () => {
-
-        if( refreshInterval ) clearInterval( refreshInterval );
+        if( state && state.phase === 'voting' && state.roundIndex === 0 )
+            navigateTo( `/${ venueSlug }/table/${ qrToken }/game/thumbs` );
 
     } );
 
     /**
      *
      */
+    function launchThumbs() {
+
+        navigateTo( `/${ venueSlug }/table/${ qrToken }/game/thumbs` );
+
+    }
+
+    /**
+     *
+     */
     function handleLeave() {
 
+        close();
         playerStore.leave();
         navigateTo( `/${ venueSlug }/table/${ qrToken }` );
 
