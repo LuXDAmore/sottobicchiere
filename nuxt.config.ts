@@ -3,13 +3,13 @@ import { defineNuxtConfig } from 'nuxt/config';
 
 // Vite - Plugins
 import sbom from 'rollup-plugin-sbom';
-import { Mode, plugin as mdPlugin } from 'vite-plugin-markdown';
 
 // Package
 import packageJson from './package.json';
 
 const
-    COLORS = ( process.env.NUXT_COLORS || '#1f9263,#4d6dab' ).split( ',' )
+    // Colori brand: primario e accento (per personalizzazione per venue in futuro)
+    COLORS = ( process.env.NUXT_COLORS || '#4F46E5,#F59E0B' ).split( ',' )
     , [ PRIMARY_COLOR ] = COLORS ?? []
     , appEnvironment = process.env.NUXT_APP_ENV || ( process.env.NUXT_NODE_ENV === 'production' ? 'production' : 'development' )
     , isVitest = process.env.VITEST === 'true'
@@ -37,7 +37,7 @@ export default defineNuxtConfig(
                 meta: [
                     { charset: 'utf-8' },
                     {
-                        content: process.env.NUXT_SITE_DESCRIPTION || 'WeGree — B2B telematic auction marketplace',
+                        content: process.env.NUXT_SITE_DESCRIPTION || 'Sottobicchiere — Giochi da tavolo per il tuo locale',
                         name: 'description',
                     },
                     {
@@ -73,31 +73,16 @@ export default defineNuxtConfig(
                         name: 'apple-mobile-web-app-status-bar-style',
                     },
                 ],
-                title: process.env.NUXT_SITE_NAME || 'WeGree',
-                titleTemplate: `%s - ${ process.env.NUXT_SITE_NAME || 'WeGree' }`,
+                title: process.env.NUXT_SITE_NAME || 'Sottobicchiere',
+                titleTemplate: `%s - ${ process.env.NUXT_SITE_NAME || 'Sottobicchiere' }`,
                 viewport: 'width=device-width,initial-scale=1',
             },
         },
 
-        appId: 'wegree',
-
-        auth: {
-            hubSecondaryStorage: true,
-            preserveRedirect: true,
-            redirects: {
-                authenticated: '/account',
-                guest: '/',
-                login: '/auth/login',
-                logout: '/auth/login',
-            },
-            schema: {
-                casing: 'snake_case',
-                usePlural: false,
-            },
-        },
+        appId: 'sottobicchiere',
 
         colorMode: {
-            fallback: 'light',
+            fallback: 'dark',
             preference: 'system',
         },
 
@@ -123,27 +108,25 @@ export default defineNuxtConfig(
                 styles: [ 'normal', 'italic' ],
                 subsets: [ 'latin' ],
                 weights: [
-                    200,
-                    300,
                     400,
-                    500,
                     600,
                     700,
-                    800,
-                    900,
                 ],
             },
             families: [
                 {
-                    name: 'DM Serif Display',
+                    // Titoli, punteggi, game titles — gaming senza essere cartoon
+                    name: 'Fredoka',
                     provider: 'google',
                 },
                 {
-                    name: 'Plus Jakarta Sans',
+                    // Body UI — arrotondato, leggibilissimo su mobile
+                    name: 'Nunito',
                     provider: 'google',
                 },
                 {
-                    name: 'JetBrains Mono',
+                    // Numeri e room code — tabular numerals
+                    name: 'Space Grotesk',
                     provider: 'google',
                 },
             ],
@@ -155,18 +138,18 @@ export default defineNuxtConfig(
             options: {
                 rules: {
                     'attribute-allowed-values': 'off',
-                    'attribute-misuse': 'off', // ?: Forse da tenere
+                    'attribute-misuse': 'off',
                     'element-permitted-content': 'off',
-                    'heading-level': 'off', // ?: Da tenere
-                    'input-missing-label': 'off', // ?: Da valutare se tenerlo
-                    'long-title': 'off', // ?: Da tenere
-                    'no-redundant-for': 'off', // ?: Da tenere
-                    'prefer-native-element': 'off', // ?: Forse da tenere
+                    'heading-level': 'off',
+                    'input-missing-label': 'off',
+                    'long-title': 'off',
+                    'no-redundant-for': 'off',
+                    'prefer-native-element': 'off',
                     'tel-non-breaking': 'off',
                     'text-content': 'off',
                     'unique-landmark': 'off',
-                    'wcag/h32': 'off', // ?: Da tenere
-                    'wcag/h71': 'off', // ?: Da tenere
+                    'wcag/h32': 'off',
+                    'wcag/h71': 'off',
                 },
             },
             usePrettier: true,
@@ -183,37 +166,6 @@ export default defineNuxtConfig(
             kv: true,
         },
 
-        /*
-        llms: {
-            description: process.env.NUXT_SITE_DESCRIPTION,
-            domain: process.env.NUXT_SITE_URL,
-            full: {
-                description: 'Full documentation of the application',
-                title: 'Full Documentation',
-            },
-            // TODO: Finire questa per la documentazione rapida da AI
-            sections: [
-                {
-                    description: 'Section 1 Description',
-                    links: [
-                        {
-                            description: 'Link 1 Description',
-                            href: '/link-1',
-                            title: 'Link 1',
-                        },
-                        {
-                            description: 'Link 2 Description',
-                            href: '/link-2',
-                            title: 'Link 2',
-                        },
-                    ],
-                    title: 'Section 1',
-                },
-            ],
-            title: process.env.NUXT_SITE_NAME,
-        },
-        */
-
         i18n: {
             defaultLocale: 'it',
             langDir: 'locales/',
@@ -229,24 +181,6 @@ export default defineNuxtConfig(
                     file: 'en.json',
                     language: 'en-US',
                     name: 'English',
-                },
-                {
-                    code: 'de',
-                    file: 'de.json',
-                    language: 'de-DE',
-                    name: 'Deutsch',
-                },
-                {
-                    code: 'fr',
-                    file: 'fr.json',
-                    language: 'fr-FR',
-                    name: 'Français',
-                },
-                {
-                    code: 'es',
-                    file: 'es.json',
-                    language: 'es-ES',
-                    name: 'Español',
                 },
             ],
             strategy: 'prefix_except_default',
@@ -272,7 +206,6 @@ export default defineNuxtConfig(
             'pinia-plugin-persistedstate/nuxt',
             '@nuxthub/core',
             ... isVitest ? [] : [ '@vercel/speed-insights' ],
-            ... isVitest ? [] : [ '@onmax/nuxt-better-auth' ],
             ... isVitest ? [] : [ '@vite-pwa/nuxt' ],
         ],
 
@@ -291,22 +224,6 @@ export default defineNuxtConfig(
                 xl: 1280,
                 xxl: 1536,
             },
-            domains: [ 'blob.vercel-storage.com', 'public.blob.vercel-storage.com' ],
-            presets: {
-                lot: {
-                    modifiers: {
-                        width: 800,
-                        quality: 80,
-                    },
-                },
-                thumbnail: {
-                    modifiers: {
-                        width: 200,
-                        height: 200,
-                        quality: 70,
-                    },
-                },
-            },
         },
 
         nitro: {
@@ -320,20 +237,8 @@ export default defineNuxtConfig(
                 websocket: true,
             },
             scheduledTasks: {
-                // Every night at 02:30: align Direct Sale machinery catalog (data) from Zucchetti API.
-                '30 2 * * *': [ 'zucchetti-nightly-sync' ],
-                // Every night at 03:00: sync machinery media from Zucchetti FTP to Vercel Blob.
-                '0 3 * * *': [ 'zucchetti-ftp-sync' ],
-                // Every hour: flag awarded lots whose payment deadline has elapsed.
-                '0 * * * *': [ 'payment-deadline-check' ],
-                // Every day at 09:00: dispatch T-3 / T-1 / T0 payment reminder emails.
-                '0 9 * * *': [ 'payment-reminders' ],
-                // Every hour: dispatch T-24h "event starting soon" reminders to participants with active deposits.
-                '15 * * * *': [ 'event-starting-soon' ],
-                // Every 4 hours: sync Fallco auctions from wegree.fallcoaste.it.
-                '0 */4 * * *': [ 'fallco-sync' ],
-                // Every 15 minutes: auto-close expired free_market auctions.
-                '*/15 * * * *': [ 'seller-auction-expiry' ],
+                // Ogni notte alle 03:00: pulizia sessioni tavolo scadute
+                '0 3 * * *': [ 'cleanup-expired-sessions' ],
             },
         },
 
@@ -342,17 +247,17 @@ export default defineNuxtConfig(
             zeroRuntime: true,
         },
 
-        piniaPluginPersistedstate: { key: `wegree_${ appEnvironment }_%id` },
+        piniaPluginPersistedstate: { key: `sottobicchiere_${ appEnvironment }_%id` },
 
         pwa: {
             client: { installPrompt: true },
-            includeAssets: [ 'favicon.ico', 'logo-wegree-square.png' ],
+            includeAssets: [ 'favicon.ico' ],
             includeManifestIcons: true,
             injectManifest: { minify: true },
             manifest: {
                 display: 'standalone',
-                name: process.env.NUXT_SITE_NAME,
-                short_name: 'WeGree',
+                name: process.env.NUXT_SITE_NAME || 'Sottobicchiere',
+                short_name: 'Sottobicchiere',
                 start_url: '/',
                 theme_color: PRIMARY_COLOR,
             },
@@ -363,138 +268,37 @@ export default defineNuxtConfig(
 
         robots: { disallow: [ '/' ] },
 
-        routeRules: {
-            '/backoffice/admin/actions': {
-                auth: { user: { role: [ 'admin' ] } },
-                ssr: false,
-            },
-            '/account/**': { auth: 'user' },
-            '/aste/mobili/**/live': { auth: 'user' },
-            '/auth/login': { auth: 'guest' },
-            '/auth/register': { auth: 'guest' },
-            '/backoffice/**': {
-                auth: { user: { role: [ 'admin', 'operator' ] } },
-                ssr: false,
-            },
-        },
+        routeRules: {},
 
         runtimeConfig: {
 
-            // Private (server-side only — never exposed to the client)
-            astalegaleWebhookSecret: process.env.ASTALEGALE_WEBHOOK_SECRET || '',
-            astalegaleAuctionsEndpoint: process.env.ASTALEGALE_AUCTIONS_ENDPOINT || '',
-            astalegaleAuctionDetailEndpoint: process.env.ASTALEGALE_AUCTION_DETAIL_ENDPOINT || '',
-            astalegaleRequestTimeoutMs: Number( process.env.ASTALEGALE_REQUEST_TIMEOUT_MS || 10_000 ),
-
-            // Auth
-            betterAuthSecret: process.env.BETTER_AUTH_SECRET || process.env.NUXT_BETTER_AUTH_SECRET || '',
-            emailVerificationPepper: process.env.EMAIL_VERIFICATION_PEPPER || '',
-
-            // Vercel Blob — media upload (foto lotti, PDF perizie, planimetrie)
+            // Private (server-side only)
             blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN || '',
-
-            // Vercel Cron auth
             cronSecret: process.env.CRON_SECRET || '',
+            redisUrl: process.env.REDIS_URL || '',
 
-            // Demo Auction Seed
-            demoAuctionSeedEnabled: process.env.DEMO_AUCTION_SEED_ENABLED === 'true',
-            demoAuctionSeedToken: process.env.DEMO_AUCTION_SEED_TOKEN || '',
-
-            // Dev Seed Users
-            devSeedUsersEnabled: process.env.DEV_SEED_USERS_ENABLED === 'true',
-            devSeedUsersToken: process.env.DEV_SEED_USERS_TOKEN || '',
-
-            // Google OAuth
-            googleClientId: process.env.GOOGLE_CLIENT_ID || '',
-            googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-
-            // LinkedIn OAuth
-            linkedinClientId: process.env.LINKEDIN_CLIENT_ID || '',
-            linkedinClientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
-
-            // Fallco crawler
-            fallcoBaseUrl: process.env.FALLCO_BASE_URL || '',
-            fallcoCrawlDelayMs: Number( process.env.FALLCO_CRAWL_DELAY_MS || 500 ),
-            fallcoCrawlTimeoutMs: Number( process.env.FALLCO_CRAWL_TIMEOUT_MS || 30_000 ),
-
-            // Ops Sync
-            opsSyncToken: process.env.OPS_SYNC_TOKEN || '',
-
-            // Production Smoke Users
-            prodSmokeUsersEnabled: process.env.PROD_SMOKE_USERS_ENABLED === 'true',
-            prodSmokeUsersPassword: process.env.PROD_SMOKE_USERS_PASSWORD || '',
-            prodSmokeUsersToken: process.env.PROD_SMOKE_USERS_TOKEN || '',
-
-            // Public (safe to expose to the client)
+            // Public (safe to expose)
             public: {
-
-                api: { httpsUrl: process.env.NUXT_PUBLIC_OPEN_FETCH_WEGREE_BASE_URL },
 
                 appEnvironment,
 
-                authFeatures: {
-                    socialProviders: {
-                        google: !! ( process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ),
-                        linkedin: !! ( process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET ),
-                    },
-                },
-
-                company: {
-                    address: process.env.COMPANY_ADDRESS || '',
-                    email: process.env.COMPANY_EMAIL || 'info@wegree.it',
-                    phone: process.env.COMPANY_PHONE || '',
-                    registrarNumber: process.env.COMPANY_REGISTRAR_NUMBER || '',
-                    vatNumber: process.env.COMPANY_VAT_NUMBER || '',
-                },
-
                 portal: {
                     colors: process.env.NUXT_COLORS,
-                    description: process.env.NUXT_SITE_DESCRIPTION || 'WeGree — B2B telematic auction marketplace',
-                    name: process.env.NUXT_SITE_NAME || 'WeGree',
+                    description: process.env.NUXT_SITE_DESCRIPTION || 'Sottobicchiere — Giochi da tavolo per il tuo locale',
+                    name: process.env.NUXT_SITE_NAME || 'Sottobicchiere',
                     url: process.env.NUXT_SITE_URL,
                     version: packageJson.version,
                 },
 
-                stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
-
             },
-
-            // Private (continued — after public for alphabetical sort-keys compliance)
-            redisUrl: process.env.REDIS_URL || '',
-            resendApiKey: process.env.RESEND_API_KEY || '',
-            resendFromEmail: process.env.RESEND_FROM_EMAIL || 'WeGree <noreply@wegree.it>',
-            stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
-            stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
-
-            // Machinio lead delivery
-            machinioLeadEndpoint: process.env.MACHINIO_LEAD_ENDPOINT || '',
-            machinioLeadToken: process.env.MACHINIO_LEAD_TOKEN || '',
-
-            // Wire (bonifico) deposit bank details
-            wireIban: process.env.WIRE_IBAN || '',
-            wireBeneficiary: process.env.WIRE_BENEFICIARY || 'WeGree S.r.l.',
-
-            // Zucchetti API — Direct Sale data sync (configurare con programmatore Zucchetti / Eleonora Passeri)
-            zucchettiApiBaseUrl: process.env.ZUCCHETTI_API_BASE_URL || '',
-            zucchettiApiKey: process.env.ZUCCHETTI_API_KEY || '',
-            zucchettiRequestTimeoutMs: Number( process.env.ZUCCHETTI_REQUEST_TIMEOUT_MS || 10_000 ),
-            zucchettiWebhookSecret: process.env.ZUCCHETTI_WEBHOOK_SECRET || '',
-
-            // Zucchetti FTP — Direct Sale media sync (blocked by partner: credenziali non ancora fornite)
-            zucchettiMediaFtpHost: process.env.ZUCCHETTI_MEDIA_FTP_HOST || '',
-            zucchettiMediaFtpPort: process.env.ZUCCHETTI_MEDIA_FTP_PORT || '21',
-            zucchettiMediaFtpUser: process.env.ZUCCHETTI_MEDIA_FTP_USER || '',
-            zucchettiMediaFtpPassword: process.env.ZUCCHETTI_MEDIA_FTP_PASSWORD || '',
-            zucchettiMediaFtpBasePath: process.env.ZUCCHETTI_MEDIA_FTP_BASE_PATH || '/',
 
         },
 
         schemaOrg: {
             identity: {
                 type: 'Organization',
-                logo: '/logo-wegree-horizontal.svg',
-                name: process.env.NUXT_SITE_NAME || 'WeGree',
-                url: process.env.NUXT_SITE_URL || 'https://wegree.com',
+                name: process.env.NUXT_SITE_NAME || 'Sottobicchiere',
+                url: process.env.NUXT_SITE_URL || 'https://sottobicchiere.app',
             },
             minify: true,
             reactive: false,
@@ -506,24 +310,16 @@ export default defineNuxtConfig(
             url: process.env.NUXT_SITE_URL,
         },
 
-        sitemap: {
-            sitemaps: {
-                auctionTypes: { sources: [ '/api/__sitemap__/auction-types' ] },
-                categories: { sources: [ '/api/__sitemap__/categories' ] },
-                regions: { sources: [ '/api/__sitemap__/regions' ] },
-                publicContent: { sources: [ '/api/__sitemap__/public-content' ] },
-            },
-            zeroRuntime: true,
-        },
+        sitemap: { zeroRuntime: true },
+
         ssr: true,
 
         ui: {
             theme: {
                 colors: [
-                    'wegree',
                     'primary',
                     'secondary',
-                    'navy',
+                    'accent',
                     'info',
                     'success',
                     'warning',
@@ -538,15 +334,13 @@ export default defineNuxtConfig(
                 include: [
                     '@vue/devtools-core',
                     '@vue/devtools-kit',
-                    '@tanstack/vue-table',
                     'zod',
                     'zod/locales',
                     '@internationalized/date',
-                    'papaparse',
                 ],
             },
 
-            plugins: [ mdPlugin( { mode: [ Mode.MARKDOWN ] } ), sbom() ],
+            plugins: [ sbom() ],
             vue: { template: { compilerOptions: { whitespace: 'condense' } } },
         },
 

@@ -1,5 +1,12 @@
 {
-    "name": "WeGree",
+    "name": "Sottobicchiere",
+    "short_name": "Sottobicchiere",
+    "description": "Giochi da tavolo per il tuo locale",
+    "start_url": "/",
+    "display": "standalone",
+    "theme_color": "#4F46E5",
+    "background_color": "#1C1917",
+    "lang": "it",
     "icons": [
         {
             "src": "/images/icons/android-icon-36x36.png",

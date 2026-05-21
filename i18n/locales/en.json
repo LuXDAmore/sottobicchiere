@@ -1,0 +1,20 @@
+{
+    "app": {
+        "name": "Sottobicchiere",
+        "tagline": "Table games for your venue",
+        "description": "Gaming PWA for bars and venues: multiplayer games with your table's QR code"
+    },
+    "welcome": {
+        "page_title": "Welcome",
+        "scan_title": "Scan the QR code",
+        "scan_description": "Find the QR code on your table and scan it to join the game session.",
+        "privacy_note": "No account needed. Your data is not saved."
+    },
+    "layout": {
+        "toggle_theme": "Toggle light/dark theme"
+    },
+    "error": {
+        "title": "Oops! Something went wrong",
+        "back": "Back to home"
+    }
+}

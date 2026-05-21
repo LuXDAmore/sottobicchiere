@@ -1,13 +1,20 @@
-# SpecDD project specific overrides
+# SpecDD — regole specifiche di progetto per Sottobicchiere
 
-This is a Nuxt 4, Nitro, Vue 3, TypeScript, Nuxt UI, NuxtHub, Neon PostgreSQL, Better Auth, Stripe, Resend, Vercel Redis, and Vercel Blob project for the WeGree B2B telematic auction marketplace.
+Questo è un progetto Nuxt 4, Nitro, Vue 3, TypeScript, Nuxt UI, NuxtHub,
+Neon PostgreSQL, Drizzle ORM, Vercel Redis, e Vercel Blob.
+Sottobicchiere è una PWA gaming per bar e locali con tavoli.
 
-When applying SpecDD in this repository:
+Quando si applica SpecDD in questo repository:
 
-1. Resolve `app.sdd` first, then any ancestor `.sdd` files down to the target path.
-2. Treat `docs/architecture.md`, `docs/database-schema.md`, `docs/moduli-business-aste.md`, `docs/modulo-mobiliare-flusso-compratore.md`, `docs/cauzioni-stati-flusso.md`, and `docs/glossario-terminologia.md` as product/architecture context when a local spec references them.
-3. Keep public auction and realtime behavior pseudonymized; never expose private identity fields in public payloads.
-4. Keep Compra Subito/Buy Now out of MVP implementation unless an explicit later spec changes that scope.
-5. Do not introduce Supabase as an implementation dependency; the active stack uses Neon PostgreSQL and NuxtHub.
-6. Update the relevant `.sdd` file when behavior, ownership, or local tasks change.
-7. Follow the repository documentation rule: update `TODO.md` and `docs/agents-changelog.md` in the same PR for meaningful coding/spec sessions.
+1. Risolvere `app.sdd` prima, poi ogni file `.sdd` discendente verso il path target.
+2. Trattare `docs/architecture.md`, `docs/database-schema.md`, e `docs/design.md`
+   come contesto di prodotto/architettura quando una spec locale li referenzia.
+3. Mantenere i dati dei giocatori anonimi e temporanei:
+   nessun campo PII in payload pubblici o WebSocket; sessioni con TTL automatico.
+4. Non introdurre autenticazione utente (Better Auth, OAuth, sessioni permanenti)
+   nell'MVP; il flusso auth è pianificato per v2.
+5. Non introdurre pagamenti (Stripe) o email transazionali (Resend) nell'MVP.
+6. Non usare Supabase come dipendenza; lo stack attivo usa Neon PostgreSQL e NuxtHub.
+7. Aggiornare il relevant file `.sdd` quando behavior, ownership, o task locali cambiano.
+8. Seguire la documentation rule: aggiornare `TODO.md` e `docs/agents-changelog.md`
+   nello stesso PR di ogni sessione di coding significativa.

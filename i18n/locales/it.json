@@ -1,0 +1,20 @@
+{
+    "app": {
+        "name": "Sottobicchiere",
+        "tagline": "Giochi da tavolo per il tuo locale",
+        "description": "PWA gaming per bar e locali: giochi multiplayer con il QR code del tuo tavolo"
+    },
+    "welcome": {
+        "page_title": "Benvenuto",
+        "scan_title": "Scansiona il QR code",
+        "scan_description": "Trova il QR code sul tuo tavolo e scansionalo per entrare nella sessione di gioco.",
+        "privacy_note": "Nessun account necessario. I tuoi dati non vengono salvati."
+    },
+    "layout": {
+        "toggle_theme": "Cambia tema chiaro/scuro"
+    },
+    "error": {
+        "title": "Oops! C'è stato un errore",
+        "back": "Torna alla home"
+    }
+}
