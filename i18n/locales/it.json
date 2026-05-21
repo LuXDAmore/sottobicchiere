@@ -10,6 +10,32 @@
         "scan_description": "Trova il QR code sul tuo tavolo e scansionalo per entrare nella sessione di gioco.",
         "privacy_note": "Nessun account necessario. I tuoi dati non vengono salvati."
     },
+    "table": {
+        "page_title": "Tavolo {n} — {venue}",
+        "table_number": "Tavolo {n}",
+        "invalid_qr_title": "QR code non valido",
+        "invalid_qr_description": "Il QR code non è riconosciuto o è scaduto. Chiedi al personale del locale.",
+        "join_title": "Entra nel gioco",
+        "join_description": "Scegli un nickname per partecipare alla sessione.",
+        "nickname_label": "Nickname",
+        "nickname_placeholder": "Come ti chiami?",
+        "group_label": "Gruppo (opzionale)",
+        "group_hint": "Gioca in squadra con gli amici al tuo tavolo",
+        "group_placeholder": "Nome del gruppo",
+        "join_button": "Entra",
+        "joining": "Ingresso in corso…",
+        "join_error_generic": "Errore durante l'ingresso. Riprova."
+    },
+    "lobby": {
+        "page_title": "Lobby — {venue}",
+        "players_title": "Giocatori",
+        "you": "tu",
+        "no_players": "Nessun giocatore ancora. Sei il primo!",
+        "games_title": "Giochi",
+        "games_coming_soon": "Giochi in arrivo",
+        "games_description": "I minigiochi multiplayer saranno disponibili presto. Restate connessi!",
+        "leave": "Esci"
+    },
     "layout": {
         "toggle_theme": "Cambia tema chiaro/scuro"
     },

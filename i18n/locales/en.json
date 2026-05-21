@@ -10,6 +10,32 @@
         "scan_description": "Find the QR code on your table and scan it to join the game session.",
         "privacy_note": "No account needed. Your data is not saved."
     },
+    "table": {
+        "page_title": "Table {n} — {venue}",
+        "table_number": "Table {n}",
+        "invalid_qr_title": "Invalid QR code",
+        "invalid_qr_description": "This QR code is not recognized or has expired. Ask the venue staff.",
+        "join_title": "Join the game",
+        "join_description": "Choose a nickname to join the session.",
+        "nickname_label": "Nickname",
+        "nickname_placeholder": "What's your name?",
+        "group_label": "Group (optional)",
+        "group_hint": "Play as a team with friends at your table",
+        "group_placeholder": "Group name",
+        "join_button": "Join",
+        "joining": "Joining…",
+        "join_error_generic": "Error while joining. Please try again."
+    },
+    "lobby": {
+        "page_title": "Lobby — {venue}",
+        "players_title": "Players",
+        "you": "you",
+        "no_players": "No players yet. You're the first!",
+        "games_title": "Games",
+        "games_coming_soon": "Games coming soon",
+        "games_description": "Multiplayer mini-games will be available soon. Stay connected!",
+        "leave": "Leave"
+    },
     "layout": {
         "toggle_theme": "Toggle light/dark theme"
     },
