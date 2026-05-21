@@ -159,6 +159,8 @@ export default defineNuxtConfig(
             blob: { driver: 'vercel-blob' },
             cache: true,
             db: {
+                applyMigrationsDuringBuild: false,
+                applyMigrationsDuringDev: false,
                 casing: 'snake_case',
                 dialect: 'postgresql',
                 driver: 'neon-http',
