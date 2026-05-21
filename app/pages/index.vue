@@ -63,10 +63,10 @@
     const { t } = useI18n();
 
     useHead( {
-        title: t( 'welcome.page_title' ),
+        title: computed( () => t( 'welcome.page_title' ) ),
         meta: [
             {
-                content: t( 'app.description' ),
+                content: computed( () => t( 'app.description' ) ),
                 name: 'description',
             },
         ],

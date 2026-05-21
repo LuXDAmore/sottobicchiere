@@ -31,7 +31,7 @@ Sottobicchiere è una PWA multi-tenant per bar e locali con tavoli. Ogni install
        │ SQL (Drizzle ORM) │ KV (ioredis)
 ┌──────▼──────┐    ┌───────▼──────────────────────────┐
 │ Neon Postgres│    │ Vercel Redis                      │
-│ (dati base) │    │ (game state real-time, effimerо)   │
+│ (dati base) │    │ (game state real-time, effimero)   │
 └─────────────┘    └──────────────────────────────────┘
 ```
 
@@ -53,7 +53,7 @@ I giocatori possono formare squadre o stare da soli. Un tavolo può avere più g
 Lo stato dei giochi vive in Vercel KV (Redis) per massima velocità real-time. Non è persistente: viene cancellato al termine della sessione.
 
 ### WebSocket (Nitro)
-Nitro espone WebSocket via `server/routes/_ws/[venue]/[table].ts`. Ogni client si connette a un canale isolato per tavolo. Il server fa da relay per gli aggiornamenti di stato.
+Nitro espone WebSocket via `server/routes/ws/table.ts` (accessibile su `/ws/table?tableSessionId=...`). Ogni client si connette a un namespace isolato per tavolo. Il server fa da relay per gli aggiornamenti di stato tramite pub/sub crossws.
 
 ## Multi-tenant
 

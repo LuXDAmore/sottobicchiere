@@ -1,9 +1,9 @@
-export type { PlayerColor } from '../utils/colors';
+import type { PlayerColor } from '../utils/colors';
 
 export interface PlayerInfo {
     id: string;
     nickname: string;
-    color: string;
+    color: PlayerColor;
     groupId: string | null;
     joinedAt: string;
 }
@@ -17,7 +17,7 @@ export interface TableInfo {
 
 export interface JoinResponse extends TableInfo {
     playerId: string;
-    playerColor: string;
+    playerColor: PlayerColor;
     playerNickname: string;
     groupId: string | null;
     expiresAt: string;

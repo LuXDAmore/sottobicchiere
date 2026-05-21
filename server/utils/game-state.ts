@@ -80,7 +80,7 @@ export function removePlayer( session: TableSession, peerId: string ): WsPlayer 
 
             const next = session.players.values().next().value;
 
-            if( next ) session.game.hostPlayerId = next.id;
+            session.game.hostPlayerId = next ? next.id : '';
 
         }
 

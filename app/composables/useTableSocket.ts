@@ -50,14 +50,16 @@ export function useTableSocket() {
         }
         );
 
-    watch( data, raw => {
+    watch( data, async raw => {
 
         if( ! raw ) return;
+
+        const text = raw instanceof Blob ? await raw.text() : ( raw as string );
         let message: ServerMessage;
 
         try {
 
-            message = JSON.parse( typeof raw === 'string' ? raw : '' ) as ServerMessage;
+            message = JSON.parse( text ) as ServerMessage;
 
         } catch{
 

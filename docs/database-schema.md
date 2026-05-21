@@ -41,7 +41,7 @@ Sessione effimera aperta per un tavolo.
 id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
 table_id    uuid NOT NULL REFERENCES tables(id) ON DELETE CASCADE
 started_at  timestamptz NOT NULL DEFAULT now()
-expires_at  timestamptz NOT NULL DEFAULT now() + interval '8 hours'
+expires_at  timestamptz NOT NULL  -- calcolato lato API: now() + 8h (nessun default DB)
 ```
 
 Index: `expires_at` (per il cleanup task notturno)

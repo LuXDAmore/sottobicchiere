@@ -1,5 +1,5 @@
 <template>
-    <u-app :locale="it" :toaster="toaster">
+    <u-app :locale="uiLocale" :toaster="toaster">
 
         <nuxt-loading-indicator color="oklch(0.5602 0.2295 264.05)" />
 
@@ -14,10 +14,10 @@
                     icon: 'lucide:arrow-left',
                     class: 'rounded-md',
                     variant: 'subtle',
-                    label: 'Torna alla home',
+                    label: t('error.back'),
                 }"
                 :error="error"
-                redirect="/"
+                :redirect="localePath('/')"
                 :ui="{
                     message: 'text-highlighted text-xl!',
                 }"
@@ -30,10 +30,8 @@
 
 <script setup lang="ts">
 
-    // Nuxt - UI
-    import { it } from '@nuxt/ui/locale';
+    import { en as enLocale, it as itLocale } from '@nuxt/ui/locale';
 
-    // Types
     import type { ToasterProps } from '@nuxt/ui';
 
     import type { NuxtError } from '#app';
@@ -44,8 +42,11 @@
 
     defineProps<Properties>();
 
-    const toaster: ToasterProps = { position: 'bottom-right' };
+    const { t, locale } = useI18n()
+          , localePath = useLocalePath()
+          , uiLocale = computed( () => ( locale.value === 'it' ? itLocale : enLocale ) )
+          , toaster: ToasterProps = { position: 'bottom-right' };
 
-    useHead( { title: "Oops! C'è stato un errore" } );
+    useHead( { title: computed( () => t( 'error.title' ) ) } );
 
 </script>

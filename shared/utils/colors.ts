@@ -17,7 +17,7 @@ export type PlayerColor = typeof PLAYER_COLORS[number];
  *
  * @param takenColors
  */
-export function pickAvailableColor( takenColors: string[] ): PlayerColor {
+export function pickAvailableColor( takenColors: readonly string[] ): PlayerColor {
 
     const available = PLAYER_COLORS.filter( c => ! takenColors.includes( c ) );
 

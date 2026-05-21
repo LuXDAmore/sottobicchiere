@@ -1,3 +1,5 @@
+import type { JoinResponse } from '../../shared/types';
+
 import { defineStore } from 'pinia';
 
 interface PlayerState {

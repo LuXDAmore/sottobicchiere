@@ -35,8 +35,8 @@ Aggiornato: 2026-05-21
 
 ## i18n (fase 1)
 
-- [x] Creare `app/locales/it.json` con chiavi MVP
-- [x] Creare `app/locales/en.json` con chiavi MVP
+- [x] Creare `i18n/locales/it.json` con chiavi MVP
+- [x] Creare `i18n/locales/en.json` con chiavi MVP
 - [ ] Verificare ogni stringa visibile in IT e EN prima del primo deploy
 
 ## Giochi (fase 2)

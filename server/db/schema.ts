@@ -9,19 +9,6 @@ import {
     uuid,
 } from 'drizzle-orm/pg-core';
 
-// ── Colori assegnabili ai giocatori ─────────────────────────────────────────
-
-export const PLAYER_COLORS = [
-    '#6366F1', // Indigo
-    '#8B5CF6', // Violet
-    '#EC4899', // Pink
-    '#F59E0B', // Amber
-    '#10B981', // Emerald
-    '#06B6D4', // Cyan
-    '#F97316', // Orange
-    '#EF4444', // Red
-] as const;
-
 // ── Venues ───────────────────────────────────────────────────────────────────
 
 export const venues = pgTable( 'venues', {

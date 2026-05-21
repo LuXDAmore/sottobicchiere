@@ -139,5 +139,5 @@ Icone chiave per gaming:
 
 - Nuxt UI è accessibility-first by default (ARIA, keyboard navigation)
 - Focus-visible visibile con outline indigo
-- Skip link per screen reader
+- Skip link per screen reader *(pianificato — non ancora implementato)*
 - Testi alternativi per avatar e icone decorative

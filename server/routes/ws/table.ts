@@ -32,6 +32,16 @@ function context( peer: { context: Record<string, unknown> } ): GamePeerContext 
 
 /**
  *
+ * @param tableSessionId
+ */
+function topic( tableSessionId: string ): string {
+
+    return `game-${ tableSessionId }`;
+
+}
+
+/**
+ *
  * @param peer
  * @param peer.send
  * @param message
@@ -46,11 +56,16 @@ function emit( peer: { send( data: string ): void }, message: ServerMessage ): v
  *
  * @param peer
  * @param peer.publish
+ * @param tableSessionId
  * @param message
  */
-function broadcast( peer: { publish( topic: string, data: string ): void }, message: ServerMessage ): void {
+function broadcast(
+    peer: { publish( t: string, data: string ): void },
+    tableSessionId: string,
+    message: ServerMessage
+): void {
 
-    peer.publish( 'game', JSON.stringify( message ) );
+    peer.publish( topic( tableSessionId ), JSON.stringify( message ) );
 
 }
 
@@ -66,15 +81,12 @@ export default defineWebSocketHandler( {
         if( ! tableSessionId || ! playerId || ! nickname || ! color )
             throw new Response( 'Missing params', { status: 400 } );
 
-        return {
-            context: {
-                color,
-                nickname,
-                playerId,
-                tableSessionId,
-            },
-            namespace: `table-${ tableSessionId }`,
-        };
+        const context_ = request.context as unknown as GamePeerContext;
+
+        context_.tableSessionId = tableSessionId;
+        context_.playerId = playerId;
+        context_.nickname = nickname;
+        context_.color = color;
 
     },
 
@@ -92,9 +104,9 @@ export default defineWebSocketHandler( {
             nickname,
         } );
 
-        peer.subscribe( 'game' );
+        peer.subscribe( topic( tableSessionId ) );
 
-        broadcast( peer, {
+        broadcast( peer, tableSessionId, {
             player: {
                 color,
                 id: playerId,
@@ -177,7 +189,7 @@ export default defineWebSocketHandler( {
                 type: 'game:question',
             };
 
-            broadcast( peer, questionMessage );
+            broadcast( peer, tableSessionId, questionMessage );
             emit( peer, questionMessage );
             return;
 
@@ -203,7 +215,7 @@ export default defineWebSocketHandler( {
                 votedCount: result.votedCount,
             };
 
-            broadcast( peer, ack );
+            broadcast( peer, tableSessionId, ack );
             emit( peer, ack );
 
             if( result.allVoted ) {
@@ -217,7 +229,7 @@ export default defineWebSocketHandler( {
                         type: 'game:reveal',
                     };
 
-                    broadcast( peer, revealMessage );
+                    broadcast( peer, tableSessionId, revealMessage );
                     emit( peer, revealMessage );
 
                 }
@@ -258,7 +270,7 @@ export default defineWebSocketHandler( {
                     type: 'game:finished',
                 };
 
-                broadcast( peer, finishedMessage );
+                broadcast( peer, tableSessionId, finishedMessage );
                 emit( peer, finishedMessage );
 
             } else {
@@ -271,7 +283,7 @@ export default defineWebSocketHandler( {
                     type: 'game:question',
                 };
 
-                broadcast( peer, questionMessage );
+                broadcast( peer, tableSessionId, questionMessage );
                 emit( peer, questionMessage );
 
             }
@@ -291,7 +303,7 @@ export default defineWebSocketHandler( {
 
             setTimeout( () => {
 
-                broadcast( peer, {
+                broadcast( peer, tableSessionId, {
                     playerId: player.id,
                     type: 'player:left',
                 } );

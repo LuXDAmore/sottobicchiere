@@ -67,19 +67,23 @@ app/
 ├── components/      Componenti Vue riutilizzabili
 ├── composables/     Composable Vue
 ├── layouts/         Layout Nuxt (default, game)
-├── locales/         File i18n (it.json, en.json)
 ├── pages/           Route Nuxt
+├── stores/          Pinia stores
 └── app.vue          Entry point
+
+i18n/
+└── locales/         File i18n (it.json, en.json)
 
 server/
 ├── api/             API Nuxt/Nitro
 ├── db/              Schema Drizzle e migrazioni
-└── plugins/         Plugin Nitro
+├── routes/ws/       WebSocket handlers Nitro
+├── tasks/           Scheduled tasks Nitro
+└── utils/           Utility server-side
 
 shared/              Tipi e utility cross-runtime
 public/              Asset statici
 docs/                Documentazione tecnica e di prodotto
-design/              Asset e guide di design
 ```
 
 ## Shared Runtime

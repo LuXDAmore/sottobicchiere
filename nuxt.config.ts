@@ -203,6 +203,7 @@ export default defineNuxtConfig(
             '@nuxt/ui',
             'lenis/nuxt',
             'nuxt-security',
+            'nuxt-qrcode',
             '@nuxtjs/seo',
             '@pinia/nuxt',
             'pinia-plugin-persistedstate/nuxt',

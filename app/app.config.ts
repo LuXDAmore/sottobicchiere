@@ -1,6 +1,6 @@
 // Sottobicchiere — App Config (Nuxt UI v4)
 // Palette "Notte Italiana": Indigo primary + Violet secondary + Amber accent
-// I token di colore sono definiti in ui.css via @theme static.
+// I token di colore custom sono definiti in app/assets/styles/ui.css.
 
 export default defineAppConfig( {
 

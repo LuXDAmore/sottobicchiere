@@ -13,6 +13,9 @@
     "table": {
         "page_title": "Tavolo {n} — {venue}",
         "table_number": "Tavolo {n}",
+        "qr_page_title": "QR Code — Tavolo {n}",
+        "qr_instruction": "Scansiona il QR code con il tuo telefono, oppure clicca il link qui sotto.",
+        "qr_open_link": "Apri il link direttamente",
         "invalid_qr_title": "QR code non valido",
         "invalid_qr_description": "Il QR code non è riconosciuto o è scaduto. Chiedi al personale del locale.",
         "join_title": "Entra nel gioco",

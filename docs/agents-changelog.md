@@ -37,8 +37,8 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - `app/pages/index.vue` — creata welcome page
 - `app/layouts/default.vue` — creato layout principale
 - `app/layouts/game.vue` — creato layout in-game full-screen
-- `app/locales/it.json` — create traduzioni italiane MVP
-- `app/locales/en.json` — create traduzioni inglesi MVP
+- `i18n/locales/it.json` — create traduzioni italiane MVP
+- `i18n/locales/en.json` — create traduzioni inglesi MVP
 
 **Database**:
 - `server/db/schema.ts` — creato schema Drizzle MVP (venues, tables, table_sessions, player_sessions, groups)
