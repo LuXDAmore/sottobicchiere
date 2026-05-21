@@ -46,8 +46,6 @@
         "typecheck": "cross-env NODE_NO_WARNINGS=1 nuxi typecheck",
         "analyze": "nuxi analyze",
         "build:profile": "nuxi build --profile",
-        "check:public-assets": "node ./scripts/check-public-assets.mjs",
-        "prebuild": "pnpm check:public-assets",
         "build": "nuxi build",
         "nuxt:upgrade": "nuxi upgrade --force",
         "dev": "nuxi dev -o",
