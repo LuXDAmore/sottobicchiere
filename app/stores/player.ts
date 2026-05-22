@@ -1,10 +1,11 @@
 import type { JoinResponse } from '../../shared/types';
+import type { PlayerColor } from '../../shared/utils/colors';
 
 import { defineStore } from 'pinia';
 
 interface PlayerState {
     playerId: string | null;
-    playerColor: string | null;
+    playerColor: PlayerColor | null;
     playerNickname: string | null;
     tableSessionId: string | null;
     tableNumber: number | null;

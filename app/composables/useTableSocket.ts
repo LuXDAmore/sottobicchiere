@@ -19,27 +19,32 @@ export interface ThumbsClientState {
 export function useTableSocket() {
 
     const playerStore = usePlayerStore()
+        , { protocol, host } = useRequestURL()
 
         , players = ref<WsPlayer[]>( [] )
         , gameState = ref<ThumbsClientState | null>( null )
+        , wsError = ref<string | null>( null )
 
-        , wsUrl = computed( () => {
+        , wsUrl = computed<string | undefined>( () => {
 
-            if( ! playerStore.tableSessionId || ! playerStore.playerId ) return null;
+            if( ! playerStore.tableSessionId || ! playerStore.playerId ) return;
 
-            const parameters = new URLSearchParams( {
-                color: playerStore.playerColor ?? '',
-                nickname: playerStore.playerNickname ?? '',
-                playerId: playerStore.playerId,
-                tableSessionId: playerStore.tableSessionId,
-            } );
+            const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
+                , parameters = new URLSearchParams( {
+                    color: playerStore.playerColor ?? '',
+                    nickname: playerStore.playerNickname ?? '',
+                    playerId: playerStore.playerId,
+                    tableSessionId: playerStore.tableSessionId,
+                } );
 
-            return `/ws/table?${ parameters.toString() }`;
+            return `${ wsProtocol }//${ host }/ws/table?${ parameters.toString() }`;
 
         } )
 
-        , { send: wsSend, status, open, close } = useWebSocket(
-            wsUrl as Ref<string>,
+        , {
+            send: wsSend, status, open, close,
+        } = useWebSocket(
+            wsUrl,
             {
                 autoReconnect: {
                     delay: 2000,
@@ -167,6 +172,13 @@ export function useTableSocket() {
 
             }
 
+            case 'error': {
+
+                wsError.value = message.message;
+                break;
+
+            }
+
             default: {
 
                 break;
@@ -243,6 +255,7 @@ export function useTableSocket() {
         startGame,
         status,
         vote,
+        wsError,
     };
 
 }

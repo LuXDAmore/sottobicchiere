@@ -289,23 +289,27 @@
     const route = useRoute()
           , { t, locale } = useI18n()
           , playerStore = usePlayerStore()
+          , localePath = useLocalePath()
 
           , venueSlug = route.params.venue as string
-          , qrToken = route.params.token as string;
+          , qrToken = route.params.token as string
 
-    // Guard
+          , {
+              players, gameState, status, open, close, isHost, startGame, vote, nextRound,
+          } = useTableSocket();
+
     onMounted( () => {
 
-        if( ! playerStore.isJoined || playerStore.isExpired )
-            navigateTo( `/${ venueSlug }/table/${ qrToken }` );
+        if( ! playerStore.isJoined || playerStore.isExpired ) {
+
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
+            return;
+
+        }
+        open();
 
     } );
 
-    const {
-        players, gameState, status, open, close, isHost, startGame, vote, nextRound,
-    } = useTableSocket();
-
-    onMounted( () => open() );
     onUnmounted( () => close() );
 
     const sortedPlayers = computed( () => {
@@ -323,7 +327,7 @@
     function goToLobby() {
 
         close();
-        navigateTo( `/${ venueSlug }/table/${ qrToken }/lobby` );
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
 
     }
 

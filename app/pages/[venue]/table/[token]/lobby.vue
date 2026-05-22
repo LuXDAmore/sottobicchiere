@@ -149,30 +149,34 @@
     const route = useRoute()
           , { t } = useI18n()
           , playerStore = usePlayerStore()
+          , localePath = useLocalePath()
 
           , venueSlug = route.params.venue as string
-          , qrToken = route.params.token as string;
+          , qrToken = route.params.token as string
 
-    // Guard: if not joined, redirect to join page
+          , {
+              players, gameState, status, open, close,
+          } = useTableSocket();
+
     onMounted( () => {
 
-        if( ! playerStore.isJoined || playerStore.isExpired )
-            navigateTo( `/${ venueSlug }/table/${ qrToken }` );
+        if( ! playerStore.isJoined || playerStore.isExpired ) {
+
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
+            return;
+
+        }
+        open();
 
     } );
 
-    const {
-        players, gameState, status, open, close,
-    } = useTableSocket();
-
-    onMounted( () => open() );
     onUnmounted( () => close() );
 
     // If game starts (server sends game:question), navigate to game page
     watch( gameState, state => {
 
         if( state && state.phase === 'voting' && state.roundIndex === 0 )
-            navigateTo( `/${ venueSlug }/table/${ qrToken }/game/thumbs` );
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
 
     } );
 
@@ -181,7 +185,7 @@
      */
     function launchThumbs() {
 
-        navigateTo( `/${ venueSlug }/table/${ qrToken }/game/thumbs` );
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
 
     }
 
@@ -192,7 +196,7 @@
 
         close();
         playerStore.leave();
-        navigateTo( `/${ venueSlug }/table/${ qrToken }` );
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
 
     }
 

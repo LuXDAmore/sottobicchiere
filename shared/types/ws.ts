@@ -1,9 +1,11 @@
 // Tipi messaggi WebSocket condivisi client ↔ server
 
+import type { PlayerColor } from '../utils/colors';
+
 export interface WsPlayer {
     id: string;
     nickname: string;
-    color: string;
+    color: PlayerColor;
 }
 
 // ── Client → Server ─────────────────────────────────────────────────────────

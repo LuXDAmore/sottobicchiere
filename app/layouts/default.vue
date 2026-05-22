@@ -8,7 +8,7 @@
                 <nuxt-link
                     :aria-label="$t('app.name')"
                     class="flex font-bold font-display gap-2 items-center text-highlighted text-xl"
-                    to="/"
+                    :to="localePath('/')"
                 >
                     <u-icon
                         class="size-6 text-primary-500"
@@ -58,6 +58,7 @@
 
     const colorMode = useColorMode()
           , { locale: currentLocale, locales, setLocale } = useI18n()
+          , localePath = useLocalePath()
 
           , isDark = computed( () => colorMode.value === 'dark' );
 

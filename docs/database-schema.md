@@ -7,7 +7,7 @@ Stack: Neon PostgreSQL + Drizzle ORM (`server/db/schema.ts`)
 - **Effimero per i giocatori**: `table_sessions`, `player_sessions`, `groups` hanno TTL (8h). Puliti ogni notte dal task `cleanup-expired-sessions`.
 - **Permanente per le venue**: `venues` e `tables` non vengono cancellate.
 - **Nessun PII**: i nickname sono scelti liberamente, nessun dato identificativo reale.
-- **Game state non in DB**: lo stato dei giochi vive in Vercel KV (Redis) per velocità real-time.
+- **Game state non in DB**: lo stato dei giochi vive in memoria Nitro (`server/utils/game-state.ts`), non persistente tra riavvii.
 
 ## Tabelle
 
@@ -88,23 +88,26 @@ const PLAYER_COLORS = [
 ];
 ```
 
-## Game State (fuori DB — Vercel KV)
+## Game State (fuori DB — in-memory Nitro)
 
-Lo stato dei giochi è strutturato come JSON in Redis con TTL allineato alla sessione:
+Lo stato dei giochi vive in `server/utils/game-state.ts` come `Map<tableSessionId, TableSession>` process-local. Non è persistente tra riavvii del server.
 
-```
-Key pattern: game:{table_session_id}:{game_id}
-TTL: 8 ore
+```typescript
+// Struttura attuale
+TableSession {
+  players: Map<playerId, WsPlayer>
+  peerToPlayer: Map<peerId, playerId>
+  game: ThumbsGameState | null
+}
 
-Struttura:
-{
-  gameId: string,
-  gameType: 'who-am-i' | 'trivia' | ...,
-  status: 'waiting' | 'playing' | 'finished',
-  round: number,
-  players: { [playerId]: { score, status, answer } },
-  currentQuestion: object | null,
-  startedAt: ISO string,
+ThumbsGameState {
+  phase: 'voting' | 'reveal' | 'finished'
+  roundIndex: number
+  totalRounds: number
+  currentQuestion: { it: string; en: string }
+  votes: Map<playerId, 'up' | 'down'>
+  scores: Map<playerId, number>
+  hostPlayerId: string
 }
 ```
 

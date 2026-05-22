@@ -1,10 +1,10 @@
-import type { Question } from './questions';
 import type { WsPlayer } from '../../shared/types/ws';
 
-import { THUMBS_QUESTIONS, shuffleQuestions } from './questions';
+import { type Question, THUMBS_QUESTIONS, shuffleQuestions } from './questions';
 
 export interface TableSession {
-    players: Map<string, WsPlayer & { peerId: string }>;
+    players: Map<string, WsPlayer>;
+    peerToPlayer: Map<string, string>;
     game: ThumbsGameState | null;
 }
 
@@ -33,12 +33,23 @@ export function getOrCreateSession( tableSessionId: string ): TableSession {
 
         session = {
             game: null,
+            peerToPlayer: new Map(),
             players: new Map(),
         };
         sessions.set( tableSessionId, session );
 
     }
     return session;
+
+}
+
+/**
+ *
+ * @param tableSessionId
+ */
+export function findSession( tableSessionId: string ): TableSession | undefined {
+
+    return sessions.get( tableSessionId );
 
 }
 
@@ -54,10 +65,8 @@ export function addPlayer(
     player: WsPlayer
 ): void {
 
-    session.players.set( peerId, {
-        ... player,
-        peerId,
-    } );
+    session.players.set( player.id, player );
+    session.peerToPlayer.set( peerId, player.id );
 
 }
 
@@ -68,15 +77,25 @@ export function addPlayer(
  */
 export function removePlayer( session: TableSession, peerId: string ): WsPlayer | null {
 
-    const player = session.players.get( peerId );
+    const playerId = session.peerToPlayer.get( peerId );
+
+    if( ! playerId ) return null;
+    session.peerToPlayer.delete( peerId );
+
+    // If another peer still represents this player (reconnect overlap), keep them in
+    const hasActivePeer = [ ... session.peerToPlayer.values() ].includes( playerId );
+
+    if( hasActivePeer ) return null;
+
+    const player = session.players.get( playerId );
 
     if( ! player ) return null;
-    session.players.delete( peerId );
+    session.players.delete( playerId );
 
     if( session.game ) {
 
-        session.game.votes.delete( player.id );
-        if( session.game.hostPlayerId === player.id ) {
+        session.game.votes.delete( playerId );
+        if( session.game.hostPlayerId === playerId ) {
 
             const next = session.players.values().next().value;
 
@@ -95,11 +114,7 @@ export function removePlayer( session: TableSession, peerId: string ): WsPlayer 
  */
 export function getPlayers( session: TableSession ): WsPlayer[] {
 
-    return [ ... session.players.values() ].map( p => ( {
-        color: p.color,
-        id: p.id,
-        nickname: p.nickname,
-    } ) );
+    return [ ... session.players.values() ];
 
 }
 

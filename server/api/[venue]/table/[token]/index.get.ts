@@ -1,4 +1,9 @@
-import { and, eq, gt } from 'drizzle-orm';
+import {
+    and,
+    desc,
+    eq,
+    gt,
+} from 'drizzle-orm';
 
 import { tableSessions, tables, venues } from '../../../../db/schema';
 
@@ -48,6 +53,7 @@ export default defineEventHandler( async event => {
                     gt( tableSessions.expiresAt, now )
                 )
             )
+            .orderBy( desc( tableSessions.startedAt ) )
             .limit( 1 )
             .then( ( rows: { id: string }[] ) => rows[ 0 ] ?? null );
 

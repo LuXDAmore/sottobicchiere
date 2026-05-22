@@ -1,8 +1,10 @@
 import type { ClientMessage, ServerMessage } from '../../../shared/types/ws';
+import type { PlayerColor } from '../../../shared/utils/colors';
 
 import {
     addPlayer,
     cleanupSession,
+    findSession,
     getOrCreateSession,
     getPlayers,
     nextRound,
@@ -74,7 +76,7 @@ export default defineWebSocketHandler( {
         const session = getOrCreateSession( tableSessionId );
 
         addPlayer( session, peer.id, {
-            color,
+            color: color as PlayerColor,
             id: playerId,
             nickname,
         } );
@@ -83,7 +85,7 @@ export default defineWebSocketHandler( {
 
         broadcast( peer, tableSessionId, {
             player: {
-                color,
+                color: color as PlayerColor,
                 id: playerId,
                 nickname,
             },
@@ -95,18 +97,56 @@ export default defineWebSocketHandler( {
             type: 'players:sync',
         } );
 
-        // Re-sync game state for reconnecting players
-        if( session.game && session.game.phase === 'voting' ) {
+        // Re-sync game state for reconnecting players across all active phases
+        if( session.game ) {
 
             const g = session.game;
 
-            emit( peer, {
-                hostPlayerId: g.hostPlayerId,
-                question: g.currentQuestion,
-                roundIndex: g.roundIndex,
-                totalRounds: g.totalRounds,
-                type: 'game:question',
-            } );
+            switch( g.phase ) {
+                case 'voting': {
+
+                    emit( peer, {
+                        hostPlayerId: g.hostPlayerId,
+                        question: g.currentQuestion,
+                        roundIndex: g.roundIndex,
+                        totalRounds: g.totalRounds,
+                        type: 'game:question',
+                    } );
+                    break;
+
+                }
+                case 'reveal': {
+
+                    emit( peer, {
+                        hostPlayerId: g.hostPlayerId,
+                        question: g.currentQuestion,
+                        roundIndex: g.roundIndex,
+                        totalRounds: g.totalRounds,
+                        type: 'game:question',
+                    } );
+                    emit( peer, {
+                        scores: Object.fromEntries( g.scores ),
+                        type: 'game:reveal',
+                        votes: Object.fromEntries( g.votes ),
+                    } );
+                    break;
+
+                }
+                case 'finished': {
+
+                    emit( peer, {
+                        scores: Object.fromEntries( g.scores ),
+                        type: 'game:finished',
+                    } );
+                    break;
+
+                }
+                default: {
+
+                    break;
+
+                }
+            }
 
         }
 
@@ -116,8 +156,19 @@ export default defineWebSocketHandler( {
 
         const url = new URL( peer.request.url ?? '', 'http://x' )
             , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? ''
-            , playerId = url.searchParams.get( 'playerId' ) ?? ''
-            , session = getOrCreateSession( tableSessionId );
+            , playerId = url.searchParams.get( 'playerId' ) ?? '';
+
+        if( ! tableSessionId || ! playerId ) {
+
+            emit( peer, {
+                message: 'Missing connection params',
+                type: 'error',
+            } );
+            return;
+
+        }
+
+        const session = getOrCreateSession( tableSessionId );
 
         let data: ClientMessage;
 
@@ -282,10 +333,17 @@ export default defineWebSocketHandler( {
 
             setTimeout( () => {
 
-                broadcast( peer, tableSessionId, {
-                    playerId: player.id,
-                    type: 'player:left',
-                } );
+                // Only broadcast player:left if the player hasn't reconnected during the grace period
+                const currentSession = findSession( tableSessionId );
+
+                if( ! currentSession || ! currentSession.players.has( player.id ) ) {
+
+                    broadcast( peer, tableSessionId, {
+                        playerId: player.id,
+                        type: 'player:left',
+                    } );
+
+                }
 
             }, 500 );
 

@@ -125,9 +125,12 @@
 
 <script setup lang="ts">
 
+    import type { JoinResponse } from '../../../../../shared/types';
+
     const route = useRoute()
           , { t } = useI18n()
           , playerStore = usePlayerStore()
+          , localePath = useLocalePath()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
@@ -150,7 +153,7 @@
             && ! playerStore.isExpired
             && playerStore.venueSlug === venueSlug
         )
-            navigateTo( `/${ venueSlug }/table/${ qrToken }/lobby` );
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
 
     } );
 
@@ -177,7 +180,7 @@
             } );
 
             playerStore.join( data );
-            await navigateTo( `/${ venueSlug }/table/${ qrToken }/lobby` );
+            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
 
         } catch( exception: unknown ) {
 

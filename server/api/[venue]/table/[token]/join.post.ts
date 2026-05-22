@@ -1,5 +1,6 @@
 import {
     and,
+    desc,
     eq,
     gt,
     sql,
@@ -79,6 +80,7 @@ export default defineEventHandler( async event => {
         .select( { id: tableSessions.id } )
         .from( tableSessions )
         .where( and( eq( tableSessions.tableId, tableRow.id ), gt( tableSessions.expiresAt, now ) ) )
+        .orderBy( desc( tableSessions.startedAt ) )
         .limit( 1 )
         .then( ( rows: { id: string }[] ) => rows[ 0 ] ?? null );
 

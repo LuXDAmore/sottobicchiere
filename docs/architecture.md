@@ -11,7 +11,7 @@ Sottobicchiere è una PWA multi-tenant per bar e locali con tavoli. Ogni install
 2. Nuxt SSR      →  valida qr_token, recupera table_session (o ne crea una nuova)
 3. Player join   →  sceglie nickname + colore/gruppo
 4. Lobby         →  grid giocatori live (WebSocket), countdown, scelta gioco
-5. Gioco         →  stato in Vercel KV (Redis), sync WebSocket
+5. Gioco         →  stato in-memory Nitro (Map per sessione), sync WebSocket
 6. Fine gioco    →  risultati, animazione vittoria, torna alla lobby
 7. Cleanup       →  table_session.expires_at (TTL 8h), cron Nitro alle 03:00
 ```
@@ -27,12 +27,14 @@ Sottobicchiere è una PWA multi-tenant per bar e locali con tavoli. Ogni install
 ┌─────────────────▼───────────────────────────────────┐
 │                 Nitro (Edge/Vercel)                   │
 │  API routes  ·  WebSocket handlers  ·  Scheduled tasks│
-└──────┬───────────────────┬──────────────────────────┘
-       │ SQL (Drizzle ORM) │ KV (ioredis)
-┌──────▼──────┐    ┌───────▼──────────────────────────┐
-│ Neon Postgres│    │ Vercel Redis                      │
-│ (dati base) │    │ (game state real-time, effimero)   │
-└─────────────┘    └──────────────────────────────────┘
+│  In-memory game state (Map<sessionId, TableSession>) │
+└──────┬──────────────────────────────────────────────┘
+       │ SQL (Drizzle ORM)
+┌──────▼──────┐
+│ Neon Postgres│
+│ (venue/table │
+│  sessions)   │
+└─────────────┘
 ```
 
 ## Componenti chiave
@@ -50,10 +52,10 @@ Completamente anonima: solo nickname + colore assegnato randomicamente. Nessun a
 I giocatori possono formare squadre o stare da soli. Un tavolo può avere più gruppi (es: squadre che competono).
 
 ### Game State (stato gioco)
-Lo stato dei giochi vive in Vercel KV (Redis) per massima velocità real-time. Non è persistente: viene cancellato al termine della sessione.
+Lo stato dei giochi vive in memoria Nitro (`server/utils/game-state.ts`) — una `Map<tableSessionId, TableSession>` process-local. Non è persistente tra riavvii del server. Adatto per deployment single-instance (locale, Vercel single-region). In futuro potrà essere migrato su Vercel KV (Redis) per multi-instance.
 
 ### WebSocket (Nitro)
-Nitro espone WebSocket via `server/routes/ws/table.ts` (accessibile su `/ws/table?tableSessionId=...`). Ogni client si connette a un namespace isolato per tavolo. Il server fa da relay per gli aggiornamenti di stato tramite pub/sub crossws.
+Nitro espone WebSocket via `server/routes/ws/table.ts` (accessibile su `/ws/table?tableSessionId=...&playerId=...`). Il server usa pub/sub crossws isolato per tavolo (topic `game-{tableSessionId}`). Il client usa `useWebSocket` da `@vueuse/core` con URL assoluto `wss://`.
 
 ## Multi-tenant
 

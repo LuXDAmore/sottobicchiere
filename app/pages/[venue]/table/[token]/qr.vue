@@ -56,7 +56,7 @@
             <!-- Clickable link -->
             <nuxt-link
                 class="break-all font-semibold hover:underline max-w-xs text-center text-primary-500 text-sm"
-                :to="`/${venueSlug}/table/${qrToken}`"
+                :to="localePath(`/${venueSlug}/table/${qrToken}`)"
             >
                 {{ $t('table.qr_open_link') }}
             </nuxt-link>
@@ -70,6 +70,7 @@
 
     const route = useRoute()
           , { t } = useI18n()
+          , localePath = useLocalePath()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
