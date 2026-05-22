@@ -73,9 +73,12 @@ export default defineEventHandler( async event => {
     }
 
     const now = new Date()
-        , expiresAt = new Date( now.getTime() + 8 * 60 * 60 * 1000 );
+        , expiresAt = new Date( now.getTime() + ( 8 * 60 * 60 * 1000 ) );
 
     // 2. Trova o crea la sessione tavolo attiva
+    // Note: select-then-insert is non-atomic; neon-http doesn't support transactions.
+    // A duplicate session on simultaneous joins is harmless — both rows expire in 8h
+    // and subsequent lookups (orderBy startedAt desc) will consistently pick the latest.
     let session: { id: string; expiresAt: Date } | null = await db
         .select( {
             expiresAt: tableSessions.expiresAt,

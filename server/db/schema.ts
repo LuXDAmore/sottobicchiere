@@ -41,7 +41,8 @@ export const tableSessions = pgTable(
         id: uuid( 'id' ).primaryKey().defaultRandom(),
         tableId: uuid( 'table_id' ).notNull().references( () => tables.id, { onDelete: 'cascade' } ),
         startedAt: timestamp( 'started_at', { withTimezone: true } ).notNull().defaultNow(),
-        expiresAt: timestamp( 'expires_at', { withTimezone: true } ).notNull(),
+        expiresAt: timestamp( 'expires_at', { withTimezone: true } ).notNull()
+            .$defaultFn( () => new Date( Date.now() + ( 8 * 60 * 60 * 1000 ) ) ),
     },
     t => [ index( 'idx_table_sessions_expires_at' ).on( t.expiresAt ) ]
 );

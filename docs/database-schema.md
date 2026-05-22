@@ -41,7 +41,7 @@ Sessione effimera aperta per un tavolo.
 id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
 table_id    uuid NOT NULL REFERENCES tables(id) ON DELETE CASCADE
 started_at  timestamptz NOT NULL DEFAULT now()
-expires_at  timestamptz NOT NULL  -- calcolato lato API: now() + 8h (nessun default DB)
+expires_at  timestamptz NOT NULL  -- default Drizzle: now() + 8h; sovrascritto lato API se necessario
 ```
 
 Index: `expires_at` (per il cleanup task notturno)
@@ -53,7 +53,7 @@ Giocatore anonimo in una sessione tavolo.
 ```sql
 id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
 table_session_id uuid NOT NULL REFERENCES table_sessions(id) ON DELETE CASCADE
-nickname         text NOT NULL                 -- scelto dal giocatore, max 20 caratteri
+nickname         text NOT NULL                 -- scelto dal giocatore (max 20 car. validati da Zod, nessun CHECK DB)
 color            text NOT NULL                 -- hex colore identità (#6366F1, #8B5CF6, ecc.)
 group_id         uuid REFERENCES groups(id)    -- null = giocatore solitario
 joined_at        timestamptz NOT NULL DEFAULT now()
