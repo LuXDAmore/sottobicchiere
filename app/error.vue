@@ -1,25 +1,18 @@
 <template>
-    <u-app :locale="it" :toaster="toaster">
+    <u-app :locale="uiLocale" :toaster="toaster">
 
-        <nuxt-loading-indicator color="oklch(70.4% 0.191 22.216)" />
+        <nuxt-loading-indicator color="oklch(0.5602 0.2295 264.05)" />
 
-        <nuxt-layout name="error">
+        <nuxt-layout>
 
             <u-error
                 as="div"
                 class="absolute inset-0 m-auto max-w-100 min-h-screen z-20"
-                :clear="{
-                    color: 'neutral',
-                    size: 'xl',
-                    icon: 'lucide:arrow-left',
-                    class: 'rounded-md',
-                    variant: 'subtle',
-                    label: 'Torna alla dashboard',
-                }"
+                :clear="clearProperties"
                 :error="error"
-                redirect="/"
+                :redirect="localePath('/')"
                 :ui="{
-                    message: 'text-white text-xl!',
+                    message: 'text-highlighted text-xl!',
                 }"
             />
 
@@ -30,17 +23,10 @@
 
 <script setup lang="ts">
 
-    // Nuxt - UI
-    import { it } from '@nuxt/ui/locale';
+    import { en as enLocale, it as itLocale } from '@nuxt/ui/locale';
 
-    // Third Party - Zod
-    import { config } from 'zod';
-    import { it as zodLocaleIt } from 'zod/locales';
-
-    // Types
     import type { ToasterProps } from '@nuxt/ui';
 
-    // Types
     import type { NuxtError } from '#app';
 
     interface Properties {
@@ -49,11 +35,19 @@
 
     defineProps<Properties>();
 
-    // Notifications
-    const toaster: ToasterProps = { position: 'bottom-right' };
+    const { t, locale } = useI18n()
+          , localePath = useLocalePath()
+          , uiLocale = computed( () => ( locale.value === 'it' ? itLocale : enLocale ) )
+          , toaster: ToasterProps = { position: 'bottom-right' }
+          , clearProperties = computed( () => ( {
+              class: 'rounded-md',
+              color: 'neutral' as const,
+              icon: 'lucide:arrow-left',
+              label: t( 'error.back' ),
+              size: 'xl' as const,
+              variant: 'subtle' as const,
+          } ) );
 
-    useHead( { title: "Ooops! C'è stato un errore" } );
-
-    config( zodLocaleIt() );
+    useHead( { title: computed( () => t( 'error.title' ) ) } );
 
 </script>

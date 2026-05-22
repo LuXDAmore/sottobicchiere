@@ -1,16 +1,19 @@
-Spec: WeGree Application
+Spec: Sottobicchiere Application
 Platform: TypeScript/Nuxt 4/Nitro
 
 Purpose:
-  Define the top-level SpecDD contract for the WeGree B2B telematic auction marketplace.
-  Keep implementation bounded by source-adjacent specs, product MVP documentation, and existing Nuxt conventions.
+  Define the top-level SpecDD contract for Sottobicchiere.
+  Sottobicchiere è una PWA gaming per bar e locali con tavoli.
+  Ogni tavolo ha un QR code; i clienti lo scansionano, scelgono un nickname e un gruppo,
+  e giocano insieme o in competizione. Privacy-first: nessun dato persistente per i giocatori.
 
 Structure:
   app: Nuxt client application, pages, layouts, stores, composables, middleware, and UI utilities.
-  server: Nitro API, database schema, server utilities, tasks, middleware, plugins, and routes.
+  server: Nitro API, WebSocket handlers, database schema, server utilities, tasks.
   shared: Cross-runtime TypeScript types and pure utilities shared by app, server, and tests.
   test: Vitest and Playwright tests.
   docs: Human-facing architecture, product, QA, and operational documentation.
+  design: Design system, palette, typography, motion guidelines, and visual assets.
   scripts: Repository automation and local operational scripts.
   public: Static assets served by Nuxt.
 
@@ -27,6 +30,7 @@ Owns:
   shared/
   test/
   docs/
+  design/
   scripts/
   public/
 
@@ -43,6 +47,7 @@ Can modify:
   shared/
   test/
   docs/
+  design/
   scripts/
   public/
 
@@ -51,26 +56,25 @@ Can read:
   TODO.md
   docs/architecture.md
   docs/database-schema.md
-  docs/moduli-business-aste.md
-  docs/modulo-mobiliare-flusso-compratore.md
-  docs/cauzioni-stati-flusso.md
-  docs/integrazione-zucchetti-01machinery.md
-  docs/qa-mvp-status.md
+  docs/design.md
+  docs/agents-changelog.md
 
 Must:
-  Use Nuxt 4, Nitro, Vue 3, TypeScript, Nuxt UI, NuxtHub, Neon PostgreSQL, Better Auth, Stripe, Resend, Vercel Redis, and Vercel Blob according to existing project configuration.
-  Preserve Italian-first product terminology defined by the documentation and existing UI copy.
-  Keep auction, lot, bid, deposit, payment, DM25, and Zucchetti behavior aligned with the MVP documents under docs/.
-  Maintain pseudonymized public auction payloads; public REST and realtime responses must not expose private identity data.
-  Update relevant .sdd specs, tests, TODO.md, and docs/agents-changelog.md in the same change when behavior or ownership changes.
+  Usare Nuxt 4, Nitro, Vue 3, TypeScript, Nuxt UI, NuxtHub, Neon PostgreSQL, Drizzle ORM,
+    Vercel Redis (KV), Vercel Blob secondo la configurazione esistente.
+  Mantenere la privacy dei giocatori: nessun dato PII salvato, sessioni effimere con TTL.
+  Mantenere i18n con italiano come lingua primaria.
+  Usare WebSocket (Nitro) per la sincronizzazione real-time dello stato di gioco.
+  Mantenere il design system "Notte Italiana" (Indigo + Violet + Amber + Stone dark).
+  Aggiornare relevant .sdd specs, tests, TODO.md, e docs/agents-changelog.md in ogni sessione.
 
 Must not:
-  Reintroduce Compra Subito/Buy Now into MVP flows unless a later spec explicitly changes the product scope.
-  Add Supabase as an application dependency or implementation path.
-  Bypass Better Auth server-side identity checks for protected user or backoffice behavior.
-  Bypass Ready-to-BUY, caution, authorization, or ban checks before accepting bids.
-  Expose legal names, internal user ids, fiscal data, or documents in public auction, lot, bid, or websocket payloads.
-  Perform broad refactors outside the nearest applicable spec authority.
+  Salvare PII o dati identificativi dei giocatori in modo permanente nel database.
+  Implementare autenticazione utente (better-auth, OAuth) nell'MVP — rimandato a v2.
+  Implementare pagamenti (Stripe) nell'MVP — rimandato a v2.
+  Implementare email transazionali (Resend) nell'MVP — rimandato a v2.
+  Aggiungere dipendenze di terze parti per funzionalità già coperte dallo stack esistente.
+  Eseguire refactor ampi al di fuori dell'autorità dell'applicazione spec più vicina.
 
 Depends on:
   Nuxt 4
@@ -80,19 +84,25 @@ Depends on:
   Nuxt UI
   NuxtHub
   Neon PostgreSQL
-  Better Auth
-  Stripe
-  Resend
+  Drizzle ORM
   Vercel Redis
   Vercel Blob
 
 Tasks:
-  [x] Add top-level SpecDD application contract.
-  [ ] Add narrower feature specs for bidding, deposits, payments, DM25, auth, backoffice, and Zucchetti before substantial changes in those areas.
-  [ ] Add component-level specs for buyer-facing auction and lot UI before major UI changes.
-  [ ] Add API-level specs for high-risk Nitro endpoints before changing request/response behavior.
+  [x] Bootstrap documentazione: README.md, Agents.md, .specdd, app.sdd.
+  [x] Design system "Notte Italiana": palette, tipografia, CSS tokens.
+  [x] nuxt.config.ts: pulizia WeGree, configurazione Sottobicchiere.
+  [x] app.config.ts: tema Nuxt UI Sottobicchiere.
+  [ ] Schema DB Drizzle: venues, tables, table_sessions, player_sessions, groups.
+  [ ] Layout default e game.
+  [ ] Pagina welcome (index): QR scan prompt, theme toggle, language switcher.
+  [ ] Rotte venue: /[venue]/table/[token].
+  [ ] WebSocket handler per game state real-time.
+  [ ] Primo gioco MVP.
+  [ ] Scheduled task: cleanup sessioni scadute.
+  [ ] Test unit e integration per schema e composables.
 
 Done when:
-  The relevant ancestor spec chain can be resolved before editing code.
-  New implementation work has a nearest local spec that defines ownership, boundaries, and done criteria.
-  Code, tests, specs, TODO.md, and docs/agents-changelog.md remain aligned.
+  La relevant ancestor spec chain può essere risolta prima di editare il codice.
+  Il nuovo lavoro di implementazione ha una spec locale che definisce ownership, boundaries, e done criteria.
+  Codice, test, spec, TODO.md e docs/agents-changelog.md rimangono allineati.

@@ -1,0 +1,74 @@
+{
+    "app": {
+        "name": "Sottobicchiere",
+        "tagline": "Giochi da tavolo per il tuo locale",
+        "description": "PWA gaming per bar e locali: giochi multiplayer con il QR code del tuo tavolo"
+    },
+    "welcome": {
+        "page_title": "Benvenuto",
+        "scan_title": "Scansiona il QR code",
+        "scan_description": "Trova il QR code sul tuo tavolo e scansionalo per entrare nella sessione di gioco.",
+        "privacy_note": "Nessun account necessario. I tuoi dati non vengono salvati."
+    },
+    "table": {
+        "page_title": "Tavolo {n} — {venue}",
+        "table_number": "Tavolo {n}",
+        "qr_page_title": "QR Code — Tavolo {n}",
+        "qr_instruction": "Scansiona il QR code con il tuo telefono, oppure clicca il link qui sotto.",
+        "qr_open_link": "Apri il link direttamente",
+        "invalid_qr_title": "QR code non valido",
+        "invalid_qr_description": "Il QR code non è riconosciuto o è scaduto. Chiedi al personale del locale.",
+        "join_title": "Entra nel gioco",
+        "join_description": "Scegli un nickname per partecipare alla sessione.",
+        "nickname_label": "Nickname",
+        "nickname_placeholder": "Come ti chiami?",
+        "group_label": "Gruppo (opzionale)",
+        "group_hint": "Gioca in squadra con gli amici al tuo tavolo",
+        "group_placeholder": "Nome del gruppo",
+        "join_button": "Entra",
+        "joining": "Ingresso in corso…",
+        "join_error_generic": "Errore durante l'ingresso. Riprova."
+    },
+    "lobby": {
+        "page_title": "Lobby — {venue}",
+        "players_title": "Giocatori",
+        "you": "tu",
+        "no_players": "Nessun giocatore ancora. Sei il primo!",
+        "games_title": "Giochi",
+        "games_coming_soon": "Giochi in arrivo",
+        "games_description": "I minigiochi multiplayer saranno disponibili presto. Restate connessi!",
+        "leave": "Esci",
+        "connecting": "Connessione in corso…",
+        "disconnected": "Connessione persa, riconnessione…",
+        "reconnect": "Riconnetti"
+    },
+    "game": {
+        "thumbs": {
+            "title": "Pollice Su",
+            "description": "Vota 👍 o 👎 su domande di opinione e sfida i tuoi amici!",
+            "players_range": "2+ giocatori",
+            "waiting_title": "Pronti a giocare?",
+            "waiting_description": "Aspetta che tutti si connettano, poi avvia il gioco.",
+            "start_button": "Inizia il gioco",
+            "need_players": "Servono almeno 2 giocatori per iniziare.",
+            "round": "Round {n} di {total}",
+            "yes": "Sì",
+            "no": "No",
+            "waiting_others": "{voted}/{total} hanno votato",
+            "waiting_host": "Aspetta che l'host avanzi al prossimo round…",
+            "scores": "Punteggi",
+            "next_round": "Prossimo round →",
+            "show_results": "Vedi risultati finali →",
+            "finished_title": "Fine del gioco!",
+            "play_again": "Gioca ancora",
+            "back_lobby": "Torna alla lobby"
+        }
+    },
+    "layout": {
+        "toggle_theme": "Cambia tema chiaro/scuro"
+    },
+    "error": {
+        "title": "Oops! C'è stato un errore",
+        "back": "Torna alla home"
+    }
+}

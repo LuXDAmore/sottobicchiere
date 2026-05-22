@@ -1,0 +1,74 @@
+{
+    "app": {
+        "name": "Sottobicchiere",
+        "tagline": "Table games for your venue",
+        "description": "Gaming PWA for bars and venues: multiplayer games with your table's QR code"
+    },
+    "welcome": {
+        "page_title": "Welcome",
+        "scan_title": "Scan the QR code",
+        "scan_description": "Find the QR code on your table and scan it to join the game session.",
+        "privacy_note": "No account needed. Your data is not saved."
+    },
+    "table": {
+        "page_title": "Table {n} — {venue}",
+        "table_number": "Table {n}",
+        "qr_page_title": "QR Code — Table {n}",
+        "qr_instruction": "Scan the QR code with your phone, or tap the link below.",
+        "qr_open_link": "Open the link directly",
+        "invalid_qr_title": "Invalid QR code",
+        "invalid_qr_description": "This QR code is not recognized or has expired. Ask the venue staff.",
+        "join_title": "Join the game",
+        "join_description": "Choose a nickname to join the session.",
+        "nickname_label": "Nickname",
+        "nickname_placeholder": "What's your name?",
+        "group_label": "Group (optional)",
+        "group_hint": "Play as a team with friends at your table",
+        "group_placeholder": "Group name",
+        "join_button": "Join",
+        "joining": "Joining…",
+        "join_error_generic": "Error while joining. Please try again."
+    },
+    "lobby": {
+        "page_title": "Lobby — {venue}",
+        "players_title": "Players",
+        "you": "you",
+        "no_players": "No players yet. You're the first!",
+        "games_title": "Games",
+        "games_coming_soon": "Games coming soon",
+        "games_description": "Multiplayer mini-games will be available soon. Stay connected!",
+        "leave": "Leave",
+        "connecting": "Connecting…",
+        "disconnected": "Connection lost, reconnecting…",
+        "reconnect": "Reconnect"
+    },
+    "game": {
+        "thumbs": {
+            "title": "Thumbs Up",
+            "description": "Vote 👍 or 👎 on opinion questions and challenge your friends!",
+            "players_range": "2+ players",
+            "waiting_title": "Ready to play?",
+            "waiting_description": "Wait for everyone to connect, then start the game.",
+            "start_button": "Start game",
+            "need_players": "You need at least 2 players to start.",
+            "round": "Round {n} of {total}",
+            "yes": "Yes",
+            "no": "No",
+            "waiting_others": "{voted}/{total} have voted",
+            "waiting_host": "Waiting for the host to advance to the next round…",
+            "scores": "Scores",
+            "next_round": "Next round →",
+            "show_results": "Show final results →",
+            "finished_title": "Game over!",
+            "play_again": "Play again",
+            "back_lobby": "Back to lobby"
+        }
+    },
+    "layout": {
+        "toggle_theme": "Toggle light/dark theme"
+    },
+    "error": {
+        "title": "Oops! Something went wrong",
+        "back": "Back to home"
+    }
+}

@@ -1,38 +1,30 @@
-// WeGree — App Config (Nuxt UI v4)
-// Le palette (wegree, navy) sono definite in ui.css via @theme static.
+// Sottobicchiere — App Config (Nuxt UI v4)
+// Palette "Notte Italiana": Indigo primary + Violet secondary + Amber accent
+// I token di colore custom sono definiti in app/assets/styles/ui.css.
 
 export default defineAppConfig( {
 
     ui: {
 
-        // ── Semantic color mapping ───────────────────────────
-        authForm: {
-            slots: {
-                base: 'space-y-4',
-                description: 'text-muted text-sm',
-                footer: 'text-center text-muted text-sm',
-                title: 'text-highlighted',
-            },
-        },
-
         badge: { slots: { base: 'font-semibold' } },
 
-        button: { slots: { base: 'font-semibold tracking-tight cursor-pointer transition-transform active:scale-[0.97]' } },
+        button: { slots: { base: 'font-semibold cursor-pointer transition-transform active:scale-[0.96] min-h-[52px] min-w-[52px]' } },
 
         card: {
             slots: {
                 body: 'sm:p-5',
-                root: 'rounded-2xl ring-1 ring-inset ring-neutral-200/70 dark:ring-neutral-800/70 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-md)] transition-shadow duration-300',
+                root: 'rounded-2xl ring-1 ring-inset ring-neutral-200/60 dark:ring-neutral-700/40 shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-md)] transition-shadow duration-300',
             },
         },
 
+        // ── Semantic color mapping ───────────────────────────
         colors: {
             error: 'red',
             info: 'sky',
-            neutral: 'wegree-gray',
-            primary: 'wegree',
-            secondary: 'navy',
-            success: 'wegree',
+            neutral: 'stone',
+            primary: 'indigo',
+            secondary: 'violet',
+            success: 'emerald',
             warning: 'amber',
         },
 
@@ -44,7 +36,7 @@ export default defineAppConfig( {
             },
         },
 
-        // ── Component-level overrides (sintassi Nuxt UI v4) ──
+        // ── Icon set ────────────────────────────────────────
         icons: {
             check: 'i-lucide-check',
             chevron: 'i-lucide-chevron-down',
@@ -57,26 +49,11 @@ export default defineAppConfig( {
 
         input: { slots: { base: 'rounded-xl focus:ring-2 focus:ring-primary-500/30' } },
 
-        link: {
-            // primary maps to wegree (see colors above), so this equals hover:text-wegree-600
-            base: 'transition-colors hover:text-primary-600',
-        },
-
-        pageCard: { slots: { root: 'ring-1 ring-inset ring-default shadow-sm' } },
+        link: { base: 'transition-colors hover:text-primary-500' },
 
         select: { slots: { base: 'focus:ring-2 focus:ring-primary-500/30' } },
 
         selectMenu: { slots: { base: 'focus:ring-2 focus:ring-primary-500/30' } },
-
-        table: {
-            slots: {
-                tbody: 'divide-y divide-neutral-100 dark:divide-neutral-800',
-                td: 'px-4 py-3',
-                th: 'font-semibold px-4 py-3 text-left text-slate-400 text-xs tracking-wide uppercase',
-                thead: 'bg-neutral-50 dark:bg-neutral-900',
-                tr: 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors duration-150',
-            },
-        },
 
         textarea: { slots: { base: 'focus:ring-2 focus:ring-primary-500/30' } },
 

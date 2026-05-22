@@ -1,7 +1,7 @@
 <template>
     <u-app :toaster="toaster">
 
-        <nuxt-loading-indicator color="oklch(0.5867 0.1226 160.34)" />
+        <nuxt-loading-indicator color="oklch(0.5602 0.2295 264.05)" />
 
         <nuxt-pwa-assets />
         <nuxt-announcer />
