@@ -32,11 +32,36 @@
             </div>
         </header>
 
+        <!-- WebSocket status banner -->
+        <div
+            v-if="status !== 'OPEN'"
+            class="flex flex-col gap-2 items-center justify-center py-2 shrink-0 text-sm"
+            :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-500' : 'bg-error-500/10 text-error-500'"
+        >
+            <div class="flex gap-2 items-center">
+                <u-icon
+                    class="size-4"
+                    :class="status !== 'CLOSED' ? 'animate-spin' : ''"
+                    name="i-lucide-loader-2"
+                />
+                {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
+            </div>
+            <u-button
+                v-if="status === 'CLOSED'"
+                color="neutral"
+                icon="i-lucide-refresh-cw"
+                :label="$t('lobby.reconnect')"
+                size="xs"
+                variant="ghost"
+                @click="open()"
+            />
+        </div>
+
         <!-- Main -->
         <main class="flex flex-1 flex-col items-center justify-between overflow-y-auto px-4 py-6">
 
             <!-- Waiting for game to start -->
-            <template v-if="! gameState || gameState.phase === 'waiting'">
+            <template v-if="! gameState">
                 <div class="flex flex-1 flex-col gap-6 items-center justify-center">
                     <div class="text-center">
                         <p class="font-bold font-display mb-2 text-3xl text-highlighted">
@@ -290,12 +315,13 @@
           , { t, locale } = useI18n()
           , playerStore = usePlayerStore()
           , localePath = useLocalePath()
+          , toast = useToast()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
 
           , {
-              players, gameState, status, open, close, isHost, startGame, vote, nextRound,
+              players, gameState, status, open, close, isHost, startGame, vote, nextRound, wsError,
           } = useTableSocket();
 
     onMounted( () => {
@@ -311,6 +337,21 @@
     } );
 
     onUnmounted( () => close() );
+
+    watch( wsError, error => {
+
+        if( error ) {
+
+            toast.add( {
+                color: 'error',
+                description: error,
+                duration: 4000,
+            } );
+            wsError.value = null;
+
+        }
+
+    } );
 
     const sortedPlayers = computed( () => {
 
@@ -331,6 +372,6 @@
 
     }
 
-    useHead( { title: t( 'game.thumbs.title' ) } );
+    useHead( { title: computed( () => t( 'game.thumbs.title' ) ) } );
 
 </script>

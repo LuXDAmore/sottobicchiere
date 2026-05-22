@@ -1,7 +1,7 @@
 import type { ClientMessage, ServerMessage, WsPlayer } from '../../shared/types/ws';
 
 export interface ThumbsClientState {
-    phase: 'finished' | 'reveal' | 'voting' | 'waiting';
+    phase: 'finished' | 'reveal' | 'voting';
     roundIndex: number;
     totalRounds: number;
     question: { it: string; en: string };

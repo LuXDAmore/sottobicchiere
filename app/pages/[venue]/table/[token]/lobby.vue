@@ -43,14 +43,26 @@
             <!-- WebSocket status -->
             <div
                 v-if="status !== 'OPEN'"
-                class="flex gap-2 items-center justify-center py-2 rounded-lg text-sm"
+                class="flex flex-col gap-2 items-center justify-center py-2 rounded-lg text-sm"
                 :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-500' : 'bg-error-500/10 text-error-500'"
             >
-                <u-icon
-                    class="animate-spin size-4"
-                    name="i-lucide-loader-2"
+                <div class="flex gap-2 items-center">
+                    <u-icon
+                        class="size-4"
+                        :class="status !== 'CLOSED' ? 'animate-spin' : ''"
+                        name="i-lucide-loader-2"
+                    />
+                    {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
+                </div>
+                <u-button
+                    v-if="status === 'CLOSED'"
+                    color="neutral"
+                    icon="i-lucide-refresh-cw"
+                    :label="$t('lobby.reconnect')"
+                    size="xs"
+                    variant="ghost"
+                    @click="open()"
                 />
-                {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
             </div>
 
             <!-- Players section -->
@@ -150,12 +162,13 @@
           , { t } = useI18n()
           , playerStore = usePlayerStore()
           , localePath = useLocalePath()
+          , toast = useToast()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
 
           , {
-              players, gameState, status, open, close,
+              players, gameState, status, open, close, wsError,
           } = useTableSocket();
 
     onMounted( () => {
@@ -172,10 +185,25 @@
 
     onUnmounted( () => close() );
 
-    // If game starts (server sends game:question), navigate to game page
+    watch( wsError, error => {
+
+        if( error ) {
+
+            toast.add( {
+                color: 'error',
+                description: error,
+                duration: 4000,
+            } );
+            wsError.value = null;
+
+        }
+
+    } );
+
+    // Navigate to game whenever an active phase is received (handles late reconnects too)
     watch( gameState, state => {
 
-        if( state && state.phase === 'voting' && state.roundIndex === 0 )
+        if( state && ( state.phase === 'voting' || state.phase === 'reveal' ) )
             navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
 
     } );
@@ -201,9 +229,9 @@
     }
 
     useHead( {
-        title: playerStore.venueName
+        title: computed( () => ( playerStore.venueName
             ? t( 'lobby.page_title', { venue: playerStore.venueName } )
-            : t( 'app.name' ),
+            : t( 'app.name' ) ) ),
     } );
 
 </script>

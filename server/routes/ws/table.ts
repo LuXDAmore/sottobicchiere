@@ -69,6 +69,7 @@ export default defineWebSocketHandler( {
                 message: 'Missing connection params',
                 type: 'error',
             } );
+            peer.close();
             return;
 
         }
@@ -280,12 +281,22 @@ export default defineWebSocketHandler( {
 
             }
 
+            if( session.game.phase !== 'reveal' ) {
+
+                emit( peer, {
+                    message: session.game.phase === 'voting' ? 'Voting still in progress' : 'No active game to advance',
+                    type: 'error',
+                } );
+                return;
+
+            }
+
             const game = nextRound( session );
 
             if( ! game ) {
 
                 emit( peer, {
-                    message: 'No active game',
+                    message: 'Failed to advance round',
                     type: 'error',
                 } );
                 return;
@@ -324,10 +335,38 @@ export default defineWebSocketHandler( {
     close( peer ) {
 
         const url = new URL( peer.request.url ?? '', 'http://x' )
-            , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? ''
-            , session = getOrCreateSession( tableSessionId )
+            , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? '';
 
-            , player = removePlayer( session, peer.id );
+        if( ! tableSessionId ) return;
+
+        const session = findSession( tableSessionId );
+
+        if( ! session ) return;
+
+        const player = removePlayer( session, peer.id );
+
+        // Auto-reveal if the departing player was the last one who hadn't voted
+        if( player && session.game?.phase === 'voting' ) {
+
+            const votedCount = session.game.votes.size
+                , totalCount = session.players.size;
+
+            if( totalCount > 0 && votedCount >= totalCount ) {
+
+                const revealed = revealRound( session );
+
+                if( revealed ) {
+
+                    broadcast( peer, tableSessionId, {
+                        ... revealed,
+                        type: 'game:reveal',
+                    } );
+
+                }
+
+            }
+
+        }
 
         if( player ) {
 

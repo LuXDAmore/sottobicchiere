@@ -145,13 +145,14 @@
               { lazy: false }
           );
 
-    // If already joined this session, redirect to lobby
+    // If already joined this exact table's session, redirect to lobby
     onMounted( () => {
 
         if(
             playerStore.isJoined
             && ! playerStore.isExpired
             && playerStore.venueSlug === venueSlug
+            && playerStore.qrToken === qrToken
         )
             navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
 
@@ -199,16 +200,16 @@
     useHead( {
         meta: [
             {
-                content: t( 'app.description' ),
+                content: computed( () => t( 'app.description' ) ),
                 name: 'description',
             },
         ],
-        title: tableInfo.value
+        title: computed( () => ( tableInfo.value
             ? t( 'table.page_title', {
                 n: tableInfo.value.tableNumber,
                 venue: tableInfo.value.venueName,
             } )
-            : t( 'app.name' ),
+            : t( 'app.name' ) ) ),
     } );
 
 </script>

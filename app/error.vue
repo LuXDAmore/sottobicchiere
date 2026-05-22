@@ -8,14 +8,7 @@
             <u-error
                 as="div"
                 class="absolute inset-0 m-auto max-w-100 min-h-screen z-20"
-                :clear="{
-                    color: 'neutral',
-                    size: 'xl',
-                    icon: 'lucide:arrow-left',
-                    class: 'rounded-md',
-                    variant: 'subtle',
-                    label: t('error.back'),
-                }"
+                :clear="clearProperties"
                 :error="error"
                 :redirect="localePath('/')"
                 :ui="{
@@ -45,7 +38,15 @@
     const { t, locale } = useI18n()
           , localePath = useLocalePath()
           , uiLocale = computed( () => ( locale.value === 'it' ? itLocale : enLocale ) )
-          , toaster: ToasterProps = { position: 'bottom-right' };
+          , toaster: ToasterProps = { position: 'bottom-right' }
+          , clearProperties = computed( () => ( {
+              class: 'rounded-md',
+              color: 'neutral' as const,
+              icon: 'lucide:arrow-left',
+              label: t( 'error.back' ),
+              size: 'xl' as const,
+              variant: 'subtle' as const,
+          } ) );
 
     useHead( { title: computed( () => t( 'error.title' ) ) } );
 

@@ -21,4 +21,5 @@ export interface JoinResponse extends TableInfo {
     playerNickname: string;
     groupId: string | null;
     expiresAt: string;
+    qrToken: string;
 }

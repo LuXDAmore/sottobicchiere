@@ -76,25 +76,40 @@ export default defineEventHandler( async event => {
         , expiresAt = new Date( now.getTime() + 8 * 60 * 60 * 1000 );
 
     // 2. Trova o crea la sessione tavolo attiva
-    let session = await db
-        .select( { id: tableSessions.id } )
+    let session: { id: string; expiresAt: Date } | null = await db
+        .select( {
+            expiresAt: tableSessions.expiresAt,
+            id: tableSessions.id,
+        } )
         .from( tableSessions )
         .where( and( eq( tableSessions.tableId, tableRow.id ), gt( tableSessions.expiresAt, now ) ) )
         .orderBy( desc( tableSessions.startedAt ) )
         .limit( 1 )
-        .then( ( rows: { id: string }[] ) => rows[ 0 ] ?? null );
+        .then( ( rows: { id: string; expiresAt: Date }[] ) => rows[ 0 ] ?? null );
 
     if( ! session ) {
 
         const [ created ] = await db
             .insert( tableSessions )
             .values( {
-                tableId: tableRow.id,
                 expiresAt,
+                tableId: tableRow.id,
             } )
-            .returning( { id: tableSessions.id } );
+            .returning( {
+                expiresAt: tableSessions.expiresAt,
+                id: tableSessions.id,
+            } );
 
-        session = created;
+        session = created ?? null;
+
+    }
+
+    if( ! session ) {
+
+        throw createError( {
+            statusCode: 500,
+            message: 'Errore durante la creazione della sessione',
+        } );
 
     }
 
@@ -161,11 +176,12 @@ export default defineEventHandler( async event => {
         } );
 
     return {
-        expiresAt: expiresAt.toISOString(),
+        expiresAt: session.expiresAt.toISOString(),
         groupId,
         playerId: player.id,
         playerColor: player.color,
         playerNickname: nickname,
+        qrToken,
         tableNumber: tableRow.tableNumber,
         tableSessionId: session.id,
         venueName: tableRow.venueName,

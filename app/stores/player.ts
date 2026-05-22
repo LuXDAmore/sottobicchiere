@@ -11,6 +11,7 @@ interface PlayerState {
     tableNumber: number | null;
     venueName: string | null;
     venueSlug: string | null;
+    qrToken: string | null;
     groupId: string | null;
     expiresAt: string | null;
 }
@@ -22,6 +23,7 @@ export const usePlayerStore = defineStore( 'player', {
         playerId: null,
         playerColor: null,
         playerNickname: null,
+        qrToken: null,
         tableNumber: null,
         tableSessionId: null,
         venueName: null,
@@ -48,6 +50,7 @@ export const usePlayerStore = defineStore( 'player', {
             this.tableNumber = data.tableNumber;
             this.venueName = data.venueName;
             this.venueSlug = data.venueSlug;
+            this.qrToken = data.qrToken;
             this.groupId = data.groupId;
             this.expiresAt = data.expiresAt;
 

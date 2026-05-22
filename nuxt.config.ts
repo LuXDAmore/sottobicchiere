@@ -24,7 +24,6 @@ export default defineNuxtConfig(
             head: {
                 htmlAttrs: {
                     'data-v': packageJson.version,
-                    lang: 'it',
                     translate: 'no',
                 },
                 link: [

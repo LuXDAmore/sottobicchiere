@@ -9,7 +9,7 @@ export interface TableSession {
 }
 
 export interface ThumbsGameState {
-    phase: 'finished' | 'reveal' | 'voting' | 'waiting';
+    phase: 'finished' | 'reveal' | 'voting';
     roundIndex: number;
     totalRounds: number;
     questions: Question[];

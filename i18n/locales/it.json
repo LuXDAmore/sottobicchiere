@@ -39,7 +39,8 @@
         "games_description": "I minigiochi multiplayer saranno disponibili presto. Restate connessi!",
         "leave": "Esci",
         "connecting": "Connessione in corso…",
-        "disconnected": "Connessione persa, riconnessione…"
+        "disconnected": "Connessione persa, riconnessione…",
+        "reconnect": "Riconnetti"
     },
     "game": {
         "thumbs": {
