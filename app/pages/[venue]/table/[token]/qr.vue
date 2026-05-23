@@ -39,7 +39,7 @@
 
             <!-- QR code — always white bg for scanner compatibility -->
             <div class="bg-white p-5 rounded-3xl shadow-[var(--shadow-lift)]">
-                <qrcode
+                <Qrcode
                     black-color="#111"
                     :height="220"
                     :value="joinUrl"

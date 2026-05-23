@@ -93,7 +93,9 @@
                         icon="i-lucide-play"
                         :label="$t('game.thumbs.start_button')"
                         size="xl"
-                        @click="startGame()"
+                        :disabled="isStartingGame || status !== 'OPEN'"
+                        :loading="isStartingGame"
+                        @click="handleStartGame"
                     />
                     <p
                         v-else
@@ -144,7 +146,8 @@
                     >
                         <button
                             class="active:scale-95 bg-emerald-500/10 border-2 border-emerald-500/30 flex flex-1 flex-col gap-2 hover:bg-emerald-500/20 hover:border-emerald-500 items-center justify-center min-h-[140px] rounded-3xl text-emerald-500 transition-all"
-                            @click="vote('up')"
+                            :disabled="isSubmittingVote || status !== 'OPEN'"
+                            @click="handleVote('up')"
                         >
                             <span class="text-5xl">
                                 👍
@@ -155,7 +158,8 @@
                         </button>
                         <button
                             class="active:scale-95 bg-error-500/10 border-2 border-error-500/30 flex flex-1 flex-col gap-2 hover:bg-error-500/20 hover:border-error-500 items-center justify-center min-h-[140px] rounded-3xl text-error-500 transition-all"
-                            @click="vote('down')"
+                            :disabled="isSubmittingVote || status !== 'OPEN'"
+                            @click="handleVote('down')"
                         >
                             <span class="text-5xl">
                                 👎
@@ -231,7 +235,9 @@
                         block
                         :label="gameState.roundIndex + 1 < gameState.totalRounds ? $t('game.thumbs.next_round') : $t('game.thumbs.show_results')"
                         size="xl"
-                        @click="nextRound()"
+                        :disabled="isAdvancingRound || status !== 'OPEN'"
+                        :loading="isAdvancingRound"
+                        @click="handleNextRound"
                     />
                     <p
                         v-else
@@ -286,7 +292,9 @@
                             icon="i-lucide-refresh-cw"
                             :label="$t('game.thumbs.play_again')"
                             size="xl"
-                            @click="startGame()"
+                            :disabled="isStartingGame || status !== 'OPEN'"
+                        :loading="isStartingGame"
+                        @click="handleStartGame"
                         />
                         <u-button
                             block
@@ -295,6 +303,8 @@
                             :label="$t('game.thumbs.back_lobby')"
                             size="xl"
                             variant="ghost"
+                            :disabled="isGoingBack"
+                            :loading="isGoingBack"
                             @click="goToLobby"
                         />
                     </div>
@@ -322,7 +332,12 @@
 
           , {
               players, gameState, status, open, close, isHost, startGame, vote, nextRound, wsError,
-          } = useTableSocket();
+          } = useTableSocket()
+
+          , isStartingGame = ref( false )
+          , isSubmittingVote = ref( false )
+          , isAdvancingRound = ref( false )
+          , isGoingBack = ref( false );
 
     onMounted( () => {
 
@@ -353,6 +368,22 @@
 
     } );
 
+
+    watch( gameState, state => {
+
+        if( ! state ) {
+
+            isSubmittingVote.value = false;
+            isAdvancingRound.value = false;
+            return;
+
+        }
+
+        if( state.phase === 'reveal' || state.phase === 'finished' ) isSubmittingVote.value = false;
+        if( state.phase === 'voting' ) isAdvancingRound.value = false;
+
+    }, { deep: true } );
+
     const sortedPlayers = computed( () => {
 
         if( ! gameState.value ) return players.value;
@@ -365,10 +396,59 @@
     /**
      *
      */
-    function goToLobby() {
+    async function goToLobby() {
 
-        close();
-        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
+        if( isGoingBack.value ) return;
+
+        isGoingBack.value = true;
+
+        try {
+
+            close();
+            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
+
+        } finally {
+
+            isGoingBack.value = false;
+
+        }
+
+    }
+
+    function handleStartGame() {
+
+        if( isStartingGame.value || status.value !== 'OPEN' ) return;
+
+        isStartingGame.value = true;
+        startGame();
+        setTimeout( () => {
+
+            isStartingGame.value = false;
+
+        }, 1200 );
+
+    }
+
+    function handleVote( choice: 'down' | 'up' ) {
+
+        if( isSubmittingVote.value || status.value !== 'OPEN' ) return;
+
+        isSubmittingVote.value = true;
+        vote( choice );
+
+    }
+
+    function handleNextRound() {
+
+        if( isAdvancingRound.value || status.value !== 'OPEN' ) return;
+
+        isAdvancingRound.value = true;
+        nextRound();
+        setTimeout( () => {
+
+            isAdvancingRound.value = false;
+
+        }, 1200 );
 
     }
 

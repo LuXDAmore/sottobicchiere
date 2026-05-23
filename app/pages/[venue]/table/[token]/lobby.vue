@@ -33,6 +33,8 @@
                     size="sm"
                     variant="ghost"
                     @click="handleLeave"
+                    :disabled="isLeaving || isNavigating"
+                    :loading="isLeaving"
                 />
             </div>
         </header>
@@ -129,6 +131,7 @@
                 <u-card
                     class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
                     :ui="{ body: 'flex items-center gap-4 p-4' }"
+                    :class="isNavigating ? 'opacity-70 pointer-events-none' : ''"
                     @click="launchThumbs"
                 >
                     <div class="bg-amber-500/15 flex items-center justify-center rounded-2xl shrink-0 size-14 text-3xl">
@@ -147,6 +150,30 @@
                         variant="subtle"
                     />
                 </u-card>
+
+                <u-card
+                    class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
+                    :ui="{ body: 'flex items-center gap-4 p-4' }"
+                    :class="isNavigating ? 'opacity-70 pointer-events-none' : ''"
+                    @click="launchWordBlitz"
+                >
+                    <div class="bg-cyan-500/15 flex items-center justify-center rounded-2xl shrink-0 size-14 text-3xl">
+                        ⚡
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-semibold text-highlighted">
+                            {{ $t('game.word_blitz.title') }}
+                        </p>
+                        <p class="mt-0.5 text-muted text-sm truncate">
+                            {{ $t('game.word_blitz.description') }}
+                        </p>
+                    </div>
+                    <u-badge
+                        :label="$t('game.word_blitz.players_range')"
+                        variant="subtle"
+                    />
+                </u-card>
+
             </section>
 
         </main>
@@ -169,7 +196,10 @@
 
           , {
               players, gameState, status, open, close, wsError,
-          } = useTableSocket();
+          } = useTableSocket()
+
+          , isNavigating = ref( false )
+          , isLeaving = ref( false );
 
     onMounted( () => {
 
@@ -211,20 +241,62 @@
     /**
      *
      */
-    function launchThumbs() {
+    async function launchThumbs() {
 
-        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
+        if( isNavigating.value ) return;
+        isNavigating.value = true;
+
+        try {
+
+            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
+
+        } finally {
+
+            isNavigating.value = false;
+
+        }
+
+    }
+
+    async function launchWordBlitz() {
+
+        if( isNavigating.value ) return;
+        isNavigating.value = true;
+
+        try {
+
+            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/word-blitz` ) );
+
+        } finally {
+
+            isNavigating.value = false;
+
+        }
 
     }
 
     /**
      *
      */
-    function handleLeave() {
+    async function handleLeave() {
 
-        close();
-        playerStore.leave();
-        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
+        if( isLeaving.value || isNavigating.value ) return;
+
+        isLeaving.value = true;
+        isNavigating.value = true;
+
+        try {
+
+            close();
+            playerStore.leave();
+            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
+
+        } finally {
+
+            isLeaving.value = false;
+            isNavigating.value = false;
+
+        }
 
     }
 
