@@ -79,6 +79,8 @@
           , localePath = useLocalePath()
           , playerStore = usePlayerStore()
 
+          , { open, close } = useTableSocket()
+
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
 
@@ -103,8 +105,11 @@
         }
 
         currentLetter.value = letters[ Math.floor( Math.random() * letters.length ) ] ?? 'A';
+        open();
 
     } );
+
+    onUnmounted( () => close() );
 
     function submitWord() {
 

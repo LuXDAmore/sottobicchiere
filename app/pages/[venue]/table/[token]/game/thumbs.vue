@@ -293,8 +293,8 @@
                             :label="$t('game.thumbs.play_again')"
                             size="xl"
                             :disabled="isStartingGame || status !== 'OPEN'"
-                        :loading="isStartingGame"
-                        @click="handleStartGame"
+                            :loading="isStartingGame"
+                            @click="handleStartGame"
                         />
                         <u-button
                             block
@@ -362,6 +362,11 @@
                 description: error,
                 duration: 4000,
             } );
+
+            isStartingGame.value = false;
+            isSubmittingVote.value = false;
+            isAdvancingRound.value = false;
+
             wsError.value = null;
 
         }
