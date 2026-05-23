@@ -8,7 +8,9 @@
         "page_title": "Benvenuto",
         "scan_title": "Scansiona il QR code",
         "scan_description": "Trova il QR code sul tuo tavolo e scansionalo per entrare nella sessione di gioco.",
-        "privacy_note": "Nessun account necessario. I tuoi dati non vengono salvati."
+        "privacy_note": "Nessun account necessario. I tuoi dati non vengono salvati.",
+        "open_demo_table": "Apri tavolo demo",
+        "mobile_qr_hint": "Se sei già sul telefono usa il pulsante qui sopra: il QR è utile per gli altri giocatori al tavolo."
     },
     "table": {
         "page_title": "Tavolo {n} — {venue}",
@@ -62,6 +64,16 @@
             "finished_title": "Fine del gioco!",
             "play_again": "Gioca ancora",
             "back_lobby": "Torna alla lobby"
+        },
+        "word_blitz": {
+            "title": "Word Blitz",
+            "description": "Dì una parola al volo: allenamento rapido prima delle vere sfide realtime.",
+            "players_range": "1+ giocatori",
+            "prompt": "Scrivi una parola che inizi con la lettera:",
+            "input_placeholder": "Es: Barca",
+            "submit": "Invia parola",
+            "history": "Storico parole",
+            "local_note": "Modalità prototipo locale: nel prossimo step diventa realtime al tavolo."
         }
     },
     "layout": {

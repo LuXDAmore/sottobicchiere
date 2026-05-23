@@ -13,10 +13,7 @@ export interface ThumbsClientState {
     hostPlayerId: string;
 }
 
-/**
- *
- */
-export function useTableSocket() {
+const _useTableSocket = createGlobalState( () => {
 
     const playerStore = usePlayerStore()
         , { protocol, host } = useRequestURL()
@@ -47,8 +44,12 @@ export function useTableSocket() {
             wsUrl,
             {
                 autoReconnect: {
-                    delay: 2000,
-                    retries: 5,
+                    delay: 1500,
+                    retries: 10,
+                },
+                heartbeat: {
+                    interval: 15_000,
+                    message: JSON.stringify( { type: 'ping' } ),
                 },
                 immediate: false,
                 async onMessage( _ws, event ) {
@@ -75,10 +76,6 @@ export function useTableSocket() {
             }
         );
 
-    /**
-     *
-     * @param message
-     */
     function handleMessage( message: ServerMessage ) {
 
         switch( message.type ) {
@@ -88,7 +85,6 @@ export function useTableSocket() {
                 break;
 
             }
-
             case 'player:joined': {
 
                 if( ! players.value.some( p => p.id === message.player.id ) )
@@ -97,14 +93,12 @@ export function useTableSocket() {
                 break;
 
             }
-
             case 'player:left': {
 
                 players.value = players.value.filter( p => p.id !== message.playerId );
                 break;
 
             }
-
             case 'game:question': {
 
                 gameState.value = {
@@ -122,7 +116,6 @@ export function useTableSocket() {
                 break;
 
             }
-
             case 'game:vote-ack': {
 
                 if( gameState.value ) {
@@ -138,7 +131,6 @@ export function useTableSocket() {
                 break;
 
             }
-
             case 'game:reveal': {
 
                 if( gameState.value ) {
@@ -155,7 +147,6 @@ export function useTableSocket() {
                 break;
 
             }
-
             case 'game:finished': {
 
                 if( gameState.value ) {
@@ -171,14 +162,12 @@ export function useTableSocket() {
                 break;
 
             }
-
             case 'error': {
 
                 wsError.value = message.message;
                 break;
 
             }
-
             default: {
 
                 break;
@@ -188,20 +177,12 @@ export function useTableSocket() {
 
     }
 
-    /**
-     *
-     * @param message
-     */
     function send( message: ClientMessage ) {
 
         wsSend( JSON.stringify( message ) );
 
     }
 
-    /**
-     *
-     * @param totalRounds
-     */
     function startGame( totalRounds = 10 ) {
 
         send( {
@@ -211,10 +192,6 @@ export function useTableSocket() {
 
     }
 
-    /**
-     *
-     * @param choice
-     */
     function vote( choice: 'down' | 'up' ) {
 
         if( gameState.value ) {
@@ -233,17 +210,13 @@ export function useTableSocket() {
 
     }
 
-    /**
-     *
-     */
     function nextRound() {
 
         send( { type: 'game:next' } );
 
     }
 
-    const isHost = computed( () =>
-        gameState.value?.hostPlayerId === playerStore.playerId );
+    const isHost = computed( () => gameState.value?.hostPlayerId === playerStore.playerId );
 
     return {
         close,
@@ -257,5 +230,11 @@ export function useTableSocket() {
         vote,
         wsError,
     };
+
+} );
+
+export function useTableSocket() {
+
+    return _useTableSocket();
 
 }

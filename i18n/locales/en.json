@@ -8,7 +8,9 @@
         "page_title": "Welcome",
         "scan_title": "Scan the QR code",
         "scan_description": "Find the QR code on your table and scan it to join the game session.",
-        "privacy_note": "No account needed. Your data is not saved."
+        "privacy_note": "No account needed. Your data is not saved.",
+        "open_demo_table": "Open demo table",
+        "mobile_qr_hint": "If you are already on your phone, use the button above: the QR is for other players at the table."
     },
     "table": {
         "page_title": "Table {n} — {venue}",
@@ -62,6 +64,16 @@
             "finished_title": "Game over!",
             "play_again": "Play again",
             "back_lobby": "Back to lobby"
+        },
+        "word_blitz": {
+            "title": "Word Blitz",
+            "description": "Say a word fast: quick warm-up before full realtime matches.",
+            "players_range": "1+ players",
+            "prompt": "Write a word starting with letter:",
+            "input_placeholder": "Ex: Boat",
+            "submit": "Submit word",
+            "history": "Word history",
+            "local_note": "Local prototype mode: next step will make this realtime for the table."
         }
     },
     "layout": {
