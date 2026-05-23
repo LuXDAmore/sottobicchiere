@@ -33,7 +33,7 @@
                     size="sm"
                     variant="ghost"
                     @click="handleLeave"
-                    :disabled="isLeaving || isNavigating"
+                    :disabled="isLeaving"
                     :loading="isLeaving"
                 />
             </div>
@@ -131,7 +131,6 @@
                 <u-card
                     class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
                     :ui="{ body: 'flex items-center gap-4 p-4' }"
-                    :class="isNavigating ? 'opacity-70 pointer-events-none' : ''"
                     @click="launchThumbs"
                 >
                     <div class="bg-amber-500/15 flex items-center justify-center rounded-2xl shrink-0 size-14 text-3xl">
@@ -154,7 +153,6 @@
                 <u-card
                     class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
                     :ui="{ body: 'flex items-center gap-4 p-4' }"
-                    :class="isNavigating ? 'opacity-70 pointer-events-none' : ''"
                     @click="launchWordBlitz"
                 >
                     <div class="bg-cyan-500/15 flex items-center justify-center rounded-2xl shrink-0 size-14 text-3xl">
@@ -198,7 +196,6 @@
               players, gameState, status, open, close, wsError,
           } = useTableSocket()
 
-          , isNavigating = ref( false )
           , isLeaving = ref( false );
 
     onMounted( () => {
@@ -241,37 +238,15 @@
     /**
      *
      */
-    async function launchThumbs() {
+    function launchThumbs() {
 
-        if( isNavigating.value ) return;
-        isNavigating.value = true;
-
-        try {
-
-            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
-
-        } finally {
-
-            isNavigating.value = false;
-
-        }
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
 
     }
 
-    async function launchWordBlitz() {
+    function launchWordBlitz() {
 
-        if( isNavigating.value ) return;
-        isNavigating.value = true;
-
-        try {
-
-            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/word-blitz` ) );
-
-        } finally {
-
-            isNavigating.value = false;
-
-        }
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/word-blitz` ) );
 
     }
 
@@ -280,10 +255,9 @@
      */
     async function handleLeave() {
 
-        if( isLeaving.value || isNavigating.value ) return;
+        if( isLeaving.value ) return;
 
         isLeaving.value = true;
-        isNavigating.value = true;
 
         try {
 
@@ -294,7 +268,6 @@
         } finally {
 
             isLeaving.value = false;
-            isNavigating.value = false;
 
         }
 
