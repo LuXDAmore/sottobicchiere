@@ -10,3 +10,5 @@ allowBuilds:
   unrs-resolver: true
   vue-demi: true
   workerd: true
+overrides:
+  h3: 1.15.11

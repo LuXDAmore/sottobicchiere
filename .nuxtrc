@@ -1,2 +1,2 @@
-setups.@nuxt/test-utils="4.0.3"
+setups.@nuxt/test-utils="3.23.0"
 setups.@onmax/nuxt-better-auth="0.0.2-alpha.31"
