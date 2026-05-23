@@ -38,7 +38,7 @@
                     color="primary"
                     icon="i-lucide-play"
                     :label="$t('welcome.open_demo_table')"
-                    :to="localePath('/demo/table/demo-001')"
+                    :to="demoTablePath"
                 />
 
                 <p class="text-muted text-xs">
@@ -61,7 +61,8 @@ const { t } = useI18n();
 const localePath = useLocalePath();
 const { origin } = useRequestURL();
 
-const demoJoinUrl = computed(() => `${origin}/demo/table/demo-001`);
+const demoTablePath = computed( () => localePath( '/demo/table/demo-001' ) );
+const demoJoinUrl = computed( () => `${ origin }${ demoTablePath.value }` );
 
 useHead({
     title: computed(() => t('welcome.page_title')),

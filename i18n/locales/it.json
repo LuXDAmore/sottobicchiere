@@ -10,7 +10,7 @@
         "scan_description": "Trova il QR code sul tuo tavolo e scansionalo per entrare nella sessione di gioco.",
         "privacy_note": "Nessun account necessario. I tuoi dati non vengono salvati.",
         "open_demo_table": "Apri tavolo demo",
-        "mobile_qr_hint": "Se sei già su telefono usa il pulsante qui sopra: il QR è utile per gli altri giocatori al tavolo."
+        "mobile_qr_hint": "Se sei già sul telefono usa il pulsante qui sopra: il QR è utile per gli altri giocatori al tavolo."
     },
     "table": {
         "page_title": "Tavolo {n} — {venue}",

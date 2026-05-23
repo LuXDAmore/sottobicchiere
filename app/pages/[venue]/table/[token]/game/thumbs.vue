@@ -369,6 +369,17 @@
     } );
 
 
+    watch( status, value => {
+
+        if( value !== 'OPEN' ) {
+
+            isStartingGame.value = false;
+            isAdvancingRound.value = false;
+
+        }
+
+    } );
+
     watch( gameState, state => {
 
         if( ! state ) {
@@ -379,8 +390,9 @@
 
         }
 
-        if( state.phase === 'reveal' || state.phase === 'finished' ) isSubmittingVote.value = false;
-        if( state.phase === 'voting' ) isAdvancingRound.value = false;
+        if( state.phase === 'voting' && ! state.myVote ) isSubmittingVote.value = false;
+        if( state.phase !== 'reveal' ) isAdvancingRound.value = false;
+        if( state.phase === 'voting' || state.phase === 'finished' ) isStartingGame.value = false;
 
     }, { deep: true } );
 
@@ -421,11 +433,6 @@
 
         isStartingGame.value = true;
         startGame();
-        setTimeout( () => {
-
-            isStartingGame.value = false;
-
-        }, 1200 );
 
     }
 
@@ -444,11 +451,6 @@
 
         isAdvancingRound.value = true;
         nextRound();
-        setTimeout( () => {
-
-            isAdvancingRound.value = false;
-
-        }, 1200 );
 
     }
 

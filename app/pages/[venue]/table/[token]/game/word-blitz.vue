@@ -83,7 +83,10 @@
           , qrToken = route.params.token as string
 
           , letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split( '' )
-          , currentLetter = ref( letters[ Math.floor( Math.random() * letters.length ) ] ?? 'A' )
+          , currentLetter = useState<string>(
+              `word-blitz-letter:${ venueSlug }:${ qrToken }:${ playerStore.playerId ?? 'anonymous' }`,
+              () => 'A'
+          )
           , myWord = ref( '' )
           , words = useState<string[]>(
               `word-blitz-history:${ venueSlug }:${ qrToken }:${ playerStore.playerId ?? 'anonymous' }`,
@@ -95,8 +98,11 @@
         if( ! playerStore.isJoined || playerStore.isExpired ) {
 
             navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
+            return;
 
         }
+
+        currentLetter.value = letters[ Math.floor( Math.random() * letters.length ) ] ?? 'A';
 
     } );
 
