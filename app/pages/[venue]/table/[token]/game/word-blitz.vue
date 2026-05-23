@@ -86,12 +86,12 @@
 
           , letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split( '' )
           , currentLetter = useState<string>(
-              `word-blitz-letter:${ venueSlug }:${ qrToken }:${ playerStore.playerId ?? 'anonymous' }`,
+              `word-blitz-letter:${ venueSlug }:${ qrToken }`,
               () => 'A'
           )
           , myWord = ref( '' )
           , words = useState<string[]>(
-              `word-blitz-history:${ venueSlug }:${ qrToken }:${ playerStore.playerId ?? 'anonymous' }`,
+              `word-blitz-history:${ venueSlug }:${ qrToken }`,
               () => []
           );
 
