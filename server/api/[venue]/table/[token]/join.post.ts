@@ -65,6 +65,25 @@ export default defineEventHandler( async event => {
 
     if( ! tableRow ) {
 
+        if( venueSlug === 'demo' && qrToken === 'demo-001' ) {
+
+            const demoSessionId = 'demo-session-001';
+
+            return {
+                expiresAt: new Date( Date.now() + ( 8 * 60 * 60 * 1000 ) ).toISOString(),
+                groupId: null,
+                playerId: crypto.randomUUID(),
+                playerColor: '#4F46E5',
+                playerNickname: nickname,
+                qrToken,
+                tableNumber: 1,
+                tableSessionId: demoSessionId,
+                venueName: 'Sottobicchiere Demo',
+                venueSlug: 'demo',
+            };
+
+        }
+
         throw createError( {
             statusCode: 404,
             message: 'QR code non valido',

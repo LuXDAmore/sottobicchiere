@@ -50,3 +50,13 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - **Fredoka vs Syne**: scelto Fredoka per titoli gaming — più leggibile a distanza, più universale per tutte le età
 - **colorMode.fallback**: cambiato da `light` a `dark` — la maggior parte dei bar ha ambienti con bassa luminosità
 - **i18n semplificato**: solo `it` + `en` per MVP (rimossi de, fr, es)
+
+
+## 2026-05-24 — Fix tavolo demo e documentazione prodotto
+
+- Fix API `GET /api/[venue]/table/[token]` con fallback per `demo/demo-001` per evitare errore QR invalido in ambiente senza seed DB.
+- Fix API `POST /api/[venue]/table/[token]/join` con join demo fallback e session/player temporanei anonimi.
+- Fix API `GET /api/[venue]/table/[token]/players` con fallback demo.
+- Aggiornata schedulazione cleanup sessioni Nitro a `0 6 * * *` (06:00 UTC).
+- Creata `docs/product-foundations.md` con obiettivi prodotto, flussi, modalità (inclusa dating mode), e policy cleanup dati.
+- Aggiornato `TODO.md` con task completati e data header.

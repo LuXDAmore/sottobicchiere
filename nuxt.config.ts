@@ -239,8 +239,8 @@ export default defineNuxtConfig(
                 websocket: true,
             },
             scheduledTasks: {
-                // Ogni notte alle 03:00: pulizia sessioni tavolo scadute
-                '0 3 * * *': [ 'cleanup-expired-sessions' ],
+                // Ogni mattina alle 06:00 UTC: pulizia sessioni tavolo scadute
+                '0 6 * * *': [ 'cleanup-expired-sessions' ],
             },
         },
 

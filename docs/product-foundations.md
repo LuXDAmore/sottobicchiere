@@ -1,62 +1,23 @@
-# Sottobicchiere — Product Foundations v0
+# Product Foundations — Sottobicchiere
 
-## UX direction (light + dark, casual but premium)
+## Obiettivo
+Sottobicchiere è una PWA per locali che permette ai clienti di aprire o raggiungere un tavolo di gioco tramite QR code, entrare con nickname anonimo e giocare in tempo reale con amici presenti al tavolo.
 
-- Visual tone: playful social gaming, not childish.
-- Core mood: rounded geometry, strong contrast CTAs, soft glass cards, micro-animations.
-- Accessibility baseline: AA contrast for all text, 44px touch targets, motion-reduced fallbacks.
+## Flussi principali
+1. **Apri tavolo demo / nuovo tavolo**: l'utente entra in una lobby e avvia una sessione.
+2. **Entra in tavolo esistente**: l'utente usa QR/link condiviso dai propri amici.
+3. **Scelta gioco**: in lobby il tavolo seleziona il gioco da avviare.
+4. **Persistenza minima**: sessioni e dati giocatore sono temporanei.
 
-## Palette candidates
+## Modalità di gioco
+- **Giochi da tavolo**: esperienze multiplayer classiche da lobby.
+- **Giochi preserata**: minigiochi sociali rapidi per gruppi in uscita.
+- **Dating mode**: i tavoli attivi in questa modalità possono scambiarsi messaggi anonimi inter-tavolo.
 
-### Palette A (default launch)
-- Primary: `#5B5FEF`
-- Secondary: `#14B8A6`
-- Accent/Reward: `#F59E0B`
-- Success: `#22C55E`
-- Danger: `#EF4444`
-- Neutral light bg: `#F8FAFC`
-- Neutral dark bg: `#0B1020`
+## Regole dati
+- Nessun account richiesto.
+- Nessuna PII permanente.
+- Sessioni temporanee con scadenza.
 
-### Palette B (night bar)
-- Primary: `#7C3AED`
-- Secondary: `#06B6D4`
-- Accent: `#F43F5E`
-- Light bg: `#F9FAFB`
-- Dark bg: `#09090B`
-
-## Interaction patterns
-
-1. Table onboarding
-- QR on physical table + direct link fallback on all screens.
-- Nickname + optional group name in one compact card.
-- Session banner explaining anonymous temporary data.
-
-2. Lobby
-- Live players chips with color identity.
-- Game cards: players needed, duration, tone (party/strategy/family).
-- Host action buttons pinned at bottom on mobile.
-
-3. Game loop template
-- Waiting room → round phase → reveal phase → results → replay.
-- Keep round timer optional for each game mode.
-
-## First game (already in progress): Thumbs
-
-- Type: async opinion voting game.
-- Rounds: 5 default.
-- Score: points for majority alignment (party mode) or minority bonus (hard mode in future).
-- Realtime sync via table websocket channel.
-
-## Suggested next games backlog
-
-1. "Guess Who Drank" (party)
-2. "Mini Briscola" (cards)
-3. "Word Blitz" (family)
-4. "Table Tactics" (light strategy)
-
-## Venue admin roadmap
-
-- QR/table management dashboard by venue domain.
-- Custom challenges with rewards and expiration.
-- Privacy-safe analytics (aggregated, non-identifying).
-
+## Cleanup giornaliero
+Ogni giorno alle **06:00 UTC** viene eseguito un job di cleanup che elimina le sessioni scadute (e relativi dati collegati in cascata).
