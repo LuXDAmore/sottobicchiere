@@ -21,10 +21,16 @@ export const isDemoFallbackEnabled = () => {
     const runtime = useRuntimeConfig().public;
     const appEnvironment = runtime.appEnvironment ?? 'development';
 
-    if( appEnvironment === 'production' ) return false;
+    const demoFlag = runtime.enableDemoFallback;
 
-    // In non-production, demo is enabled by default unless explicitly disabled
-    return runtime.enableDemoFallback !== 'false';
+    // Explicit opt-out always wins
+    if( demoFlag === 'false' ) return false;
+
+    // Explicit opt-in enables demo fallback even in production
+    if( demoFlag === 'true' ) return true;
+
+    // Safe default for missing/unknown values
+    return appEnvironment !== 'production';
 
 };
 
