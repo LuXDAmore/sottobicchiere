@@ -45,6 +45,7 @@ Aggiornato: 2026-05-24
 - [x] Fix logica toast thumbs (vote/start) evitando success duplicati/falsi positivi
 - [x] Allineare demo `tableSessionId` UUID anche in `session/create`
 - [x] Rimuovere toast dating orfano e legare il pending a conferma WS/errore (no timeout fragile)
+- [x] Sostituire i `setTimeout` con `useTimeoutFn` (VueUse) dove applicabile
 - [x] Fix demo join: usare `tableSessionId` UUID-safe per evitare server error nei flussi successivi
 - [x] Fix `isDemoFallbackEnabled()` — default `true` in non-production
 - [x] Aggiornare `.env.example` default demo fallback a `true`

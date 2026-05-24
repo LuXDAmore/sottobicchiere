@@ -6,6 +6,12 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 ---
 
 
+## 2026-05-24 — Timeout resiliente con VueUse (`useTimeoutFn`)
+
+- `server/routes/ws/table.ts` — sostituito `setTimeout` (grace period su `player:left`) con `useTimeoutFn` per uniformare l'uso dei timer con utility VueUse/Nuxt auto-import compatibili e ridurre logica imperativa raw.
+
+---
+
 ## 2026-05-24 — Fix feedback dating send (no timeout fragile)
 
 - `app/pages/[venue]/table/[token]/lobby.vue` — rimosso reset `setTimeout(300ms)` per `isSendingDating`; ora lo stato pending si chiude su ack WS (`dating:message:new` coerente con sender/target/body) o su `wsError`.
