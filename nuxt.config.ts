@@ -239,7 +239,7 @@ export default defineNuxtConfig(
                 websocket: true,
             },
             scheduledTasks: {
-                // Ogni mattina alle 06:00 UTC: pulizia sessioni tavolo scadute
+                // Nitro Scheduled Tasks usano timezone UTC: 06:00 UTC ogni giorno
                 '0 6 * * *': [ 'cleanup-expired-sessions' ],
             },
         },

@@ -1,6 +1,4 @@
-import { lt } from 'drizzle-orm';
-
-import { tableSessions } from '../db/schema';
+import { deleteExpiredSessions, setCleanupLastRun } from '../utils/cleanup-expired-sessions';
 
 export default defineTask( {
     meta: {
@@ -9,14 +7,30 @@ export default defineTask( {
     },
     async run() {
 
-        const deleted = await db
-            .delete( tableSessions )
-            .where( lt( tableSessions.expiresAt, new Date() ) )
-            .returning( { id: tableSessions.id } );
+        const startedAt = Date.now();
+        const executedAt = new Date().toISOString();
+
+        const deleted = await deleteExpiredSessions();
+        const durationMs = Date.now() - startedAt;
+
+        setCleanupLastRun( {
+            deleted,
+            durationMs,
+            executedAt,
+        } );
+
+        const logPayload = {
+            deleted,
+            durationMs,
+            executedAt,
+            task: 'cleanup-expired-sessions',
+        };
+
+        console.info( '[cleanup-expired-sessions] completed', logPayload );
 
         return {
             result: 'success',
-            deleted: deleted.length,
+            ...logPayload,
         };
 
     },
