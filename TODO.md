@@ -27,14 +27,14 @@ Aggiornato: 2026-05-24
 
 - [ ] Schema Drizzle: `venues`, `tables`, `table_sessions`, `player_sessions`, `groups`
 - [ ] Generare e applicare la prima migrazione
-- [ ] Scheduled task Nitro: `cleanup-expired-sessions` (TTL 8h)
+- [x] Scheduled task Nitro: `cleanup-expired-sessions` (run giornaliero alle 06:00 UTC)
 
 ## App Structure (fase 1)
 
 - [x] Layout `default` (header: logo + theme toggle + lang switcher)
 - [x] Layout `game` (full-screen, minimal chrome)
 - [x] Pagina welcome `index.vue` (QR scan prompt, branding, onboarding)
-- [ ] Rotta dinamica `/[venue]/table/[token]` — join tavolo
+- [x] Rotta dinamica `/[venue]/table/[token]` — join tavolo (fix demo fallback)
 - [ ] Pagina lobby tavolo — lista giocatori, scelta gruppo, countdown
 
 ## i18n (fase 1)
@@ -60,7 +60,7 @@ Aggiornato: 2026-05-24
 
 - [ ] v2: Autenticazione giocatori (Better Auth, Google OAuth)
 - [ ] v2: Profili utente persistenti con statistiche
-- [ ] v2: Chat anonima inter-tavolo
+- [ ] v2: Chat anonima inter-tavolo (dating mode)
 - [ ] v2: Marketplace giochi (gioco portato da un bar all'altro)
 - [ ] v2: Stripe per premi a pagamento
 - [ ] v2: Resend per notifiche venue admin

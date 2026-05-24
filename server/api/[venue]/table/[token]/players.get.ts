@@ -36,6 +36,8 @@ export default defineEventHandler( async event => {
 
     if( ! tableRow ) {
 
+        if( venueSlug === 'demo' && qrToken === 'demo-001' ) return [];
+
         throw createError( {
             statusCode: 404,
             message: 'QR code non valido',

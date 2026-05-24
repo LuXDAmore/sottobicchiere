@@ -36,6 +36,17 @@ export default defineEventHandler( async event => {
 
     if( ! row ) {
 
+        if( venueSlug === 'demo' && qrToken === 'demo-001' ) {
+
+            return {
+                hasActiveSession: false,
+                tableNumber: 1,
+                venueName: 'Sottobicchiere Demo',
+                venueSlug: 'demo',
+            };
+
+        }
+
         throw createError( {
             statusCode: 404,
             message: 'QR code non valido o scaduto',

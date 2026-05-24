@@ -52,6 +52,14 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - **i18n semplificato**: solo `it` + `en` per MVP (rimossi de, fr, es)
 
 
+## 2026-05-24 — Fix tavolo demo e documentazione prodotto
+
+- Fix API `GET /api/[venue]/table/[token]` con fallback per `demo/demo-001` per evitare errore QR invalido in ambiente senza seed DB.
+- Fix API `POST /api/[venue]/table/[token]/join` con join demo fallback e session/player temporanei anonimi.
+- Fix API `GET /api/[venue]/table/[token]/players` con fallback demo.
+- Aggiornata schedulazione cleanup sessioni Nitro a `0 6 * * *` (06:00 UTC).
+- Creata `docs/product-foundations.md` con obiettivi prodotto, flussi, modalità (inclusa dating mode), e policy cleanup dati.
+- Aggiornato `TODO.md` con task completati e data header.
 ## 2026-05-24 — Milestone documentazione prodotto/API MVP
 
 **Obiettivo**: Consolidare documentazione funzionale MVP (journey, modalità gioco, contratti API) e riallineare README/TODO allo stato reale.
