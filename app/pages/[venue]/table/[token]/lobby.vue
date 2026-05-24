@@ -77,14 +77,14 @@
 
             <section v-else-if="sessionMetaError" class="rounded-lg border border-error-500/30 bg-error-500/10 p-3 text-sm">
                 <p class="text-error-500">Errore caricamento sessione.</p>
-                <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" label="Riprova" size="xs" variant="soft" @click="refreshSessionMeta" />
+                <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.retry')" size="xs" variant="soft" @click="() => refreshSessionMeta()" />
             </section>
 
             <section v-else-if="sessionMeta" class="rounded-lg border border-[var(--ui-border)] p-3 text-sm">
                 <p><strong>{{ $t('lobby.session_status') }}:</strong> {{ sessionMeta.status }}</p>
                 <p><strong>{{ $t('lobby.session_host') }}:</strong> {{ sessionMeta.hostNickname ?? '-' }}</p>
                 <p><strong>{{ $t('lobby.session_remaining') }}:</strong> {{ Math.max(0, remainingSeconds) }}s</p>
-                <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" label="Aggiorna sessione" size="xs" variant="ghost" @click="refreshSessionMeta" />
+                <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.refresh_session')" size="xs" variant="ghost" @click="() => refreshSessionMeta()" />
             </section>
 
             <!-- Players section -->
