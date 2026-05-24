@@ -75,6 +75,10 @@
         "dating_send_button": "Send",
         "dating_no_messages": "No messages yet.",
         "dating_select_target": "Select a table",
+        "dating_table_label": "Table {id}…",
+        "game_category_board": "Board game",
+        "game_category_preserata": "Pre-party",
+        "game_category_both": "Versatile",
         "tab_players": "Players",
         "tab_games": "Games"
     },

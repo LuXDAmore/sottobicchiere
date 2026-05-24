@@ -75,6 +75,10 @@
         "dating_send_button": "Invia",
         "dating_no_messages": "Nessun messaggio ancora.",
         "dating_select_target": "Seleziona un tavolo",
+        "dating_table_label": "Tavolo {id}…",
+        "game_category_board": "Da tavolo",
+        "game_category_preserata": "Pre-serata",
+        "game_category_both": "Versatile",
         "tab_players": "Giocatori",
         "tab_games": "Giochi"
     },

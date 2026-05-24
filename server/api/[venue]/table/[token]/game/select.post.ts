@@ -1,4 +1,4 @@
-import { and, desc, eq, gt } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -51,40 +51,45 @@ export default defineEventHandler( async event => {
 
     }
 
-    const now = new Date()
-        , session = await db
-            .select( {
-                id: tableSessions.id,
-                hostPlayerId: tableSessions.hostPlayerId,
-                lockedAt: tableSessions.lockedAt,
-            } )
-            .from( tableSessions )
-            .where( and( eq( tableSessions.tableId, table.tableId ), gt( tableSessions.expiresAt, now ) ) )
-            .orderBy( desc( tableSessions.startedAt ) )
-            .limit( 1 )
-            .then( ( rows: { id: string; hostPlayerId: string | null; lockedAt: Date | null }[] ) => rows[ 0 ] ?? null );
+    const now = new Date();
+
+    // Resolve the session the player actually belongs to (not the newest one on the table)
+    const playerRow = await db
+        .select( { tableSessionId: playerSessions.tableSessionId } )
+        .from( playerSessions )
+        .where( eq( playerSessions.id, body.playerId ) )
+        .limit( 1 )
+        .then( ( rows: { tableSessionId: string }[] ) => rows[ 0 ] ?? null );
+
+    if( ! playerRow ) {
+
+        throw createError( {
+            statusCode: 403,
+            message: 'Player non trovato',
+        } );
+
+    }
+
+    const session = await db
+        .select( {
+            id: tableSessions.id,
+            hostPlayerId: tableSessions.hostPlayerId,
+            lockedAt: tableSessions.lockedAt,
+        } )
+        .from( tableSessions )
+        .where( and(
+            eq( tableSessions.id, playerRow.tableSessionId ),
+            eq( tableSessions.tableId, table.tableId ),
+            gt( tableSessions.expiresAt, now )
+        ) )
+        .limit( 1 )
+        .then( ( rows: { id: string; hostPlayerId: string | null; lockedAt: Date | null }[] ) => rows[ 0 ] ?? null );
 
     if( ! session ) {
 
         throw createError( {
             statusCode: 404,
-            message: 'Sessione non trovata',
-        } );
-
-    }
-
-    const player = await db
-        .select( { id: playerSessions.id } )
-        .from( playerSessions )
-        .where( and( eq( playerSessions.id, body.playerId ), eq( playerSessions.tableSessionId, session.id ) ) )
-        .limit( 1 )
-        .then( ( rows: { id: string }[] ) => rows[ 0 ] ?? null );
-
-    if( ! player ) {
-
-        throw createError( {
-            statusCode: 403,
-            message: 'Player non valido per questa sessione',
+            message: 'Sessione non trovata o scaduta',
         } );
 
     }

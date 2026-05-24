@@ -63,6 +63,11 @@ const _useTableSocket = createGlobalState( () => {
                     message: JSON.stringify( { type: 'ping' } ),
                 },
                 immediate: false,
+                onConnected() {
+                    // Re-register dating after auto-reconnect: server creates a new peer, so the
+                    // per-peer flag resets. We restore the client-visible state transparently.
+                    if( datingEnabled.value ) wsSend( JSON.stringify( { type: 'dating:enable' } ) );
+                },
                 async onMessage( _ws, event ) {
 
                     const text = typeof event.data === 'string'

@@ -103,12 +103,15 @@ export default defineEventHandler( async event => {
         }
     }
 
+    // isHost is only possible when creating a brand new session; joining an existing one can never claim host
+    const isHost = ! requestedSessionId && createSession;
+
     const [ player ] = await db.insert( playerSessions ).values( {
         tableSessionId: session.id,
         nickname,
         color: playerColor,
         groupId,
-        isHost: createSession,
+        isHost,
     } ).returning( { id: playerSessions.id, color: playerSessions.color, isHost: playerSessions.isHost } );
 
     return {

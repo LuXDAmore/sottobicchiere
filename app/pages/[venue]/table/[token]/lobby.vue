@@ -93,7 +93,7 @@
                         >
                             <option value="">{{ $t('lobby.dating_select_target') }}</option>
                             <option v-for="tid in datingRoomStatus.availableTableSessionIds" :key="tid" :value="tid">
-                                Tavolo {{ tid.slice( 0, 8 ) }}…
+                                {{ $t('lobby.dating_table_label', { id: tid.slice(0, 8) }) }}
                             </option>
                         </select>
                         <div class="flex gap-2">
@@ -250,7 +250,7 @@
                                                     : 'bg-success-500/15 text-success-500'"
                                         >
                                             {{ game.category === 'preserata' ? '🍹' : game.category === 'board' ? '🎲' : '✨' }}
-                                            {{ game.category === 'both' ? 'Versatile' : game.category === 'preserata' ? 'Pre-serata' : 'Da tavolo' }}
+                                            {{ $t(`lobby.game_category_${ game.category === 'both' ? 'both' : game.category }`) }}
                                         </span>
                                     </div>
                                 </div>
