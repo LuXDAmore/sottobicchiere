@@ -6,6 +6,13 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 ---
 
 
+## 2026-05-24 — Fix feedback dating send (no timeout fragile)
+
+- `app/pages/[venue]/table/[token]/lobby.vue` — rimosso reset `setTimeout(300ms)` per `isSendingDating`; ora lo stato pending si chiude su ack WS (`dating:message:new` coerente con sender/target/body) o su `wsError`.
+- `i18n/locales/it.json` e `i18n/locales/en.json` — rimossa chiave orfana `dating_message_sent_toast` (non usata).
+
+---
+
 ## 2026-05-24 — Fix commenti PR: toast thumbs/lobby + UUID demo session/create
 
 - `app/pages/[venue]/table/[token]/game/thumbs.vue` — corrette condizioni toast: `vote_success` mostrato solo quando il voto locale è impostato; `start_success` mostrato una sola volta su transizione reale (pending start → phase voting), evitando duplicati a ogni update `gameState`.

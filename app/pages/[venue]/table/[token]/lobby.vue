@@ -310,7 +310,8 @@ const route = useRoute()
     , datingTarget = ref( '' )
     , datingBody = ref( '' )
     , isSendingDating = ref( false )
-    , pendingSelectedGame = ref<string | null>( null );
+    , pendingSelectedGame = ref<string | null>( null )
+    , pendingDatingMessage = ref<{ body: string; toTableSessionId: string } | null>( null );
 
 // Game categories for filter tabs
 const gameCategories = computed( () => [
@@ -345,6 +346,8 @@ watch( wsError, error => {
         isSelectingGame.value = false;
         toast.remove( 'lobby-select-game-loading' );
         toast.remove( 'lobby-dating-send-loading' );
+        isSendingDating.value = false;
+        pendingDatingMessage.value = null;
         toast.add( { color: 'error', description: error, duration: 4000 } );
         wsError.value = null;
     }
@@ -362,6 +365,20 @@ watch( () => gameSelection.value.lockedAt, ( lockedAt, previousLockedAt ) => {
     toast.add( { color: 'success', description: t( 'lobby.game_select_success_toast' ), duration: 2500, icon: 'i-lucide-check-circle-2' } );
     pendingSelectedGame.value = null;
     isSelectingGame.value = false;
+} );
+
+watch( () => datingInbox.value[ 0 ], latestMessage => {
+    if( ! latestMessage || ! pendingDatingMessage.value ) return;
+
+    const isOwnAck = latestMessage.fromTableSessionId === playerStore.tableSessionId
+        && latestMessage.toTableSessionId === pendingDatingMessage.value.toTableSessionId
+        && latestMessage.body.trim() === pendingDatingMessage.value.body.trim();
+
+    if( ! isOwnAck ) return;
+
+    toast.remove( 'lobby-dating-send-loading' );
+    isSendingDating.value = false;
+    pendingDatingMessage.value = null;
 } );
 
 // Clear unread when dating panel is open
@@ -385,13 +402,13 @@ function formatTime( isoString: string ): string {
 function onSendDating() {
     if( ! datingTarget.value || ! datingBody.value.trim() || isSendingDating.value ) return;
 
+    const messageBody = datingBody.value.trim();
+
     isSendingDating.value = true;
-    toast.add( { id: 'lobby-dating-send-loading', color: 'primary', description: t( 'lobby.dating_message_sending_toast' ), duration: 1500, icon: 'i-lucide-loader-2' } );
-    sendDatingMessage( datingTarget.value, datingBody.value );
+    pendingDatingMessage.value = { body: messageBody, toTableSessionId: datingTarget.value };
+    toast.add( { id: 'lobby-dating-send-loading', color: 'primary', description: t( 'lobby.dating_message_sending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+    sendDatingMessage( datingTarget.value, messageBody );
     datingBody.value = '';
-    setTimeout( () => {
-        isSendingDating.value = false;
-    }, 300 );
 }
 
 async function selectGame( selectedGame: 'thumbs' | 'word-blitz' ) {
