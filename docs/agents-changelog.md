@@ -95,3 +95,21 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - `test/unit/table-resolver.test.ts` — estesi i test per coprire: production override, QR reale esistente, QR reale inesistente e fallback demo attivo.
 
 - Migrazioni DB spostate in `server/database/migrations` (path di default NuxtHub) e rimossa la chiave `hub.db.migrationsDirs` da `nuxt.config.ts`.
+
+
+## 2026-05-24 — Selezione gioco lobby con lock host + sync WebSocket
+
+- `server/db/schema.ts` — esteso `table_sessions` con `selectedGame`, `gameMode`, `lockedAt`, `hostPlayerId`.
+- `server/api/[venue]/table/[token]/game/select.post.ts` — nuovo endpoint host-only per selezione e lock gioco.
+- `server/api/[venue]/table/[token]/game/current.get.ts` — nuovo endpoint per stato gioco corrente in lobby.
+- `server/utils/table-ws-broker.ts` — broker in-memory per emettere eventi WS da API Nitro.
+- `server/routes/ws/table.ts` — sync stato selezione/lock ai join e registrazione peer per push eventi `game:selected` / `game:locked`.
+- `shared/types/ws.ts` — estesi i messaggi server con i nuovi eventi game selection.
+- `app/composables/useTableSocket.ts` — aggiunto stato `gameSelection` e gestione eventi nuovi.
+- `app/pages/[venue]/table/[token]/lobby.vue` — UI lobby aggiornata: scelta giochi solo host prima del lock; visualizzazione “Gioco corrente” dopo selezione.
+
+## 2026-05-24 — Hardening selezione gioco host (bugfix)
+
+- `server/api/[venue]/table/[token]/game/select.post.ts` — aggiunta validazione `safeParse` con risposta `422` su payload invalido.
+- `server/api/[venue]/table/[token]/game/select.post.ts` — aggiunta guard server-side che verifica che `playerId` appartenga alla `table_session` attiva prima di permettere la selezione (chiusura bypass non-host).
+- `app/pages/[venue]/table/[token]/lobby.vue` — pulizia funzioni inutilizzate e formattazione script per coerenza.

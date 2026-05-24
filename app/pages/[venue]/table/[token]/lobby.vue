@@ -125,59 +125,18 @@
             <!-- Games section -->
             <section>
                 <div class="flex gap-2 items-center mb-3">
-                    <u-icon
-                        class="size-4 text-muted"
-                        name="i-lucide-gamepad-2"
-                    />
-                    <h2 class="font-semibold text-highlighted text-sm">
-                        {{ $t('lobby.games_title') }}
-                    </h2>
+                    <u-icon class="size-4 text-muted" name="i-lucide-gamepad-2" />
+                    <h2 class="font-semibold text-highlighted text-sm">{{ $t('lobby.games_title') }}</h2>
                 </div>
-
-                <u-card
-                    class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
-                    :ui="{ body: 'flex items-center gap-4 p-4' }"
-                    @click="launchThumbs"
-                >
-                    <div class="bg-amber-500/15 flex items-center justify-center rounded-2xl shrink-0 size-14 text-3xl">
-                        👍
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-highlighted">
-                            {{ $t('game.thumbs.title') }}
-                        </p>
-                        <p class="mt-0.5 text-muted text-sm truncate">
-                            {{ $t('game.thumbs.description') }}
-                        </p>
-                    </div>
-                    <u-badge
-                        :label="$t('game.thumbs.players_range')"
-                        variant="subtle"
-                    />
-                </u-card>
-
-                <u-card
-                    class="cursor-pointer hover:ring-2 hover:ring-primary-500 transition-all"
-                    :ui="{ body: 'flex items-center gap-4 p-4' }"
-                    @click="launchWordBlitz"
-                >
-                    <div class="bg-cyan-500/15 flex items-center justify-center rounded-2xl shrink-0 size-14 text-3xl">
-                        ⚡
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="font-semibold text-highlighted">
-                            {{ $t('game.word_blitz.title') }}
-                        </p>
-                        <p class="mt-0.5 text-muted text-sm truncate">
-                            {{ $t('game.word_blitz.description') }}
-                        </p>
-                    </div>
-                    <u-badge
-                        :label="$t('game.word_blitz.players_range')"
-                        variant="subtle"
-                    />
-                </u-card>
-
+                <div v-if="gameSelection.selectedGame" class="bg-primary-500/10 p-4 rounded-xl text-sm">
+                    <p class="font-semibold">Gioco corrente: {{ gameSelection.selectedGame }}</p>
+                    <p class="text-muted">Selezione bloccata{{ gameSelection.lockedAt ? ' alle ' + new Date(gameSelection.lockedAt).toLocaleTimeString() : '' }}</p>
+                </div>
+                <div v-else class="grid gap-3">
+                    <u-button :disabled="isSelectingGame || !isHostSelector" @click="selectGame('thumbs')">👍 {{ $t('game.thumbs.title') }}</u-button>
+                    <u-button :disabled="isSelectingGame || !isHostSelector" @click="selectGame('word-blitz')">⚡ {{ $t('game.word_blitz.title') }}</u-button>
+                    <p v-if="!isHostSelector" class="text-muted text-xs">Solo l'host può scegliere il gioco.</p>
+                </div>
             </section>
 
         </main>
@@ -199,12 +158,13 @@
           , qrToken = route.params.token as string
 
           , {
-              players, gameState, status, open, close, wsError,
+              players, gameSelection, gameState, status, open, close, wsError,
           } = useTableSocket()
 
           , isLeaving = ref( false )
           , { data: sessionMeta } = await useFetch(`/api/${ venueSlug }/table/${ qrToken }/session`)
           , remainingSeconds = ref(0);
+          , isSelectingGame = ref( false );
 
     onMounted( () => {
 
@@ -262,24 +222,33 @@
 
     } );
 
-    /**
-     *
-     */
-    function launchThumbs() {
+    const isHostSelector = computed( () => ! gameSelection.value.hostPlayerId || gameSelection.value.hostPlayerId === playerStore.playerId );
 
-        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
+    async function selectGame( selectedGame: 'thumbs' | 'word-blitz' ) {
+
+        if( ! isHostSelector.value || gameSelection.value.lockedAt || isSelectingGame.value ) return;
+
+        isSelectingGame.value = true;
+
+        try {
+
+            await $fetch( `/api/${ venueSlug }/table/${ qrToken }/game/select`, {
+                method: 'POST',
+                body: {
+                    selectedGame,
+                    gameMode: 'default',
+                    playerId: playerStore.playerId,
+                },
+            } );
+
+        } finally {
+
+            isSelectingGame.value = false;
+
+        }
 
     }
 
-    function launchWordBlitz() {
-
-        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/word-blitz` ) );
-
-    }
-
-    /**
-     *
-     */
     async function handleLeave() {
 
         if( isLeaving.value ) return;

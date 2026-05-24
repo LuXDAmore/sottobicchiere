@@ -44,6 +44,10 @@ export const tableSessions = pgTable(
         startedAt: timestamp( 'started_at', { withTimezone: true } ).notNull().defaultNow(),
         expiresAt: timestamp( 'expires_at', { withTimezone: true } ).notNull()
             .$defaultFn( () => new Date( Date.now() + ( 8 * 60 * 60 * 1000 ) ) ),
+        selectedGame: text( 'selected_game' ),
+        gameMode: text( 'game_mode' ),
+        lockedAt: timestamp( 'locked_at', { withTimezone: true } ),
+        hostPlayerId: text( 'host_player_id' ),
     },
     t => [ index( 'idx_table_sessions_expires_at' ).on( t.expiresAt ) ]
 );
