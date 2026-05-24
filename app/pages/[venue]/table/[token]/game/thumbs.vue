@@ -388,7 +388,7 @@
 
     } );
 
-    watch( gameState, state => {
+    watch( gameState, ( state, previousState ) => {
 
         if( ! state ) {
 
@@ -398,19 +398,21 @@
 
         }
 
-        if( state.phase === 'voting' && ! state.myVote ) {
+        if( isSubmittingVote.value && state.myVote ) {
             isSubmittingVote.value = false;
             toast.remove( 'thumbs-vote-loading' );
             toast.add( { color: 'success', description: t( 'game.thumbs.vote_success_toast' ), duration: 2200, icon: 'i-lucide-check-circle-2' } );
         }
-        if( state.phase !== 'reveal' ) {
+
+        if( isAdvancingRound.value && state.phase === 'voting' && previousState?.phase === 'reveal' ) {
             isAdvancingRound.value = false;
             toast.remove( 'thumbs-next-round-loading' );
         }
-        if( state.phase === 'voting' || state.phase === 'finished' ) {
+
+        if( isStartingGame.value && state.phase === 'voting' && previousState?.phase !== 'voting' ) {
             isStartingGame.value = false;
             toast.remove( 'thumbs-start-loading' );
-            if( state.phase === 'voting' ) toast.add( { color: 'success', description: t( 'game.thumbs.start_success_toast' ), duration: 2200, icon: 'i-lucide-check-circle-2' } );
+            toast.add( { color: 'success', description: t( 'game.thumbs.start_success_toast' ), duration: 2200, icon: 'i-lucide-check-circle-2' } );
         }
 
     }, { deep: true } );

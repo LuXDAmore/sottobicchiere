@@ -6,6 +6,16 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 ---
 
 
+## 2026-05-24 — Fix commenti PR: toast thumbs/lobby + UUID demo session/create
+
+- `app/pages/[venue]/table/[token]/game/thumbs.vue` — corrette condizioni toast: `vote_success` mostrato solo quando il voto locale è impostato; `start_success` mostrato una sola volta su transizione reale (pending start → phase voting), evitando duplicati a ogni update `gameState`.
+- `app/pages/[venue]/table/[token]/lobby.vue` — `dating` non mostra più success ottimistico fuorviante: ora feedback di invio in corso; per `selectGame` il success toast è agganciato alla conferma WS (`lockedAt`) invece che alla sola risposta HTTP.
+- `server/api/[venue]/table/[token]/session/create.post.ts` — demo branch aggiornato con stesso UUID-safe `tableSessionId` del join demo.
+- `server/utils/demo-session.ts` — nuova costante condivisa `DEMO_TABLE_SESSION_ID` usata da join/session-create per evitare drift.
+- `server/api/[venue]/table/[token]/join.post.ts` — usa la costante condivisa demo session id.
+
+---
+
 ## 2026-05-24 — Toast UX uniforme per azioni async
 
 - `app/pages/[venue]/table/[token]/lobby.vue` — aggiunti toast pending/success/error per selezione gioco, uscita lobby e invio messaggi dating.

@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { pickAvailableColor } from '../../../../../shared/utils/colors';
 import { groups, playerSessions, tableSessions } from '../../../../db/schema';
+import { DEMO_TABLE_SESSION_ID } from '../../../../utils/demo-session';
 import { resolveTableRow } from '../../../../utils/table-resolver';
 
 const joinSchema = z.object( {
@@ -37,7 +38,7 @@ export default defineEventHandler( async event => {
         qrToken,
         selectedGame: null,
         tableNumber: tableRow.tableNumber,
-        tableSessionId: '00000000-0000-4000-8000-000000000001',
+        tableSessionId: DEMO_TABLE_SESSION_ID,
         venueName: tableRow.venueName,
         venueSlug: tableRow.venueSlug,
     };

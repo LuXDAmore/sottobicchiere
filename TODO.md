@@ -42,6 +42,8 @@ Aggiornato: 2026-05-24
 ### Fix bug critico
 - [x] Migliorare messaggi di errore/join con toast async lato app
 - [x] Uniformare i toast per tutte le principali azioni async (join, lobby, game)
+- [x] Fix logica toast thumbs (vote/start) evitando success duplicati/falsi positivi
+- [x] Allineare demo `tableSessionId` UUID anche in `session/create`
 - [x] Fix demo join: usare `tableSessionId` UUID-safe per evitare server error nei flussi successivi
 - [x] Fix `isDemoFallbackEnabled()` — default `true` in non-production
 - [x] Aggiornare `.env.example` default demo fallback a `true`

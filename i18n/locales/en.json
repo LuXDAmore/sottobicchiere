@@ -88,7 +88,8 @@
         "game_select_error_toast": "Could not select game. Please try again.",
         "leave_pending_toast": "Leaving lobby…",
         "leave_error_toast": "Error while leaving lobby.",
-        "dating_message_sent_toast": "Anonymous message sent."
+        "dating_message_sent_toast": "Anonymous message sent.",
+        "dating_message_sending_toast": "Sending anonymous message…"
     },
     "game": {
         "thumbs": {

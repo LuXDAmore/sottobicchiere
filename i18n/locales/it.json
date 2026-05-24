@@ -88,7 +88,8 @@
         "game_select_error_toast": "Non sono riuscito a selezionare il gioco. Riprova.",
         "leave_pending_toast": "Uscita dalla lobby in corso…",
         "leave_error_toast": "Errore durante l’uscita dalla lobby.",
-        "dating_message_sent_toast": "Messaggio anonimo inviato."
+        "dating_message_sent_toast": "Messaggio anonimo inviato.",
+        "dating_message_sending_toast": "Invio messaggio anonimo in corso…"
     },
     "game": {
         "thumbs": {
