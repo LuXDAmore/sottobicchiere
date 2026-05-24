@@ -3,10 +3,15 @@
 
         <!-- Loading -->
         <template v-if="tableInfoStatus === 'pending'">
-            <u-icon
-                class="animate-spin size-10 text-primary-500"
-                name="i-lucide-loader-2"
-            />
+            <div class="max-w-sm w-full">
+                <div class="text-center">
+                    <u-skeleton class="h-4 mx-auto w-36" />
+                    <u-skeleton class="h-8 mt-3 mx-auto w-52" />
+                </div>
+                <u-skeleton class="h-[260px] mt-6 rounded-3xl w-full" />
+                <u-skeleton class="h-4 mt-6 mx-auto w-52" />
+                <u-skeleton class="h-4 mt-2 mx-auto w-48" />
+            </div>
         </template>
 
         <!-- Error -->

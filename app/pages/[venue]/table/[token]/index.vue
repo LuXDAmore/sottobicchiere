@@ -2,7 +2,24 @@
     <div class="flex flex-col gap-6 items-center justify-center min-h-screen px-4 py-12">
 
         <template v-if="tableInfoStatus === 'pending'">
-            <u-icon class="animate-spin size-10 text-primary-500" name="i-lucide-loader-2" />
+            <div class="max-w-sm w-full">
+                <div class="text-center">
+                    <u-skeleton class="mb-4 mx-auto rounded-3xl size-16" />
+                    <u-skeleton class="h-4 mx-auto w-36" />
+                    <u-skeleton class="h-9 mt-3 mx-auto w-52" />
+                </div>
+
+                <u-card class="mt-6" :ui="{ body: 'flex flex-col gap-5 p-6' }">
+                    <u-skeleton class="h-5 mx-auto w-40" />
+                    <u-skeleton class="h-4 mx-auto w-56" />
+                    <u-skeleton class="h-12 w-full" />
+                    <u-skeleton class="h-12 w-full" />
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <u-skeleton class="h-11 w-full" />
+                        <u-skeleton class="h-11 w-full" />
+                    </div>
+                </u-card>
+            </div>
         </template>
 
         <template v-else-if="tableError">

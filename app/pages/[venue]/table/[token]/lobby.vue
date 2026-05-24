@@ -68,9 +68,10 @@
             </div>
 
             <section v-if="sessionMetaPending" class="rounded-lg border border-[var(--ui-border)] p-3 text-sm">
-                <div class="flex items-center gap-2 text-muted">
-                    <u-icon class="animate-spin size-4" name="i-lucide-loader-2" />
-                    <span>Caricamento sessione...</span>
+                <div class="space-y-2">
+                    <u-skeleton class="h-4 w-44" />
+                    <u-skeleton class="h-4 w-52" />
+                    <u-skeleton class="h-4 w-40" />
                 </div>
             </section>
 
