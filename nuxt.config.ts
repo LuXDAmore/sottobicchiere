@@ -165,6 +165,7 @@ export default defineNuxtConfig(
             kv: true,
         },
 
+
         i18n: {
             defaultLocale: 'it',
             langDir: 'locales/',
