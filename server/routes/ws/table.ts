@@ -77,6 +77,21 @@ function cleanupPeerDating( peerId: string, tableSessionId: string ): void {
     peerDatingEnabled.delete( peerId );
 }
 
+// Notify all sessions currently in the dating pool that availability has changed.
+// Called after a session enters or leaves the pool so their clients refresh the list.
+function broadcastDatingStatusToPool( changedTableSessionId: string ): void {
+    const { available, unavailable } = getRoomStatus( changedTableSessionId );
+    const allInPool = [ ... available, ... unavailable ];
+
+    for( const otherSessionId of allInPool ) {
+        const otherPeers = getPeersForTable( otherSessionId );
+        if( otherPeers.length === 0 ) continue;
+        const otherStatus = getRoomStatus( otherSessionId );
+        const msg = JSON.stringify( { type: 'dating:room:status', availableTableSessionIds: otherStatus.available, unavailableTableSessionIds: otherStatus.unavailable } );
+        for( const p of otherPeers ) p.send( msg );
+    }
+}
+
 export default defineWebSocketHandler( {
 
     async open( peer ) {
@@ -134,10 +149,11 @@ export default defineWebSocketHandler( {
 
         if (persistedSession?.sessionMode) {
             emit(peer, { type: 'session:mode:sync', mode: persistedSession.sessionMode as 'board' | 'dating' | 'preserata' });
-            setTableAvailability(tableSessionId, persistedSession.sessionMode === 'dating');
-            const status = getRoomStatus(tableSessionId);
-            emit(peer, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable });
         }
+
+        // Always send current dating room status so new/reconnecting peers see the live pool
+        const roomStatus = getRoomStatus( tableSessionId );
+        emit( peer, { type: 'dating:room:status', availableTableSessionIds: roomStatus.available, unavailableTableSessionIds: roomStatus.unavailable } );
 
         if (persistedSession?.lockedAt) {
             emit(peer, { type: 'game:locked', lockedAt: persistedSession.lockedAt.toISOString() });
@@ -259,10 +275,8 @@ export default defineWebSocketHandler( {
                 .set( { sessionMode: data.mode, hostPlayerId } )
                 .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) );
 
-            setTableAvailability( tableSessionId, data.mode === 'dating' );
             broadcast( peer, tableSessionId, { type: 'session:mode:sync', mode: data.mode } );
-            const status = getRoomStatus( tableSessionId );
-            broadcast( peer, tableSessionId, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable } );
+            emit( peer, { type: 'session:mode:sync', mode: data.mode } );
             return;
 
         }
@@ -273,6 +287,8 @@ export default defineWebSocketHandler( {
             emit( peer, { type: 'dating:status', enabled: true } );
             const status = getRoomStatus( tableSessionId );
             emit( peer, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable } );
+            // Notify other tables already in the pool that this session is now available
+            broadcastDatingStatusToPool( tableSessionId );
             return;
 
         }
@@ -281,6 +297,8 @@ export default defineWebSocketHandler( {
 
             setPeerDating( peer.id, tableSessionId, false );
             emit( peer, { type: 'dating:status', enabled: false } );
+            // Notify other tables that this session left the pool
+            broadcastDatingStatusToPool( tableSessionId );
             return;
 
         }

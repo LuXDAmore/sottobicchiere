@@ -1,4 +1,4 @@
-import { and, count, eq, gt } from 'drizzle-orm';
+import { and, count, desc, eq, gt } from 'drizzle-orm';
 
 import { playerSessions, tableSessions } from '../../../../db/schema';
 import { resolveTableRow } from '../../../../utils/table-resolver';
@@ -37,49 +37,46 @@ export default defineEventHandler( async event => {
         } )
         .from( tableSessions )
         .where( and( eq( tableSessions.tableId, row.tableId ), gt( tableSessions.expiresAt, now ) ) )
-        .orderBy( tableSessions.startedAt );
+        .orderBy( desc( tableSessions.startedAt ) ); // newest first
 
     if( activeSessions.length === 0 ) return { sessions: [] };
 
-    const sessionIds = activeSessions.map( ( s: SessionRow ) => s.sessionId );
-
-    // Fetch player counts for all sessions
+    // Fetch player count and host nickname for all sessions in parallel
     const countMap = new Map<string, number>();
-    await Promise.all(
-        sessionIds.map( ( id: string ) =>
-            db
-                .select( { count: count() } )
-                .from( playerSessions )
-                .where( eq( playerSessions.tableSessionId, id ) )
-                .then( ( r: { count: number }[] ) => countMap.set( id, r[ 0 ]?.count ?? 0 ) )
-        )
-    );
-
-    // Fetch host nickname for each session
     const nicknameMap = new Map<string, string | null>();
+
     await Promise.all(
         activeSessions.map( async ( s: SessionRow ) => {
-            if( ! s.hostPlayerId ) {
-                nicknameMap.set( s.sessionId, null );
-                return;
-            }
-            const host = await db
-                .select( { nickname: playerSessions.nickname } )
-                .from( playerSessions )
-                .where( eq( playerSessions.id, s.hostPlayerId ) )
-                .limit( 1 )
-                .then( ( r: { nickname: string }[] ) => r[ 0 ] ?? null );
-            nicknameMap.set( s.sessionId, host?.nickname ?? null );
+            const [ playerCount, hostNickname ] = await Promise.all( [
+                db
+                    .select( { count: count() } )
+                    .from( playerSessions )
+                    .where( eq( playerSessions.tableSessionId, s.sessionId ) )
+                    .then( ( r: { count: number }[] ) => r[ 0 ]?.count ?? 0 )
+                    .catch( () => 0 ),
+                s.hostPlayerId
+                    ? db
+                        .select( { nickname: playerSessions.nickname } )
+                        .from( playerSessions )
+                        .where( eq( playerSessions.id, s.hostPlayerId ) )
+                        .limit( 1 )
+                        .then( ( r: { nickname: string }[] ) => r[ 0 ]?.nickname ?? null )
+                        .catch( () => null )
+                    : Promise.resolve( null ),
+            ] );
+
+            countMap.set( s.sessionId, playerCount );
+            nicknameMap.set( s.sessionId, hostNickname );
         } )
     );
 
     return {
         sessions: activeSessions.map( ( s: SessionRow ) => ( {
-            sessionId: s.sessionId,
-            playerCount: countMap.get( s.sessionId ) ?? 0,
             hasActiveGame: !! s.lockedAt,
-            selectedGame: s.selectedGame,
             hostNickname: nicknameMap.get( s.sessionId ) ?? null,
+            playerCount: countMap.get( s.sessionId ) ?? 0,
+            selectedGame: s.selectedGame,
+            sessionId: s.sessionId,
             startedAt: s.startedAt.toISOString(),
         } ) ),
     };

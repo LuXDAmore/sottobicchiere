@@ -214,10 +214,8 @@ async function handleJoin() {
 
         playerStore.join( data );
 
-        // If joining a session with an active game, navigate directly to game
-        const chosenSession = sessions.value.find( s => s.sessionId === selectedSessionId.value );
-        if( chosenSession?.hasActiveGame && chosenSession.selectedGame ) {
-            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ chosenSession.selectedGame }` ) );
+        if( data.hasActiveGame && data.selectedGame ) {
+            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ data.selectedGame }` ) );
         } else {
             await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
         }

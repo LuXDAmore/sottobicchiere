@@ -29,11 +29,13 @@ export default defineEventHandler( async event => {
     if( tableRow.tableId === 'demo-table-001' ) return {
         expiresAt: new Date( Date.now() + ( 8 * 60 * 60 * 1000 ) ).toISOString(),
         groupId: null,
+        hasActiveGame: false,
         isHost: createSession,
         playerId: crypto.randomUUID(),
         playerColor: '#4F46E5',
         playerNickname: nickname,
         qrToken,
+        selectedGame: null,
         tableNumber: tableRow.tableNumber,
         tableSessionId: 'demo-session-001',
         venueName: tableRow.venueName,
@@ -43,12 +45,12 @@ export default defineEventHandler( async event => {
     const now = new Date()
         , expiresAt = new Date( now.getTime() + ( 8 * 60 * 60 * 1000 ) );
 
-    let session: { id: string; expiresAt: Date } | null = null;
+    let session: { id: string; expiresAt: Date; lockedAt: Date | null; selectedGame: string | null } | null = null;
 
     if( requestedSessionId ) {
         // Join a specific session by ID (validate it belongs to this table and is not expired)
         session = await db
-            .select( { id: tableSessions.id, expiresAt: tableSessions.expiresAt } )
+            .select( { id: tableSessions.id, expiresAt: tableSessions.expiresAt, lockedAt: tableSessions.lockedAt, selectedGame: tableSessions.selectedGame } )
             .from( tableSessions )
             .where( and(
                 eq( tableSessions.id, requestedSessionId ),
@@ -56,25 +58,25 @@ export default defineEventHandler( async event => {
                 gt( tableSessions.expiresAt, now )
             ) )
             .limit( 1 )
-            .then( ( rows: { id: string; expiresAt: Date }[] ) => rows[ 0 ] ?? null );
+            .then( ( rows: { id: string; expiresAt: Date; lockedAt: Date | null; selectedGame: string | null }[] ) => rows[ 0 ] ?? null );
 
         if( ! session ) throw createError( { statusCode: 404, message: 'Sessione non trovata o scaduta' } );
     } else if( ! createSession ) {
         session = await db
-            .select( { id: tableSessions.id, expiresAt: tableSessions.expiresAt } )
+            .select( { id: tableSessions.id, expiresAt: tableSessions.expiresAt, lockedAt: tableSessions.lockedAt, selectedGame: tableSessions.selectedGame } )
             .from( tableSessions )
             .where( and( eq( tableSessions.tableId, tableRow.tableId ), gt( tableSessions.expiresAt, now ) ) )
             .orderBy( desc( tableSessions.startedAt ) )
             .limit( 1 )
-            .then( ( rows: { id: string; expiresAt: Date }[] ) => rows[ 0 ] ?? null );
+            .then( ( rows: { id: string; expiresAt: Date; lockedAt: Date | null; selectedGame: string | null }[] ) => rows[ 0 ] ?? null );
     }
 
     if( ! session ) {
         const [ created ] = await db
             .insert( tableSessions )
             .values( { expiresAt, tableId: tableRow.tableId } )
-            .returning( { id: tableSessions.id, expiresAt: tableSessions.expiresAt } );
-        session = created ?? null;
+            .returning( { id: tableSessions.id, expiresAt: tableSessions.expiresAt, lockedAt: tableSessions.lockedAt, selectedGame: tableSessions.selectedGame } );
+        session = created ? { ...created, lockedAt: null, selectedGame: null } : null;
     }
 
     if( ! session ) throw createError( { statusCode: 500, message: 'Errore durante la creazione della sessione' } );
@@ -112,11 +114,13 @@ export default defineEventHandler( async event => {
     return {
         expiresAt: session.expiresAt.toISOString(),
         groupId,
+        hasActiveGame: !! session.lockedAt,
         isHost: player.isHost,
         playerId: player.id,
         playerColor: player.color,
         playerNickname: nickname,
         qrToken,
+        selectedGame: session.selectedGame ?? null,
         tableNumber: tableRow.tableNumber,
         tableSessionId: session.id,
         venueName: tableRow.venueName,
