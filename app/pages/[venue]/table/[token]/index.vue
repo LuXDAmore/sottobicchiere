@@ -1,8 +1,25 @@
 <template>
     <div class="flex flex-col gap-6 items-center justify-center min-h-screen px-4 py-12">
 
-        <template v-if="pending">
-            <u-icon class="animate-spin size-10 text-primary-500" name="i-lucide-loader-2" />
+        <template v-if="tableInfoStatus === 'pending'">
+            <div class="max-w-sm w-full">
+                <div class="text-center">
+                    <u-skeleton class="mb-4 mx-auto rounded-3xl size-16" />
+                    <u-skeleton class="h-4 mx-auto w-36" />
+                    <u-skeleton class="h-9 mt-3 mx-auto w-52" />
+                </div>
+
+                <u-card class="mt-6" :ui="{ body: 'flex flex-col gap-5 p-6' }">
+                    <u-skeleton class="h-5 mx-auto w-40" />
+                    <u-skeleton class="h-4 mx-auto w-56" />
+                    <u-skeleton class="h-12 w-full" />
+                    <u-skeleton class="h-12 w-full" />
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <u-skeleton class="h-11 w-full" />
+                        <u-skeleton class="h-11 w-full" />
+                    </div>
+                </u-card>
+            </div>
         </template>
 
         <template v-else-if="tableError">
@@ -10,6 +27,7 @@
                 <u-icon class="mb-4 size-12 text-error-500" name="i-lucide-qr-code-off" />
                 <h1 class="font-bold font-display text-2xl text-highlighted">{{ $t('table.invalid_qr_title') }}</h1>
                 <p class="mt-2 text-muted text-sm">{{ $t('table.invalid_qr_description') }}</p>
+                <u-button class="mt-4" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.reconnect')" variant="soft" @click="refreshTableInfo()" />
             </div>
         </template>
 
@@ -68,7 +86,15 @@ const route = useRoute()
     , groupName = ref( '' )
     , joining = ref( false )
     , joinError = ref<string | null>( null )
-    , { data: tableInfo, error: tableError, pending } = await useFetch( `/api/${ venueSlug }/table/${ qrToken }`, { lazy: false } );
+    , {
+        data: tableInfo,
+        error: tableError,
+        status: tableInfoStatus,
+        refresh: refreshTableInfo,
+    } = await useLazyAsyncData(
+        `table-info-${ venueSlug }-${ qrToken }`,
+        () => $fetch( `/api/${ venueSlug }/table/${ qrToken }` ),
+    );
 
 onMounted( () => {
     if( playerStore.isJoined && ! playerStore.isExpired && playerStore.venueSlug === venueSlug && playerStore.qrToken === qrToken )

@@ -75,10 +75,24 @@
                 </div>
             </section>
 
+            <section v-if="sessionMetaPending" class="rounded-lg border border-[var(--ui-border)] p-3 text-sm">
+                <div class="space-y-2">
+                    <u-skeleton class="h-4 w-44" />
+                    <u-skeleton class="h-4 w-52" />
+                    <u-skeleton class="h-4 w-40" />
+                </div>
+            </section>
+
+            <section v-else-if="sessionMetaError" class="rounded-lg border border-error-500/30 bg-error-500/10 p-3 text-sm">
+                <p class="text-error-500">Errore caricamento sessione.</p>
+                <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.retry')" size="xs" variant="soft" @click="() => refreshSessionMeta()" />
+            </section>
+
             <section v-else-if="sessionMeta" class="rounded-lg border border-[var(--ui-border)] p-3 text-sm">
                 <p><strong>{{ $t('lobby.session_status') }}:</strong> {{ sessionMeta.status }}</p>
                 <p><strong>{{ $t('lobby.session_host') }}:</strong> {{ sessionMeta.hostNickname ?? '-' }}</p>
                 <p><strong>{{ $t('lobby.session_remaining') }}:</strong> {{ Math.max(0, remainingSeconds) }}s</p>
+                <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.refresh_session')" size="xs" variant="ghost" @click="() => refreshSessionMeta()" />
             </section>
 
 
@@ -206,6 +220,14 @@
           } = await useLazyAsyncData(
               `table-session-meta-${ venueSlug }-${ qrToken }`,
               () => $fetch( `/api/${ venueSlug }/table/${ qrToken }/session` ),
+           )
+ , {
+              pending: sessionMetaPending,
+              error: sessionMetaError,
+              refresh: refreshSessionMeta,
+          } = await useLazyAsyncData(
+              `session-meta-${ venueSlug }-${ qrToken }`,
+              () => $fetch(`/api/${ venueSlug }/table/${ qrToken }/session`),
           )
           , remainingSeconds = ref( 0 )
           , isSelectingGame = ref( false );
