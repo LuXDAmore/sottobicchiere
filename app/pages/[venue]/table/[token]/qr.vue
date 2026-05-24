@@ -2,7 +2,7 @@
     <div class="flex flex-col gap-6 items-center justify-center min-h-screen px-4 py-12">
 
         <!-- Loading -->
-        <template v-if="pending">
+        <template v-if="tableInfoStatus === 'pending'">
             <u-icon
                 class="animate-spin size-10 text-primary-500"
                 name="i-lucide-loader-2"
@@ -22,6 +22,14 @@
                 <p class="mt-2 text-muted text-sm">
                     {{ $t('table.invalid_qr_description') }}
                 </p>
+                <u-button
+                    class="mt-4"
+                    color="neutral"
+                    icon="i-lucide-refresh-cw"
+                    :label="$t('lobby.reconnect')"
+                    variant="soft"
+                    @click="refreshTableInfo"
+                />
             </div>
         </template>
 
@@ -75,9 +83,14 @@
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
 
-          , { data: tableInfo, error: tableError, pending } = await useFetch(
-              `/api/${ venueSlug }/table/${ qrToken }`,
-              { lazy: false }
+          , {
+              data: tableInfo,
+              error: tableError,
+              status: tableInfoStatus,
+              refresh: refreshTableInfo,
+          } = await useLazyAsyncData(
+              `table-info-${ venueSlug }-${ qrToken }`,
+              () => $fetch( `/api/${ venueSlug }/table/${ qrToken }` ),
           )
 
           , { origin } = useRequestURL()
