@@ -21,6 +21,8 @@ export interface DatingInboxMessage {
 // ── Client → Server ─────────────────────────────────────────────────────────
 
 export type ClientMessage =
+    { type: 'dating:enable' } |
+    { type: 'dating:disable' } |
     { type: 'dating:message:send'; body: string; toTableSessionId: string } |
     { type: 'game:next' } |
     { type: 'game:start'; totalRounds?: number } |
@@ -32,6 +34,7 @@ export type ClientMessage =
 export type ServerMessage =
     { type: 'dating:message:new'; message: DatingInboxMessage } |
     { type: 'dating:room:status'; availableTableSessionIds: string[]; unavailableTableSessionIds: string[] } |
+    { type: 'dating:status'; enabled: boolean } |
     { type: 'error'; message: string } |
     { type: 'game:finished'; scores: Record<string, number> } |
     { type: 'game:question'; question: { it: string; en: string }; roundIndex: number; totalRounds: number; hostPlayerId: string } |

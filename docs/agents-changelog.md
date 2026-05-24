@@ -5,6 +5,40 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-05-24 — MVP: fix QR demo, multi-sessione, dating per-player, UI refactor
+
+**Obiettivo**: Far funzionare il demo QR, aggiungere il join flow multi-gruppo per tavolo, trasformare il dating in toggle individuale, rivedere l'UI con tre sezioni e aggiornare tutta la documentazione.
+
+### Bug fix
+- `server/utils/table-resolver.ts` — `isDemoFallbackEnabled()` ora torna `true` per default in non-production; rimossa dipendenza dal flag esplicito
+- `.env.example` — default `NUXT_ENABLE_DEMO_FALLBACK` cambiato da `"false"` a `"true"`
+- `nuxt.config.ts` — default `enableDemoFallback` cambiato da `|| 'false'` a `?? 'true'`
+
+### Join flow multi-sessione (più gruppi per tavolo fisico)
+- `server/api/[venue]/table/[token]/sessions.get.ts` — **nuovo**: lista sessioni attive per tavolo (playerCount, hasActiveGame, hostNickname)
+- `server/api/[venue]/table/[token]/join.post.ts` — aggiunto campo `sessionId` per join diretto a una sessione specifica
+- `shared/types/index.ts` — aggiunti `ActiveSessionSummary`, `SessionsResponse`
+- `app/pages/[venue]/table/[token]/index.vue` — riscritto: card lista sessioni attive, selezione o creazione gruppo, navigazione diretta al gioco se partita in corso
+
+### Dating mode per-player
+- `shared/types/ws.ts` — aggiunti messaggi `dating:enable`, `dating:disable` (client→server) e `dating:status` (server→client)
+- `server/routes/ws/table.ts` — tracking `peerDatingEnabled` e `sessionDatingPeerCount` in-memory; handler per i nuovi messaggi; cleanup al close; `dating:message:send` non richiede più `sessionMode === 'dating'`
+- `app/composables/useTableSocket.ts` — aggiunti `datingEnabled`, `datingUnreadCount`, `enableDating()`, `disableDating()`, `clearDatingUnread()`
+
+### Tre sezioni + UI polish
+- `shared/utils/games.ts` — **nuovo**: `GameDefinition`, `GameCategory`, `GAME_DEFINITIONS`, `getGamesByCategory()`
+- `app/pages/index.vue` — riscritto: hero + feature pills (Giochi da tavolo / Pre-serata / Dating), CTA pulita senza QR inline
+- `app/pages/[venue]/table/[token]/lobby.vue` — riscritto: dating toggle nell'header con badge unread, pannello dating slide-down, tab navigation (Giocatori | Giochi), filtro categoria giochi, game card con icona/badge/durata
+- `i18n/locales/it.json` — aggiornate chiavi per nuovi elementi UI
+- `i18n/locales/en.json` — aggiornate chiavi per nuovi elementi UI
+
+### Documentazione
+- `docs/product-foundations.md` — aggiornato con multi-gruppo per tavolo, dating individuale, tre sezioni
+- `docs/game-modes.md` — aggiunta sezione `GameDefinition` con tabella giochi MVP
+- `TODO.md` — aggiunto sprint 2026-05-24 con tutti i task completati e backlog aggiornato
+
+---
+
 ## 2026-05-21 — Bootstrap documentazione e design system
 
 **Obiettivo**: Ripulire il repository da WeGree, impostare la base documentale e il design system per Sottobicchiere.

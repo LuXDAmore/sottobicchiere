@@ -61,8 +61,30 @@ Favorire interazione sociale guidata tra gruppi/utenti (ice-breaker, matching li
 | Focus | Strategia/partita | Social quick fun | Interazione/affinità |
 | Scoring | Competitivo | Leggero/flash | Soft/social |
 
+## GameDefinition (codice)
+
+Ogni gioco è descritto da `GameDefinition` in `shared/utils/games.ts`:
+
+```typescript
+interface GameDefinition {
+    id: 'thumbs' | 'word-blitz';
+    category: 'board' | 'preserata' | 'both'; // 'both' = compare in entrambi i filtri
+    minPlayers: number;
+    avgDurationMinutes: number;
+    icon: string;
+    labelKey: string; // chiave i18n
+}
+```
+
+Giochi implementati nell'MVP:
+| ID | Category | Min players | Durata media |
+|----|----------|------------|-------------|
+| `thumbs` | `both` | 2 | 8 min |
+| `word-blitz` | `preserata` | 2 | 5 min |
+
 ## Implicazioni MVP
 
-- Il primo set giochi MVP dovrebbe partire dai **preserata** (time-to-fun più alto, complessità minore).
+- Il primo set giochi MVP parte dai **preserata** (time-to-fun più alto, complessità minore).
 - I **giochi da tavolo** richiedono più investimenti in engine stato/turni.
-- Il **dating mode** necessita linee guida copy/moderazione prima del rollout pubblico.
+- Il **dating mode** è un toggle individuale per-player — non è una "modalità sessione" ma un layer indipendente che coesiste con i giochi.
+- Nuovi giochi si aggiungono estendendo `GAME_DEFINITIONS` in `shared/utils/games.ts` e implementando la pagina `/game/[id].vue`.

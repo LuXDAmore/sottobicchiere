@@ -58,6 +58,40 @@ function broadcast(
 
 }
 
+// Per-peer dating state (in-memory, not persisted)
+const peerDatingEnabled = new Map<string, boolean>(); // peerId → enabled
+const sessionDatingPeerCount = new Map<string, number>(); // tableSessionId → count of dating-enabled peers
+
+function setPeerDating( peerId: string, tableSessionId: string, enabled: boolean ): void {
+    const wasEnabled = peerDatingEnabled.get( peerId ) ?? false;
+    if( wasEnabled === enabled ) return;
+    peerDatingEnabled.set( peerId, enabled );
+    const current = sessionDatingPeerCount.get( tableSessionId ) ?? 0;
+    const updated = enabled ? current + 1 : Math.max( 0, current - 1 );
+    sessionDatingPeerCount.set( tableSessionId, updated );
+    setTableAvailability( tableSessionId, updated > 0 );
+}
+
+function cleanupPeerDating( peerId: string, tableSessionId: string ): void {
+    if( peerDatingEnabled.get( peerId ) ) setPeerDating( peerId, tableSessionId, false );
+    peerDatingEnabled.delete( peerId );
+}
+
+// Notify all sessions currently in the dating pool that availability has changed.
+// Called after a session enters or leaves the pool so their clients refresh the list.
+function broadcastDatingStatusToPool( changedTableSessionId: string ): void {
+    const { available, unavailable } = getRoomStatus( changedTableSessionId );
+    const allInPool = [ ... available, ... unavailable ];
+
+    for( const otherSessionId of allInPool ) {
+        const otherPeers = getPeersForTable( otherSessionId );
+        if( otherPeers.length === 0 ) continue;
+        const otherStatus = getRoomStatus( otherSessionId );
+        const msg = JSON.stringify( { type: 'dating:room:status', availableTableSessionIds: otherStatus.available, unavailableTableSessionIds: otherStatus.unavailable } );
+        for( const p of otherPeers ) p.send( msg );
+    }
+}
+
 export default defineWebSocketHandler( {
 
     async open( peer ) {
@@ -115,10 +149,11 @@ export default defineWebSocketHandler( {
 
         if (persistedSession?.sessionMode) {
             emit(peer, { type: 'session:mode:sync', mode: persistedSession.sessionMode as 'board' | 'dating' | 'preserata' });
-            setTableAvailability(tableSessionId, persistedSession.sessionMode === 'dating');
-            const status = getRoomStatus(tableSessionId);
-            emit(peer, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable });
         }
+
+        // Always send current dating room status so new/reconnecting peers see the live pool
+        const roomStatus = getRoomStatus( tableSessionId );
+        emit( peer, { type: 'dating:room:status', availableTableSessionIds: roomStatus.available, unavailableTableSessionIds: roomStatus.unavailable } );
 
         if (persistedSession?.lockedAt) {
             emit(peer, { type: 'game:locked', lockedAt: persistedSession.lockedAt.toISOString() });
@@ -240,25 +275,38 @@ export default defineWebSocketHandler( {
                 .set( { sessionMode: data.mode, hostPlayerId } )
                 .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) );
 
-            setTableAvailability( tableSessionId, data.mode === 'dating' );
             broadcast( peer, tableSessionId, { type: 'session:mode:sync', mode: data.mode } );
+            emit( peer, { type: 'session:mode:sync', mode: data.mode } );
+            return;
+
+        }
+
+        if( data.type === 'dating:enable' ) {
+
+            setPeerDating( peer.id, tableSessionId, true );
+            emit( peer, { type: 'dating:status', enabled: true } );
             const status = getRoomStatus( tableSessionId );
-            broadcast( peer, tableSessionId, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable } );
+            emit( peer, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable } );
+            // Notify other tables already in the pool that this session is now available
+            broadcastDatingStatusToPool( tableSessionId );
+            return;
+
+        }
+
+        if( data.type === 'dating:disable' ) {
+
+            setPeerDating( peer.id, tableSessionId, false );
+            emit( peer, { type: 'dating:status', enabled: false } );
+            // Notify other tables that this session left the pool
+            broadcastDatingStatusToPool( tableSessionId );
             return;
 
         }
 
         if( data.type === 'dating:message:send' ) {
 
-            const persistedSession = await db
-                .select( { sessionMode: tableSessions.sessionMode } )
-                .from( tableSessions )
-                .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) )
-                .limit( 1 )
-                .then( ( rows: { sessionMode: string }[] ) => rows[ 0 ] ?? null );
-
-            if( !persistedSession || persistedSession.sessionMode !== 'dating' ) {
-                emit( peer, { type: 'error', message: 'Modalità dating non attiva' } );
+            if( ! ( peerDatingEnabled.get( peer.id ) ?? false ) ) {
+                emit( peer, { type: 'error', message: 'Abilita la dating mode prima di inviare messaggi' } );
                 return;
             }
 
@@ -440,6 +488,7 @@ export default defineWebSocketHandler( {
 
         if( ! tableSessionId ) return;
 
+        cleanupPeerDating( peer.id, tableSessionId );
         unregisterTablePeer( tableSessionId, peer.id );
 
         if( getPeersForTable( tableSessionId ).length === 0 ) {

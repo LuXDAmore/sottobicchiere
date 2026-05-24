@@ -23,6 +23,8 @@ export interface JoinResponse extends TableInfo {
     expiresAt: string;
     qrToken: string;
     isHost: boolean;
+    hasActiveGame: boolean;
+    selectedGame: string | null;
 }
 
 export interface TableSessionMeta {
@@ -32,4 +34,17 @@ export interface TableSessionMeta {
     hostNickname: string | null;
     expiresAt: string;
     remainingSeconds: number;
+}
+
+export interface ActiveSessionSummary {
+    sessionId: string;
+    playerCount: number;
+    hasActiveGame: boolean;
+    selectedGame: string | null;
+    hostNickname: string | null;
+    startedAt: string;
+}
+
+export interface SessionsResponse {
+    sessions: ActiveSessionSummary[];
 }

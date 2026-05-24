@@ -2,143 +2,165 @@
     <div class="flex flex-col h-screen overflow-hidden">
 
         <!-- Top bar -->
-        <header class="border-[var(--ui-border)] border-b flex items-center justify-between px-4 py-3 shrink-0">
-            <div>
-                <p class="font-semibold text-highlighted text-sm">
-                    {{ playerStore.venueName }}
-                </p>
-                <p class="text-muted text-xs">
-                    {{ $t('table.table_number', { n: playerStore.tableNumber }) }}
-                </p>
+        <header class="border-[var(--ui-border)] border-b flex items-center justify-between px-4 py-3 shrink-0 gap-3">
+
+            <div class="min-w-0">
+                <p class="font-semibold text-highlighted text-sm truncate">{{ playerStore.venueName }}</p>
+                <p class="text-muted text-xs">{{ $t('table.table_number', { n: playerStore.tableNumber }) }}</p>
             </div>
 
-            <div class="flex gap-3 items-center">
+            <div class="flex gap-2 items-center shrink-0">
+
+                <!-- Dating toggle -->
+                <button
+                    class="relative flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold transition-all"
+                    :class="datingEnabled
+                        ? 'bg-secondary-500/15 text-secondary-500'
+                        : 'bg-[var(--ui-bg-elevated)] text-muted border border-[var(--ui-border)] hover:border-secondary-500/40'"
+                    :title="$t('lobby.dating_toggle_hint')"
+                    @click="toggleDating"
+                >
+                    <u-icon class="size-4" name="i-lucide-heart" />
+                    <span class="hidden sm:inline">{{ $t('lobby.dating_toggle_label') }}</span>
+                    <span
+                        v-if="datingUnreadCount > 0"
+                        class="absolute -top-1 -right-1 flex items-center justify-center bg-secondary-500 text-white rounded-full min-w-[18px] h-[18px] text-[10px] font-bold px-1"
+                    >{{ datingUnreadCount > 9 ? '9+' : datingUnreadCount }}</span>
+                </button>
+
+                <!-- Player pill -->
                 <div
-                    class="flex gap-2 h-9 items-center px-3 rounded-full text-sm"
+                    class="flex gap-2 h-9 items-center px-3 rounded-full text-sm shrink-0"
                     :style="{ backgroundColor: (playerStore.playerColor ?? '#6366F1') + '22', color: playerStore.playerColor ?? '#6366F1' }"
                 >
-                    <span
-                        class="block rounded-full size-2.5"
-                        :style="{ backgroundColor: playerStore.playerColor ?? 'currentColor' }"
-                    />
-                    <span class="font-semibold">
-                        {{ playerStore.playerNickname }}
-                    </span>
+                    <span class="block rounded-full size-2.5" :style="{ backgroundColor: playerStore.playerColor ?? 'currentColor' }" />
+                    <span class="font-semibold max-w-[80px] truncate">{{ playerStore.playerNickname }}</span>
                 </div>
 
                 <u-button
                     color="neutral"
                     icon="i-lucide-log-out"
-                    :label="$t('lobby.leave')"
                     size="sm"
                     variant="ghost"
-                    @click="handleLeave"
                     :disabled="isLeaving"
                     :loading="isLeaving"
+                    :label="$t('lobby.leave')"
+                    @click="handleLeave"
                 />
             </div>
         </header>
 
-        <!-- Main content -->
-        <main class="flex flex-1 flex-col gap-6 overflow-y-auto p-4">
-
-            <!-- WebSocket status -->
-            <div
-                v-if="status !== 'OPEN'"
-                class="flex flex-col gap-2 items-center justify-center py-2 rounded-lg text-sm"
-                :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-500' : 'bg-error-500/10 text-error-500'"
-            >
-                <div class="flex gap-2 items-center">
-                    <u-icon
-                        class="size-4"
-                        :class="status !== 'CLOSED' ? 'animate-spin' : ''"
-                        name="i-lucide-loader-2"
-                    />
-                    {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
-                </div>
-                <u-button
-                    v-if="status === 'CLOSED'"
-                    color="neutral"
-                    icon="i-lucide-refresh-cw"
-                    :label="$t('lobby.reconnect')"
-                    size="xs"
-                    variant="ghost"
-                    @click="open()"
-                />
+        <!-- Connection status banner -->
+        <div
+            v-if="status !== 'OPEN'"
+            class="flex items-center justify-between gap-2 px-4 py-2 text-sm shrink-0"
+            :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-error-500/10 text-error-500'"
+        >
+            <div class="flex gap-2 items-center">
+                <u-icon class="size-4" :class="status !== 'CLOSED' ? 'animate-spin' : ''" name="i-lucide-loader-2" />
+                {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
             </div>
+            <u-button
+                v-if="status === 'CLOSED'"
+                color="neutral"
+                icon="i-lucide-refresh-cw"
+                :label="$t('lobby.reconnect')"
+                size="xs"
+                variant="ghost"
+                @click="open()"
+            />
+        </div>
 
-            <section v-if="isSessionMetaLoading" class="rounded-lg border border-[var(--ui-border)] p-3">
-                <div class="space-y-2">
-                    <u-skeleton class="h-4 w-40" />
-                    <u-skeleton class="h-4 w-52" />
-                    <u-skeleton class="h-4 w-36" />
-                </div>
-            </section>
-
-            <section v-if="sessionMetaPending" class="rounded-lg border border-[var(--ui-border)] p-3 text-sm">
-                <div class="space-y-2">
-                    <u-skeleton class="h-4 w-44" />
-                    <u-skeleton class="h-4 w-52" />
-                    <u-skeleton class="h-4 w-40" />
-                </div>
-            </section>
-
-            <section v-else-if="sessionMetaError" class="rounded-lg border border-error-500/30 bg-error-500/10 p-3 text-sm">
-                <p class="text-error-500">Errore caricamento sessione.</p>
-                <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.retry')" size="xs" variant="soft" @click="() => refreshSessionMeta()" />
-            </section>
-
-            <section v-else-if="sessionMeta" class="rounded-lg border border-[var(--ui-border)] p-3 text-sm">
-                <p><strong>{{ $t('lobby.session_status') }}:</strong> {{ sessionMeta.status }}</p>
-                <p><strong>{{ $t('lobby.session_host') }}:</strong> {{ sessionMeta.hostNickname ?? '-' }}</p>
-                <p><strong>{{ $t('lobby.session_remaining') }}:</strong> {{ Math.max(0, remainingSeconds) }}s</p>
-                <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.refresh_session')" size="xs" variant="ghost" @click="() => refreshSessionMeta()" />
-            </section>
-
-
-            <section class="rounded-lg border border-[var(--ui-border)] p-3">
-                <p class="font-semibold text-sm mb-2">Modalità sessione</p>
-                <div class="flex gap-2 flex-wrap">
-                    <u-button size="xs" :variant="sessionMode === 'board' ? 'solid' : 'outline'" :disabled="!isHostSelector" @click="setSessionMode('board')">board</u-button>
-                    <u-button size="xs" :variant="sessionMode === 'preserata' ? 'solid' : 'outline'" :disabled="!isHostSelector" @click="setSessionMode('preserata')">preserata</u-button>
-                    <u-button size="xs" :variant="sessionMode === 'dating' ? 'solid' : 'outline'" :disabled="!isHostSelector" @click="setSessionMode('dating')">dating</u-button>
-                </div>
-            </section>
-
-            <section v-if="sessionMode === 'dating'" class="rounded-lg border border-[var(--ui-border)] p-3">
-                <div class="flex items-center justify-between mb-2">
-                    <p class="font-semibold text-sm">Inbox anonima</p>
-                    <u-badge color="primary" variant="soft">{{ datingInbox.length }} nuovi</u-badge>
-                </div>
-                <p class="text-xs text-muted mb-2">Tavoli disponibili: {{ datingRoomStatus.availableTableSessionIds.length }} / non disponibili: {{ datingRoomStatus.unavailableTableSessionIds.length }}</p>
-                <div class="flex gap-2 mb-2">
-                    <u-input v-model="datingTarget" size="sm" placeholder="tableSessionId target" />
-                    <u-input v-model="datingBody" size="sm" placeholder="Messaggio anonimo" />
-                    <u-button size="sm" @click="onSendDating">Invia</u-button>
-                </div>
-                <div class="space-y-1 max-h-40 overflow-auto">
-                    <p v-for="msg in datingInbox" :key="msg.id" class="text-xs">{{ msg.createdAt }} · {{ msg.body }}</p>
-                </div>
-            </section>
-
-            <!-- Players section -->
-            <section>
-                <div class="flex gap-2 items-center mb-3">
-                    <u-icon
-                        class="size-4 text-muted"
-                        name="i-lucide-users"
-                    />
-                    <h2 class="font-semibold text-highlighted text-sm">
-                        {{ $t('lobby.players_title') }}
-                    </h2>
-                    <span
-                        v-if="status === 'OPEN'"
-                        class="live-dot ml-auto"
-                    />
+        <!-- Dating panel -->
+        <transition name="slide-down">
+            <div v-if="datingEnabled" class="shrink-0 border-b border-secondary-500/20 bg-secondary-500/5 px-4 py-4">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <u-icon class="size-4 text-secondary-500" name="i-lucide-heart" />
+                        <p class="font-semibold text-highlighted text-sm">{{ $t('lobby.dating_inbox_title') }}</p>
+                    </div>
+                    <span v-if="datingRoomStatus.availableTableSessionIds.length > 0" class="text-xs text-secondary-500 font-medium">
+                        {{ $t('lobby.dating_available_tables', { n: datingRoomStatus.availableTableSessionIds.length }) }}
+                    </span>
                 </div>
 
-                <div v-if="isWsBootstrapping" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <u-skeleton v-for="index in 6" :key="index" class="h-10 w-full rounded-full" />
+                <!-- Send message -->
+                <div v-if="datingRoomStatus.availableTableSessionIds.length > 0" class="flex gap-2 mb-3">
+                    <div class="flex-1 min-w-0">
+                        <select
+                            v-model="datingTarget"
+                            class="w-full text-sm bg-[var(--ui-bg)] border border-[var(--ui-border)] rounded-lg px-3 py-2 text-highlighted focus:outline-none focus:ring-2 focus:ring-secondary-500/50 mb-2"
+                        >
+                            <option value="">{{ $t('lobby.dating_select_target') }}</option>
+                            <option v-for="tid in datingRoomStatus.availableTableSessionIds" :key="tid" :value="tid">
+                                {{ $t('lobby.dating_table_label', { id: tid.slice(0, 8) }) }}
+                            </option>
+                        </select>
+                        <div class="flex gap-2">
+                            <u-input
+                                v-model="datingBody"
+                                class="flex-1"
+                                maxlength="240"
+                                :placeholder="$t('lobby.dating_send_placeholder')"
+                                size="sm"
+                                @keyup.enter="onSendDating"
+                            />
+                            <u-button
+                                color="secondary"
+                                icon="i-lucide-send"
+                                :label="$t('lobby.dating_send_button')"
+                                size="sm"
+                                :disabled="!datingTarget || !datingBody.trim()"
+                                @click="onSendDating"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inbox -->
+                <div class="space-y-1.5 max-h-32 overflow-y-auto">
+                    <p v-if="datingInbox.length === 0" class="text-muted text-xs py-2">{{ $t('lobby.dating_no_messages') }}</p>
+                    <div
+                        v-for="msg in datingInbox"
+                        :key="msg.id"
+                        class="bg-[var(--ui-bg)] rounded-lg px-3 py-2 text-sm"
+                    >
+                        <p class="text-highlighted">{{ msg.body }}</p>
+                        <p class="text-muted text-xs mt-0.5">{{ formatTime(msg.createdAt) }}</p>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- Tabs navigation -->
+        <div class="flex border-b border-[var(--ui-border)] shrink-0 px-4">
+            <button
+                v-for="tab in tabs"
+                :key="tab.id"
+                class="flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-colors -mb-px"
+                :class="activeTab === tab.id
+                    ? 'border-primary-500 text-primary-500'
+                    : 'border-transparent text-muted hover:text-highlighted'"
+                @click="activeTab = tab.id"
+            >
+                <u-icon class="size-4" :name="tab.icon" />
+                {{ tab.label }}
+            </button>
+        </div>
+
+        <!-- Main content area -->
+        <main class="flex-1 overflow-y-auto">
+
+            <!-- Players tab -->
+            <section v-show="activeTab === 'players'" class="p-4 space-y-4">
+
+                <div class="flex items-center gap-2">
+                    <span v-if="status === 'OPEN'" class="live-dot" />
+                    <p class="text-muted text-xs font-medium uppercase tracking-wide">{{ players.length }} {{ $t('lobby.players_title').toLowerCase() }}</p>
+                </div>
+
+                <div v-if="isWsBootstrapping" class="flex flex-wrap gap-2">
+                    <u-skeleton v-for="i in 4" :key="i" class="h-10 w-28 rounded-full" />
                 </div>
 
                 <div v-else class="flex flex-wrap gap-2">
@@ -147,48 +169,104 @@
                         :key="player.id"
                         class="flex gap-2 items-center px-3 py-2 rounded-full text-sm transition-all"
                         :class="player.id === playerStore.playerId ? 'ring-2' : ''"
-                        :style="{
-                            backgroundColor: player.color + '22',
-                            color: player.color,
-                        }"
+                        :style="{ backgroundColor: player.color + '22', color: player.color }"
                     >
-                        <span
-                            class="block rounded-full shrink-0 size-2.5"
-                            :style="{ backgroundColor: player.color }"
-                        />
-                        <span class="font-semibold">
-                            {{ player.nickname }}
-                        </span>
-                        <span
-                            v-if="player.id === playerStore.playerId"
-                            class="opacity-60 text-xs"
-                        >{{ $t('lobby.you') }}</span>
+                        <span class="block rounded-full shrink-0 size-2.5" :style="{ backgroundColor: player.color }" />
+                        <span class="font-semibold">{{ player.nickname }}</span>
+                        <span v-if="player.id === playerStore.playerId" class="opacity-60 text-xs">{{ $t('lobby.you') }}</span>
                     </div>
 
-                    <div
-                        v-if="players.length === 0"
-                        class="py-4 text-center text-muted text-sm w-full"
-                    >
+                    <div v-if="players.length === 0" class="py-6 text-center text-muted text-sm w-full">
                         {{ $t('lobby.no_players') }}
                     </div>
                 </div>
+
             </section>
 
-            <!-- Games section -->
-            <section>
-                <div class="flex gap-2 items-center mb-3">
-                    <u-icon class="size-4 text-muted" name="i-lucide-gamepad-2" />
-                    <h2 class="font-semibold text-highlighted text-sm">{{ $t('lobby.games_title') }}</h2>
+            <!-- Games tab -->
+            <section v-show="activeTab === 'games'" class="p-4 space-y-4">
+
+                <!-- Active game banner -->
+                <div v-if="gameSelection.selectedGame" class="rounded-xl bg-primary-500/10 border border-primary-500/20 p-4">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center size-10 rounded-full bg-primary-500/20">
+                            <u-icon class="size-5 text-primary-500" name="i-lucide-gamepad-2" />
+                        </div>
+                        <div>
+                            <p class="font-semibold text-highlighted text-sm">{{ $t('lobby.game_in_progress') }}</p>
+                            <p class="text-primary-500 text-xs font-medium">{{ gameSelection.selectedGame }}</p>
+                        </div>
+                    </div>
                 </div>
-                <div v-if="gameSelection.selectedGame" class="bg-primary-500/10 p-4 rounded-xl text-sm">
-                    <p class="font-semibold">Gioco corrente: {{ gameSelection.selectedGame }}</p>
-                    <p class="text-muted">Selezione bloccata{{ gameSelection.lockedAt ? ' alle ' + new Date(gameSelection.lockedAt).toLocaleTimeString() : '' }}</p>
-                </div>
-                <div v-else class="grid gap-3">
-                    <u-button :disabled="isSelectingGame || !isHostSelector" @click="selectGame('thumbs')">👍 {{ $t('game.thumbs.title') }}</u-button>
-                    <u-button :disabled="isSelectingGame || !isHostSelector" @click="selectGame('word-blitz')">⚡ {{ $t('game.word_blitz.title') }}</u-button>
-                    <p v-if="!isHostSelector" class="text-muted text-xs">Solo l'host può scegliere il gioco.</p>
-                </div>
+
+                <template v-else>
+
+                    <!-- Category filter tabs -->
+                    <div class="flex gap-1 bg-[var(--ui-bg-elevated)] rounded-lg p-1">
+                        <button
+                            v-for="cat in gameCategories"
+                            :key="cat.id"
+                            class="flex-1 text-sm font-semibold py-1.5 px-2 rounded-md transition-colors"
+                            :class="activeGameCategory === cat.id
+                                ? 'bg-[var(--ui-bg)] text-highlighted shadow-sm'
+                                : 'text-muted hover:text-highlighted'"
+                            @click="activeGameCategory = cat.id"
+                        >
+                            {{ cat.label }}
+                        </button>
+                    </div>
+
+                    <!-- Game cards -->
+                    <div class="space-y-3">
+                        <button
+                            v-for="game in filteredGames"
+                            :key="game.id"
+                            class="w-full text-left rounded-xl border border-[var(--ui-border)] bg-[var(--ui-bg-elevated)] p-4 transition-all"
+                            :class="isHostSelector
+                                ? 'hover:border-primary-500/50 hover:bg-primary-500/5 cursor-pointer active:scale-[0.98]'
+                                : 'opacity-60 cursor-not-allowed'"
+                            :disabled="!isHostSelector || isSelectingGame"
+                            @click="isHostSelector && selectGame(game.id)"
+                        >
+                            <div class="flex items-center gap-4">
+                                <span class="text-3xl">{{ game.icon }}</span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-semibold text-highlighted">{{ $t(game.labelKey) }}</p>
+                                    <div class="flex items-center gap-3 mt-1">
+                                        <span class="text-muted text-xs flex items-center gap-1">
+                                            <u-icon class="size-3" name="i-lucide-users" />
+                                            {{ $t('lobby.game_min_players', { n: game.minPlayers }) }}
+                                        </span>
+                                        <span class="text-muted text-xs flex items-center gap-1">
+                                            <u-icon class="size-3" name="i-lucide-clock" />
+                                            {{ $t('lobby.game_duration', { n: game.avgDurationMinutes }) }}
+                                        </span>
+                                        <span
+                                            class="text-xs font-medium px-2 py-0.5 rounded-full"
+                                            :class="game.category === 'preserata'
+                                                ? 'bg-accent-500/15 text-accent-500'
+                                                : game.category === 'board'
+                                                    ? 'bg-primary-500/15 text-primary-500'
+                                                    : 'bg-success-500/15 text-success-500'"
+                                        >
+                                            {{ game.category === 'preserata' ? '🍹' : game.category === 'board' ? '🎲' : '✨' }}
+                                            {{ $t(`lobby.game_category_${ game.category === 'both' ? 'both' : game.category }`) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <u-icon v-if="isSelectingGame" class="size-5 text-muted animate-spin" name="i-lucide-loader-2" />
+                                <u-icon v-else-if="isHostSelector" class="size-5 text-muted" name="i-lucide-chevron-right" />
+                            </div>
+                        </button>
+                    </div>
+
+                    <p v-if="!isHostSelector" class="text-center text-muted text-xs py-2">
+                        <u-icon class="inline-block mr-1 size-3" name="i-lucide-lock" />
+                        {{ $t('lobby.game_host_only') }}
+                    </p>
+
+                </template>
+
             </section>
 
         </main>
@@ -197,157 +275,153 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta( { layout: 'game' } );
 
-    definePageMeta( { layout: 'game' } );
+const route = useRoute()
+    , { t } = useI18n()
+    , playerStore = usePlayerStore()
+    , localePath = useLocalePath()
+    , toast = useToast()
+    , venueSlug = route.params.venue as string
+    , qrToken = route.params.token as string
 
-    const route = useRoute()
-          , { t } = useI18n()
-          , playerStore = usePlayerStore()
-          , localePath = useLocalePath()
-          , toast = useToast()
+    , {
+        players,
+        gameSelection,
+        gameState,
+        status,
+        open,
+        close,
+        wsError,
+        datingEnabled,
+        datingInbox,
+        datingRoomStatus,
+        datingUnreadCount,
+        enableDating,
+        disableDating,
+        clearDatingUnread,
+        sendDatingMessage,
+    } = useTableSocket()
 
-          , venueSlug = route.params.venue as string
-          , qrToken = route.params.token as string
+    , isLeaving = ref( false )
+    , isSelectingGame = ref( false )
+    , activeTab = ref<'players' | 'games'>( 'players' )
+    , activeGameCategory = ref<'all' | GameCategory>( 'all' )
+    , datingTarget = ref( '' )
+    , datingBody = ref( '' );
 
-          , {
-              players, gameSelection, gameState, status, open, close, wsError, sessionMode, setSessionMode, datingInbox, datingRoomStatus, sendDatingMessage,
-          } = useTableSocket()
+// Game categories for filter tabs
+const gameCategories = computed( () => [
+    { id: 'all' as const, label: t( 'lobby.games_tab_all' ) },
+    { id: 'board' as const, label: t( 'lobby.games_tab_board' ) },
+    { id: 'preserata' as const, label: t( 'lobby.games_tab_preserata' ) },
+] );
 
-          , isLeaving = ref( false )
-          , {
-              data: sessionMeta,
-              pending: isSessionMetaLoading,
-          } = await useLazyAsyncData(
-              `table-session-meta-${ venueSlug }-${ qrToken }`,
-              () => $fetch( `/api/${ venueSlug }/table/${ qrToken }/session` ),
-           )
- , {
-              pending: sessionMetaPending,
-              error: sessionMetaError,
-              refresh: refreshSessionMeta,
-          } = await useLazyAsyncData(
-              `session-meta-${ venueSlug }-${ qrToken }`,
-              () => $fetch(`/api/${ venueSlug }/table/${ qrToken }/session`),
-          )
-          , remainingSeconds = ref( 0 )
-          , isSelectingGame = ref( false );
+const filteredGames = computed( () => getGamesByCategory( activeGameCategory.value ) );
 
-    onMounted( () => {
+const isHostSelector = computed( () => ! gameSelection.value.hostPlayerId || gameSelection.value.hostPlayerId === playerStore.playerId );
+const isWsBootstrapping = computed( () => status.value === 'CONNECTING' && players.value.length === 0 );
 
-        if( ! playerStore.isJoined || playerStore.isExpired ) {
+const tabs = computed( () => [
+    { id: 'players' as const, label: t( 'lobby.tab_players' ), icon: 'i-lucide-users' },
+    { id: 'games' as const, label: t( 'lobby.tab_games' ), icon: 'i-lucide-gamepad-2' },
+] );
 
-            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
-            return;
-
-        }
-        open();
-
-    } );
-
-    onUnmounted( () => close() );
-
-    watchEffect(() => {
-        if (!sessionMeta.value) return;
-        remainingSeconds.value = sessionMeta.value.remainingSeconds;
-    });
-
-    let countdownTimer: ReturnType<typeof setInterval> | null = null;
-
-    onMounted(() => {
-        if (import.meta.client) {
-            countdownTimer = setInterval(() => {
-                if (remainingSeconds.value > 0) remainingSeconds.value -= 1;
-            }, 1000);
-        }
-    });
-
-    onUnmounted(() => {
-        if (countdownTimer) clearInterval(countdownTimer);
-    });
-
-    watch( wsError, error => {
-
-        if( error ) {
-
-            toast.add( {
-                color: 'error',
-                description: error,
-                duration: 4000,
-            } );
-            wsError.value = null;
-
-        }
-
-    } );
-
-    // Navigate to game whenever an active phase is received (handles late reconnects too)
-    watch( gameState, state => {
-
-        if( state && ( state.phase === 'voting' || state.phase === 'reveal' ) )
-            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
-
-    } );
-
-    const isHostSelector = computed( () => ! gameSelection.value.hostPlayerId || gameSelection.value.hostPlayerId === playerStore.playerId );
-    const isWsBootstrapping = computed( () => status.value === 'CONNECTING' && players.value.length === 0 );
-    const datingTarget = ref('');
-    const datingBody = ref('');
-
-    function onSendDating() {
-        if (!datingTarget.value || !datingBody.value) return;
-        sendDatingMessage(datingTarget.value, datingBody.value);
-        datingBody.value = '';
+onMounted( () => {
+    if( ! playerStore.isJoined || playerStore.isExpired ) {
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
+        return;
     }
+    open();
+} );
 
-    async function selectGame( selectedGame: 'thumbs' | 'word-blitz' ) {
+onUnmounted( () => close() );
 
-        if( ! isHostSelector.value || gameSelection.value.lockedAt || isSelectingGame.value ) return;
-
-        isSelectingGame.value = true;
-
-        try {
-
-            await $fetch( `/api/${ venueSlug }/table/${ qrToken }/game/select`, {
-                method: 'POST',
-                body: {
-                    selectedGame,
-                    gameMode: 'default',
-                    playerId: playerStore.playerId,
-                },
-            } );
-
-        } finally {
-
-            isSelectingGame.value = false;
-
-        }
-
+watch( wsError, error => {
+    if( error ) {
+        toast.add( { color: 'error', description: error, duration: 4000 } );
+        wsError.value = null;
     }
+} );
 
-    async function handleLeave() {
+watch( gameState, state => {
+    if( state && ( state.phase === 'voting' || state.phase === 'reveal' ) )
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
+} );
 
-        if( isLeaving.value ) return;
+// Clear unread when dating panel is open
+watch( datingEnabled, enabled => {
+    if( enabled ) clearDatingUnread();
+} );
 
-        isLeaving.value = true;
+function toggleDating() {
+    if( datingEnabled.value ) disableDating();
+    else enableDating();
+}
 
-        try {
-
-            close();
-            playerStore.leave();
-            await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
-
-        } finally {
-
-            isLeaving.value = false;
-
-        }
-
+function formatTime( isoString: string ): string {
+    try {
+        return new Date( isoString ).toLocaleTimeString( [], { hour: '2-digit', minute: '2-digit' } );
+    } catch{
+        return '';
     }
+}
 
-    useHead( {
-        title: computed( () => ( playerStore.venueName
-            ? t( 'lobby.page_title', { venue: playerStore.venueName } )
-            : t( 'app.name' ) ) ),
-    } );
+function onSendDating() {
+    if( ! datingTarget.value || ! datingBody.value.trim() ) return;
+    sendDatingMessage( datingTarget.value, datingBody.value );
+    datingBody.value = '';
+}
 
+async function selectGame( selectedGame: 'thumbs' | 'word-blitz' ) {
+    if( ! isHostSelector.value || gameSelection.value.lockedAt || isSelectingGame.value ) return;
+
+    isSelectingGame.value = true;
+    try {
+        await $fetch( `/api/${ venueSlug }/table/${ qrToken }/game/select`, {
+            method: 'POST',
+            body: { selectedGame, gameMode: 'default', playerId: playerStore.playerId },
+        } );
+    } finally {
+        isSelectingGame.value = false;
+    }
+}
+
+async function handleLeave() {
+    if( isLeaving.value ) return;
+    isLeaving.value = true;
+    try {
+        close();
+        playerStore.leave();
+        await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
+    } finally {
+        isLeaving.value = false;
+    }
+}
+
+useHead( {
+    title: computed( () => ( playerStore.venueName
+        ? t( 'lobby.page_title', { venue: playerStore.venueName } )
+        : t( 'app.name' ) ) ),
+} );
 </script>
+
+<style scoped>
+.slide-down-enter-active,
+.slide-down-leave-active {
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+    opacity: 0;
+    max-height: 0;
+}
+
+.slide-down-enter-to,
+.slide-down-leave-from {
+    opacity: 1;
+    max-height: 500px;
+}
+</style>

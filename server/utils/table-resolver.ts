@@ -23,11 +23,8 @@ export const isDemoFallbackEnabled = () => {
 
     if( appEnvironment === 'production' ) return false;
 
-    const envFlag = process.env.NUXT_ENABLE_DEMO_FALLBACK;
-
-    if( envFlag !== undefined ) return envFlag === 'true';
-
-    return runtime.enableDemoFallback === 'true';
+    // In non-production, demo is enabled by default unless explicitly disabled
+    return runtime.enableDemoFallback !== 'false';
 
 };
 
