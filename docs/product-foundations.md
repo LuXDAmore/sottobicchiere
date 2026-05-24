@@ -4,15 +4,19 @@
 Sottobicchiere è una PWA per locali che permette ai clienti di aprire o raggiungere un tavolo di gioco tramite QR code, entrare con nickname anonimo e giocare in tempo reale con amici presenti al tavolo.
 
 ## Flussi principali
-1. **Apri tavolo demo / nuovo tavolo**: l'utente entra in una lobby e avvia una sessione.
-2. **Entra in tavolo esistente**: l'utente usa QR/link condiviso dai propri amici.
-3. **Scelta gioco**: in lobby il tavolo seleziona il gioco da avviare.
-4. **Persistenza minima**: sessioni e dati giocatore sono temporanei.
+1. **Scan QR → scegli gruppo**: l'utente scansiona il QR, vede i gruppi attivi al tavolo e ne sceglie uno (o ne crea uno nuovo).
+2. **Join gruppo con partita in corso**: se il gruppo scelto ha una partita attiva, l'utente è portato direttamente al gioco.
+3. **Scelta gioco in lobby**: l'host del gruppo seleziona il gioco; gli altri attendono.
+4. **Dating anonimo individuale**: ogni utente può attivare in autonomia il dating toggle e ricevere/inviare messaggi anonimi da altri tavoli — indipendentemente dal gioco in corso.
+5. **Persistenza minima**: sessioni e dati giocatore sono temporanei.
 
-## Modalità di gioco
-- **Giochi da tavolo**: esperienze multiplayer classiche da lobby.
-- **Giochi preserata**: minigiochi sociali rapidi per gruppi in uscita.
-- **Dating mode**: i tavoli attivi in questa modalità possono scambiarsi messaggi anonimi inter-tavolo.
+## Tre sezioni del prodotto
+- **Giochi da tavolo** (`category: 'board'`): partite strutturate, durata 10-25 min, lock join durante partita.
+- **Giochi pre-serata** (`category: 'preserata'`): minigiochi rapidi sociali, durata 3-10 min, onboarding frequente.
+- **Dating anonimo**: toggle per-player, attivabile in background; messaggi anonimi tra sessioni di tavoli diversi.
+
+## Multi-gruppo per tavolo fisico
+Un tavolo fisico può ospitare più sessioni (`table_sessions`) attive simultaneamente (es. due comitive separate allo stesso tavolo). Scansionando il QR si vedono tutte le sessioni attive con il numero di giocatori e lo stato del gioco, e si sceglie a quale unirsi o se crearne una nuova.
 
 ## Regole dati
 - Nessun account richiesto.

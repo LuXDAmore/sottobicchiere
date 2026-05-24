@@ -1,16 +1,19 @@
 {
     "app": {
         "name": "Sottobicchiere",
-        "tagline": "Giochi da tavolo per il tuo locale",
+        "tagline": "Giochi e socialità per il tuo tavolo",
         "description": "PWA gaming per bar e locali: giochi multiplayer con il QR code del tuo tavolo"
     },
     "welcome": {
         "page_title": "Benvenuto",
-        "scan_title": "Scansiona il QR code",
-        "scan_description": "Trova il QR code sul tuo tavolo e scansionalo per entrare nella sessione di gioco.",
+        "scan_title": "Inquadra il QR code al tuo tavolo",
+        "scan_description": "Scansiona il QR code sul tavolo per entrare o creare una sessione di gioco.",
         "privacy_note": "Nessun account necessario. I tuoi dati non vengono salvati.",
-        "open_demo_table": "Apri tavolo demo",
-        "mobile_qr_hint": "Se sei già sul telefono usa il pulsante qui sopra: il QR è utile per gli altri giocatori al tavolo."
+        "open_demo_table": "Prova il demo",
+        "mobile_qr_hint": "Se sei già sul telefono, usa il pulsante qui sopra.",
+        "feature_board": "Giochi da tavolo",
+        "feature_preserata": "Pre-serata",
+        "feature_dating": "Dating anonimo"
     },
     "table": {
         "page_title": "Tavolo {n} — {venue}",
@@ -21,7 +24,7 @@
         "invalid_qr_title": "QR code non valido",
         "invalid_qr_description": "Il QR code non è riconosciuto o è scaduto. Chiedi al personale del locale.",
         "join_title": "Entra nel gioco",
-        "join_description": "Scegli un nickname per partecipare alla sessione.",
+        "join_description": "Scegli un nickname per partecipare.",
         "nickname_label": "Nickname",
         "nickname_placeholder": "Come ti chiami?",
         "group_label": "Gruppo (opzionale)",
@@ -30,8 +33,15 @@
         "join_button": "Entra",
         "joining": "Ingresso in corso…",
         "join_error_generic": "Errore durante l'ingresso. Riprova.",
-        "create_table_button": "Crea tavolo",
-        "join_table_button": "Unisciti al tavolo"
+        "create_table_button": "Crea nuovo gruppo",
+        "join_table_button": "Unisciti",
+        "active_sessions_title": "Gruppi attivi al tavolo",
+        "active_sessions_empty": "Nessun gruppo attivo. Crea il primo!",
+        "session_players": "{n} giocatori",
+        "session_game_in_progress": "Partita in corso",
+        "session_join": "Unisciti",
+        "session_host_label": "Host: {name}",
+        "or_create_new": "oppure crea un nuovo gruppo"
     },
     "lobby": {
         "page_title": "Lobby — {venue}",
@@ -39,15 +49,34 @@
         "you": "tu",
         "no_players": "Nessun giocatore ancora. Sei il primo!",
         "games_title": "Giochi",
+        "games_tab_all": "Tutti",
+        "games_tab_board": "Da tavolo",
+        "games_tab_preserata": "Pre-serata",
         "games_coming_soon": "Giochi in arrivo",
-        "games_description": "I minigiochi multiplayer saranno disponibili presto. Restate connessi!",
+        "games_description": "I minigiochi multiplayer saranno disponibili presto.",
+        "game_min_players": "Min. {n} giocatori",
+        "game_duration": "~{n} min",
+        "game_in_progress": "Partita in corso",
+        "game_host_only": "Solo l'host può scegliere il gioco.",
         "leave": "Esci",
         "connecting": "Connessione in corso…",
-        "disconnected": "Connessione persa, riconnessione…",
+        "disconnected": "Connessione persa",
         "reconnect": "Riconnetti",
+        "retry": "Riprova",
+        "refresh_session": "Aggiorna",
         "session_status": "Stato sessione",
         "session_host": "Host",
-        "session_remaining": "Tempo residuo"
+        "session_remaining": "Tempo residuo",
+        "dating_toggle_label": "Dating anonimo",
+        "dating_toggle_hint": "Ricevi e invia messaggi anonimi da altri tavoli",
+        "dating_inbox_title": "Messaggi anonimi",
+        "dating_available_tables": "{n} tavoli disponibili",
+        "dating_send_placeholder": "Scrivi un messaggio anonimo…",
+        "dating_send_button": "Invia",
+        "dating_no_messages": "Nessun messaggio ancora.",
+        "dating_select_target": "Seleziona un tavolo",
+        "tab_players": "Giocatori",
+        "tab_games": "Giochi"
     },
     "game": {
         "thumbs": {

@@ -9,6 +9,7 @@ const joinSchema = z.object( {
     nickname: z.string().min( 1 ).max( 20 ).trim(),
     groupName: z.string().max( 30 ).trim().optional(),
     createSession: z.boolean().optional(),
+    sessionId: z.string().uuid().optional(),
 } );
 
 export default defineEventHandler( async event => {
@@ -20,7 +21,7 @@ export default defineEventHandler( async event => {
     const parsed = joinSchema.safeParse( await readBody( event ) );
     if( ! parsed.success ) throw createError( { statusCode: 422, message: 'Nickname non valido (1–20 caratteri)' } );
 
-    const { nickname, groupName, createSession = false } = parsed.data
+    const { nickname, groupName, createSession = false, sessionId: requestedSessionId } = parsed.data
         , tableRow = await resolveTableRow( venueSlug, qrToken );
 
     if( ! tableRow ) throw createError( { statusCode: 404, message: 'QR code non valido' } );
@@ -44,7 +45,21 @@ export default defineEventHandler( async event => {
 
     let session: { id: string; expiresAt: Date } | null = null;
 
-    if( ! createSession ) {
+    if( requestedSessionId ) {
+        // Join a specific session by ID (validate it belongs to this table and is not expired)
+        session = await db
+            .select( { id: tableSessions.id, expiresAt: tableSessions.expiresAt } )
+            .from( tableSessions )
+            .where( and(
+                eq( tableSessions.id, requestedSessionId ),
+                eq( tableSessions.tableId, tableRow.tableId ),
+                gt( tableSessions.expiresAt, now )
+            ) )
+            .limit( 1 )
+            .then( ( rows: { id: string; expiresAt: Date }[] ) => rows[ 0 ] ?? null );
+
+        if( ! session ) throw createError( { statusCode: 404, message: 'Sessione non trovata o scaduta' } );
+    } else if( ! createSession ) {
         session = await db
             .select( { id: tableSessions.id, expiresAt: tableSessions.expiresAt } )
             .from( tableSessions )

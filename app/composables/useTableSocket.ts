@@ -30,6 +30,8 @@ const _useTableSocket = createGlobalState( () => {
         , wsError = ref<string | null>( null )
         , gameSelection = ref<LobbyGameSelection>( { selectedGame: null, gameMode: null, lockedAt: null, hostPlayerId: null } )
         , sessionMode = ref<SessionMode>( 'board' )
+        , datingEnabled = ref<boolean>( false )
+        , datingUnreadCount = ref<number>( 0 )
         , datingInbox = ref<DatingInboxMessage[]>( [] )
         , datingRoomStatus = ref<{ availableTableSessionIds: string[]; unavailableTableSessionIds: string[] }>( { availableTableSessionIds: [], unavailableTableSessionIds: [] } )
 
@@ -185,9 +187,16 @@ const _useTableSocket = createGlobalState( () => {
                 break;
 
             }
+            case 'dating:status': {
+
+                datingEnabled.value = message.enabled;
+                break;
+
+            }
             case 'dating:message:new': {
 
                 datingInbox.value = [ message.message, ...datingInbox.value ].slice(0, 100);
+                datingUnreadCount.value += 1;
                 break;
 
             }
@@ -260,9 +269,27 @@ const _useTableSocket = createGlobalState( () => {
 
     }
 
+    function enableDating() {
+
+        send( { type: 'dating:enable' } );
+
+    }
+
+    function disableDating() {
+
+        send( { type: 'dating:disable' } );
+
+    }
+
     function sendDatingMessage( toTableSessionId: string, body: string ) {
 
         send( { type: 'dating:message:send', toTableSessionId, body } );
+
+    }
+
+    function clearDatingUnread() {
+
+        datingUnreadCount.value = 0;
 
     }
 
@@ -275,18 +302,23 @@ const _useTableSocket = createGlobalState( () => {
     const isHost = computed( () => gameState.value?.hostPlayerId === playerStore.playerId );
 
     return {
+        clearDatingUnread,
         close,
-        gameSelection,
+        datingEnabled,
         datingInbox,
         datingRoomStatus,
+        datingUnreadCount,
+        disableDating,
+        enableDating,
+        gameSelection,
         gameState,
         isHost,
         nextRound,
         open,
+        players,
         sendDatingMessage,
         sessionMode,
         setSessionMode,
-        players,
         startGame,
         status,
         vote,

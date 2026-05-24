@@ -1,16 +1,19 @@
 {
     "app": {
         "name": "Sottobicchiere",
-        "tagline": "Table games for your venue",
+        "tagline": "Games and socialising at your table",
         "description": "Gaming PWA for bars and venues: multiplayer games with your table's QR code"
     },
     "welcome": {
         "page_title": "Welcome",
-        "scan_title": "Scan the QR code",
-        "scan_description": "Find the QR code on your table and scan it to join the game session.",
+        "scan_title": "Scan the QR code at your table",
+        "scan_description": "Scan the QR code on the table to join or create a game session.",
         "privacy_note": "No account needed. Your data is not saved.",
-        "open_demo_table": "Open demo table",
-        "mobile_qr_hint": "If you are already on your phone, use the button above: the QR is for other players at the table."
+        "open_demo_table": "Try the demo",
+        "mobile_qr_hint": "If you are already on your phone, use the button above.",
+        "feature_board": "Board games",
+        "feature_preserata": "Pre-party",
+        "feature_dating": "Anonymous dating"
     },
     "table": {
         "page_title": "Table {n} — {venue}",
@@ -21,7 +24,7 @@
         "invalid_qr_title": "Invalid QR code",
         "invalid_qr_description": "This QR code is not recognized or has expired. Ask the venue staff.",
         "join_title": "Join the game",
-        "join_description": "Choose a nickname to join the session.",
+        "join_description": "Choose a nickname to join.",
         "nickname_label": "Nickname",
         "nickname_placeholder": "What's your name?",
         "group_label": "Group (optional)",
@@ -30,8 +33,15 @@
         "join_button": "Join",
         "joining": "Joining…",
         "join_error_generic": "Error while joining. Please try again.",
-        "create_table_button": "Create table",
-        "join_table_button": "Join table"
+        "create_table_button": "Create new group",
+        "join_table_button": "Join",
+        "active_sessions_title": "Active groups at this table",
+        "active_sessions_empty": "No active groups. Create the first one!",
+        "session_players": "{n} players",
+        "session_game_in_progress": "Game in progress",
+        "session_join": "Join",
+        "session_host_label": "Host: {name}",
+        "or_create_new": "or create a new group"
     },
     "lobby": {
         "page_title": "Lobby — {venue}",
@@ -39,15 +49,34 @@
         "you": "you",
         "no_players": "No players yet. You're the first!",
         "games_title": "Games",
+        "games_tab_all": "All",
+        "games_tab_board": "Board games",
+        "games_tab_preserata": "Pre-party",
         "games_coming_soon": "Games coming soon",
-        "games_description": "Multiplayer mini-games will be available soon. Stay connected!",
+        "games_description": "Multiplayer mini-games will be available soon.",
+        "game_min_players": "Min. {n} players",
+        "game_duration": "~{n} min",
+        "game_in_progress": "Game in progress",
+        "game_host_only": "Only the host can select a game.",
         "leave": "Leave",
         "connecting": "Connecting…",
-        "disconnected": "Connection lost, reconnecting…",
+        "disconnected": "Connection lost",
         "reconnect": "Reconnect",
+        "retry": "Retry",
+        "refresh_session": "Refresh",
         "session_status": "Session status",
         "session_host": "Host",
-        "session_remaining": "Time remaining"
+        "session_remaining": "Time remaining",
+        "dating_toggle_label": "Anonymous dating",
+        "dating_toggle_hint": "Send and receive anonymous messages from other tables",
+        "dating_inbox_title": "Anonymous messages",
+        "dating_available_tables": "{n} tables available",
+        "dating_send_placeholder": "Write an anonymous message…",
+        "dating_send_button": "Send",
+        "dating_no_messages": "No messages yet.",
+        "dating_select_target": "Select a table",
+        "tab_players": "Players",
+        "tab_games": "Games"
     },
     "game": {
         "thumbs": {

@@ -33,3 +33,16 @@ export interface TableSessionMeta {
     expiresAt: string;
     remainingSeconds: number;
 }
+
+export interface ActiveSessionSummary {
+    sessionId: string;
+    playerCount: number;
+    hasActiveGame: boolean;
+    selectedGame: string | null;
+    hostNickname: string | null;
+    startedAt: string;
+}
+
+export interface SessionsResponse {
+    sessions: ActiveSessionSummary[];
+}

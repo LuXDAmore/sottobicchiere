@@ -33,9 +33,46 @@ Aggiornato: 2026-05-24
 
 - [x] Layout `default` (header: logo + theme toggle + lang switcher)
 - [x] Layout `game` (full-screen, minimal chrome)
-- [x] Pagina welcome `index.vue` (QR scan prompt, branding, onboarding)
-- [x] Rotta dinamica `/[venue]/table/[token]` — join tavolo (fix demo fallback)
-- [x] Pagina lobby tavolo — lista giocatori, scelta gruppo, countdown (selezione gioco host + lock realtime)
+- [x] Pagina welcome `index.vue` — hero + feature pills, CTA demo senza QR inline
+- [x] Rotta dinamica `/[venue]/table/[token]` — join tavolo con lista sessioni attive
+- [x] Pagina lobby tavolo — tabs (Giocatori | Giochi), gaming cards con categoria, dating toggle per-player
+
+## MVP Sprint (2026-05-24)
+
+### Fix bug critico
+- [x] Fix `isDemoFallbackEnabled()` — default `true` in non-production
+- [x] Aggiornare `.env.example` default demo fallback a `true`
+- [x] Fix `nuxt.config.ts` default `enableDemoFallback`
+
+### Join flow multi-sessione
+- [x] Nuovo endpoint `GET /api/[venue]/table/[token]/sessions` — lista sessioni attive
+- [x] Join page: mostra sessioni attive con card; seleziona o crea nuovo gruppo
+- [x] `join.post.ts`: accept `sessionId` per join diretto a sessione specifica
+- [x] Navigazione diretta al gioco se la sessione ha una partita in corso
+- [x] Tipi `ActiveSessionSummary` e `SessionsResponse` in `shared/types/index.ts`
+
+### Dating mode per-player
+- [x] Nuovi WS messages: `dating:enable`, `dating:disable` (client→server)
+- [x] Nuovo WS message: `dating:status` (server→client)
+- [x] Tracking per-peer dating state in `server/routes/ws/table.ts` (in-memory)
+- [x] `dating-room.ts`: session availability aggiornata per count di peer con dating enabled
+- [x] Composable: `datingEnabled`, `datingUnreadCount`, `enableDating()`, `disableDating()`, `clearDatingUnread()`
+- [x] Lobby: dating toggle in header con badge messaggi non letti
+- [x] Lobby: pannello dating slide-down con inbox e form invio
+
+### Tre sezioni + UI polish
+- [x] Home page: hero + feature pills, rimozione QR inline, CTA pulita
+- [x] `shared/utils/games.ts`: `GameDefinition`, `GameCategory`, `GAME_DEFINITIONS`, `getGamesByCategory()`
+- [x] Lobby: tab navigation (Giocatori | Giochi)
+- [x] Lobby: filtro giochi per categoria (Tutti | Da tavolo | Pre-serata)
+- [x] Lobby: game card con icona, categoria badge, durata, min players
+- [x] i18n: aggiornate chiavi IT + EN per tutti i nuovi elementi UI
+
+### Documentazione
+- [x] `docs/product-foundations.md` — aggiornato con nuovo join flow, dating individuale, tre sezioni
+- [x] `docs/game-modes.md` — aggiornato con GameCategory e GameDefinition
+- [x] `docs/agents-changelog.md` — nuova entry 2026-05-24
+- [x] `TODO.md` — aggiornato con tasks sprint
 
 ## i18n (fase 1)
 
@@ -45,10 +82,14 @@ Aggiornato: 2026-05-24
 
 ## Giochi (fase 2)
 
-- [ ] Definire la struttura dati di un `Game` e `GameState`
-- [ ] Implementare WebSocket handler Nitro per sync real-time
-- [ ] Primo gioco MVP: "Chi sono io?" (indovina il personaggio)
-- [ ] Secondo gioco: quiz trivia a scelta multipla
+- [x] Implementare "Pollice Su" (Thumbs) con WebSocket realtime
+- [x] Implementare "Word Blitz" (prototipo locale)
+- [x] WebSocket handler Nitro per sync real-time
+- [x] Game state in-memory con `game-state.ts`
+- [ ] Host handover automatico se host disconnette
+- [ ] Lock join durante partita attiva (messaggio "partita in corso")
+- [ ] Terzo gioco MVP: trivia/quiz a scelta multipla
+- [ ] Replay/rematch senza tornare alla join page
 
 ## Venue Admin (fase 2)
 
@@ -56,11 +97,13 @@ Aggiornato: 2026-05-24
 - [ ] Dashboard venue: lista tavoli, QR code, sfide attive
 - [ ] CRUD sfide venue con campo premio
 
-## Funzionalità Future (backlog)
+## Funzionalità Future (backlog v2)
 
-- [ ] v2: Autenticazione giocatori (Better Auth, Google OAuth)
-- [ ] v2: Profili utente persistenti con statistiche
-- [ ] v2: Chat anonima inter-tavolo (dating mode)
-- [ ] v2: Marketplace giochi (gioco portato da un bar all'altro)
-- [ ] v2: Stripe per premi a pagamento
-- [ ] v2: Resend per notifiche venue admin
+- [ ] Autenticazione giocatori (Better Auth, Google OAuth)
+- [ ] Profili utente persistenti con statistiche
+- [ ] Dating: storico conversazioni con tavolo anonimizzato
+- [ ] Dating: "match" quando due tavoli si scambiano messaggi reciproci
+- [ ] Marketplace giochi (gioco portato da un bar all'altro)
+- [ ] Stripe per premi a pagamento
+- [ ] Resend per notifiche venue admin
+- [ ] Multi-region game state (Redis invece di in-memory)

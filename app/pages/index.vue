@@ -1,30 +1,41 @@
 <template>
-    <div class="flex flex-col gap-8 items-center justify-center min-h-screen px-4 py-12">
+    <div class="flex flex-col gap-10 items-center justify-center min-h-screen px-4 py-16">
 
+        <!-- Hero -->
         <div class="text-center">
             <div
                 aria-hidden="true"
-                class="bg-primary-500 flex items-center justify-center mb-4 mx-auto rounded-3xl shadow-[var(--shadow-lift)] size-20"
+                class="bg-primary-500 flex items-center justify-center mb-5 mx-auto rounded-3xl shadow-[var(--shadow-lift)] size-20"
             >
                 <u-icon class="size-10 text-white" name="i-lucide-dice-6" />
             </div>
 
-            <h1 class="font-bold font-display text-5xl text-highlighted">
+            <h1 class="font-bold font-display text-5xl text-highlighted tracking-tight">
                 {{ $t('app.name') }}
             </h1>
 
-            <p class="mt-2 text-lg text-muted">
+            <p class="mt-3 text-lg text-muted max-w-xs mx-auto">
                 {{ $t('app.tagline') }}
             </p>
         </div>
 
-        <div class="max-w-sm text-center w-full">
-            <u-card class="p-2" :ui="{ body: 'flex flex-col items-center gap-4 p-6' }">
-                <div class="bg-white p-4 rounded-2xl shadow-[var(--shadow-lift)]">
-                    <Qrcode :height="180" :value="demoJoinUrl" :width="180" black-color="#111" white-color="#fff" />
-                </div>
+        <!-- Feature pills -->
+        <div class="flex flex-wrap gap-3 items-center justify-center max-w-sm">
+            <span class="flex items-center gap-2 bg-primary-500/10 text-primary-500 px-4 py-2 rounded-full text-sm font-semibold">
+                🎲 {{ $t('welcome.feature_board') }}
+            </span>
+            <span class="flex items-center gap-2 bg-accent-500/10 text-accent-500 px-4 py-2 rounded-full text-sm font-semibold">
+                🍹 {{ $t('welcome.feature_preserata') }}
+            </span>
+            <span class="flex items-center gap-2 bg-secondary-500/10 text-secondary-500 px-4 py-2 rounded-full text-sm font-semibold">
+                💌 {{ $t('welcome.feature_dating') }}
+            </span>
+        </div>
 
-                <div>
+        <!-- Demo CTA -->
+        <div class="max-w-xs w-full">
+            <u-card :ui="{ body: 'flex flex-col gap-4 p-6' }">
+                <div class="text-center">
                     <p class="font-semibold text-highlighted">
                         {{ $t('welcome.scan_title') }}
                     </p>
@@ -37,11 +48,12 @@
                     block
                     color="primary"
                     icon="i-lucide-play"
+                    size="xl"
                     :label="$t('welcome.open_demo_table')"
                     :to="demoTablePath"
                 />
 
-                <p class="text-muted text-xs">
+                <p class="text-center text-muted text-xs">
                     {{ $t('welcome.mobile_qr_hint') }}
                 </p>
             </u-card>
@@ -59,19 +71,17 @@
 
 const { t } = useI18n();
 const localePath = useLocalePath();
-const { origin } = useRequestURL();
 
 const demoTablePath = computed( () => localePath( '/demo/table/demo-001' ) );
-const demoJoinUrl = computed( () => `${ origin }${ demoTablePath.value }` );
 
-useHead({
-    title: computed(() => t('welcome.page_title')),
+useHead( {
+    title: computed( () => t( 'welcome.page_title' ) ),
     meta: [
         {
-            content: computed(() => t('app.description')),
+            content: computed( () => t( 'app.description' ) ),
             name: 'description',
         },
     ],
-});
+} );
 
 </script>

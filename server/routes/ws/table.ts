@@ -58,6 +58,25 @@ function broadcast(
 
 }
 
+// Per-peer dating state (in-memory, not persisted)
+const peerDatingEnabled = new Map<string, boolean>(); // peerId → enabled
+const sessionDatingPeerCount = new Map<string, number>(); // tableSessionId → count of dating-enabled peers
+
+function setPeerDating( peerId: string, tableSessionId: string, enabled: boolean ): void {
+    const wasEnabled = peerDatingEnabled.get( peerId ) ?? false;
+    if( wasEnabled === enabled ) return;
+    peerDatingEnabled.set( peerId, enabled );
+    const current = sessionDatingPeerCount.get( tableSessionId ) ?? 0;
+    const updated = enabled ? current + 1 : Math.max( 0, current - 1 );
+    sessionDatingPeerCount.set( tableSessionId, updated );
+    setTableAvailability( tableSessionId, updated > 0 );
+}
+
+function cleanupPeerDating( peerId: string, tableSessionId: string ): void {
+    if( peerDatingEnabled.get( peerId ) ) setPeerDating( peerId, tableSessionId, false );
+    peerDatingEnabled.delete( peerId );
+}
+
 export default defineWebSocketHandler( {
 
     async open( peer ) {
@@ -248,17 +267,28 @@ export default defineWebSocketHandler( {
 
         }
 
+        if( data.type === 'dating:enable' ) {
+
+            setPeerDating( peer.id, tableSessionId, true );
+            emit( peer, { type: 'dating:status', enabled: true } );
+            const status = getRoomStatus( tableSessionId );
+            emit( peer, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable } );
+            return;
+
+        }
+
+        if( data.type === 'dating:disable' ) {
+
+            setPeerDating( peer.id, tableSessionId, false );
+            emit( peer, { type: 'dating:status', enabled: false } );
+            return;
+
+        }
+
         if( data.type === 'dating:message:send' ) {
 
-            const persistedSession = await db
-                .select( { sessionMode: tableSessions.sessionMode } )
-                .from( tableSessions )
-                .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) )
-                .limit( 1 )
-                .then( ( rows: { sessionMode: string }[] ) => rows[ 0 ] ?? null );
-
-            if( !persistedSession || persistedSession.sessionMode !== 'dating' ) {
-                emit( peer, { type: 'error', message: 'Modalità dating non attiva' } );
+            if( ! ( peerDatingEnabled.get( peer.id ) ?? false ) ) {
+                emit( peer, { type: 'error', message: 'Abilita la dating mode prima di inviare messaggi' } );
                 return;
             }
 
@@ -440,6 +470,7 @@ export default defineWebSocketHandler( {
 
         if( ! tableSessionId ) return;
 
+        cleanupPeerDating( peer.id, tableSessionId );
         unregisterTablePeer( tableSessionId, peer.id );
 
         if( getPeersForTable( tableSessionId ).length === 0 ) {
