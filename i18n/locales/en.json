@@ -29,7 +29,9 @@
         "group_placeholder": "Group name",
         "join_button": "Join",
         "joining": "Joining…",
-        "join_error_generic": "Error while joining. Please try again."
+        "join_error_generic": "Error while joining. Please try again.",
+        "create_table_button": "Create table",
+        "join_table_button": "Join table"
     },
     "lobby": {
         "page_title": "Lobby — {venue}",
@@ -42,7 +44,10 @@
         "leave": "Leave",
         "connecting": "Connecting…",
         "disconnected": "Connection lost, reconnecting…",
-        "reconnect": "Reconnect"
+        "reconnect": "Reconnect",
+        "session_status": "Session status",
+        "session_host": "Host",
+        "session_remaining": "Time remaining"
     },
     "game": {
         "thumbs": {
