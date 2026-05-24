@@ -2,7 +2,19 @@
 
 PWA gaming per bar e locali con tavoli.
 
-Ogni tavolo ha un QR code: ogni persona lo scansiona, sceglie un nickname e un gruppo, e può giocare con (o contro) gli altri presenti. I giochi spaziano dal pre-serata social al gioco di carte o strategia. I gestori del locale possono creare sfide personalizzate con premi. La privacy è al centro: nessun dato permanente per i giocatori (tutto effimero, pulizia automatica), nessun account richiesto in MVP.
+Ogni tavolo ha un QR code: ogni persona lo scansiona, sceglie un nickname e un gruppo, e può giocare con (o contro) gli altri presenti. L'MVP è focalizzato su giochi social rapidi da tavolo (preserata), con estensioni future verso carte e strategia light. I gestori del locale possono creare sfide personalizzate con premi. La privacy è al centro: nessun dato permanente per i giocatori (tutto effimero, pulizia automatica), nessun account richiesto in MVP.
+
+
+## Capability MVP attuali
+
+Stato reale del progetto (maggio 2026):
+
+- ✅ Base applicativa Nuxt 4 configurata (layout `default` + `game`, welcome page, i18n IT/EN).
+- ✅ Fondazioni documentali prodotto/architettura/design/database già presenti.
+- ✅ Schema dati iniziale Drizzle impostato a livello di codice (`server/db/schema.ts`).
+- ⚠️ Join tavolo via route dinamica QR, lobby completa e motore partita realtime sono **in implementazione**.
+- ⚠️ Admin venue, premi e analytics sono **post-MVP**.
+- ⚠️ Nessuna autenticazione giocatore persistente nell’MVP (sessioni effimere).
 
 ## Stack
 

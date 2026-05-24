@@ -1,62 +1,105 @@
-# Sottobicchiere — Product Foundations v0
+# Sottobicchiere — Product Foundations v1
 
-## UX direction (light + dark, casual but premium)
+## Visione MVP
 
-- Visual tone: playful social gaming, not childish.
-- Core mood: rounded geometry, strong contrast CTAs, soft glass cards, micro-animations.
-- Accessibility baseline: AA contrast for all text, 44px touch targets, motion-reduced fallbacks.
+Sottobicchiere è una PWA social gaming per tavoli reali di bar/locali: accesso istantaneo via QR, nessun account, sessioni effimere, partite brevi e coordinate da un host locale.
 
-## Palette candidates
+## User journey MVP (scan QR → join → lobby → game)
 
-### Palette A (default launch)
-- Primary: `#5B5FEF`
-- Secondary: `#14B8A6`
-- Accent/Reward: `#F59E0B`
-- Success: `#22C55E`
-- Danger: `#EF4444`
-- Neutral light bg: `#F8FAFC`
-- Neutral dark bg: `#0B1020`
+1. **Scan QR**
+   - L’utente scansiona il QR del tavolo.
+   - Fallback: URL breve stampato vicino al QR.
+   - Se il token tavolo è valido, si apre la route del tavolo.
 
-### Palette B (night bar)
-- Primary: `#7C3AED`
-- Secondary: `#06B6D4`
-- Accent: `#F43F5E`
-- Light bg: `#F9FAFB`
-- Dark bg: `#09090B`
+2. **Join**
+   - Schermata join con campi minimi: nickname (obbligatorio), gruppo (opzionale).
+   - Mostrare informativa breve privacy: dati temporanei, nessun account richiesto.
+   - Alla conferma, viene creata/agganciata una `player_session` alla `table_session` attiva.
 
-## Interaction patterns
+3. **Lobby**
+   - Vista giocatori presenti in tempo reale.
+   - Stato tavolo: `waiting`, `starting`, `in_game`, `ended`.
+   - Se host presente: selezione gioco, impostazioni round/timer, start match.
+   - Se player: stato read-only + feedback di readiness.
 
-1. Table onboarding
-- QR on physical table + direct link fallback on all screens.
-- Nickname + optional group name in one compact card.
-- Session banner explaining anonymous temporary data.
+4. **Game**
+   - Inizio round e sync realtime via canale websocket del tavolo.
+   - Turni/fasi dipendono dal game mode, ma sempre con loop standard:
+     `waiting room → round phase → reveal phase → results → replay/new game`.
+   - Fine partita: recap punteggi + ritorno in lobby o rematch.
 
-2. Lobby
-- Live players chips with color identity.
-- Game cards: players needed, duration, tone (party/strategy/family).
-- Host action buttons pinned at bottom on mobile.
+## Ruoli
 
-3. Game loop template
-- Waiting room → round phase → reveal phase → results → replay.
-- Keep round timer optional for each game mode.
+### Host
+- È il coordinatore operativo della sessione tavolo.
+- Può:
+  - scegliere modalità/gioco;
+  - avviare partita;
+  - bloccare accesso tardivo (lock join);
+  - chiudere partita e rientrare in lobby.
+- Nell’MVP l’host è un ruolo di sessione, non un account permanente.
 
-## First game (already in progress): Thumbs
+### Player
+- Partecipa con nickname temporaneo.
+- Può:
+  - entrare in lobby;
+  - impostare/aggiornare il proprio gruppo (se abilitato);
+  - giocare i round;
+  - uscire liberamente dalla sessione.
+- Non può avviare/chiudere partita se non host.
 
-- Type: async opinion voting game.
-- Rounds: 5 default.
-- Score: points for majority alignment (party mode) or minority bonus (hard mode in future).
-- Realtime sync via table websocket channel.
+## Regole di sessione e lock gioco
 
-## Suggested next games backlog
+- Una `table_session` è attiva per tavolo con TTL (cleanup automatico server-side).
+- All’avvio partita lo stato passa a `in_game`.
+- **Lock join in-game**:
+  - default MVP: nuovi ingressi bloccati durante partita attiva;
+  - i nuovi utenti vedono messaggio “Partita in corso, attendi il prossimo round”.
+- **Reconnect grace**:
+  - player già presenti possono rientrare se la loro sessione è ancora valida.
+- **Host handover (fallback)**:
+  - se host disconnette, il sistema promuove automaticamente il player più anziano in lobby.
+- **Fine partita**:
+  - stato `ended` e ritorno a `waiting` dopo recap/rematch decision.
 
-1. "Guess Who Drank" (party)
-2. "Mini Briscola" (cards)
-3. "Word Blitz" (family)
-4. "Table Tactics" (light strategy)
+## Errori utente e messaggi UI previsti
 
-## Venue admin roadmap
+### Join / accesso tavolo
+- **QR/token non valido**
+  - Messaggio: “Questo tavolo non è disponibile. Riprova con un nuovo QR.”
+- **Sessione tavolo scaduta**
+  - Messaggio: “La sessione è scaduta. Aggiorna per crearne una nuova.”
+- **Nickname non valido (vuoto/troppo lungo)**
+  - Messaggio: “Inserisci un nickname valido (2–20 caratteri).”
 
-- QR/table management dashboard by venue domain.
-- Custom challenges with rewards and expiration.
-- Privacy-safe analytics (aggregated, non-identifying).
+### Lobby
+- **Lobby piena (limite giocatori)**
+  - Messaggio: “Tavolo al completo. Riprova tra poco.”
+- **Permesso negato (azione host-only)**
+  - Messaggio: “Solo l’host può eseguire questa azione.”
+- **Gioco non selezionato (host start)**
+  - Messaggio: “Seleziona un gioco prima di iniziare.”
 
+### In game
+- **Invio mossa/voto fuori tempo**
+  - Messaggio: “Tempo scaduto per questo round.”
+- **Payload round non valido**
+  - Messaggio: “Azione non valida. Riprova.”
+- **Connessione realtime persa**
+  - Messaggio: “Connessione instabile. Riconnessione in corso…”
+
+### Post game
+- **Recap non disponibile (errore server)**
+  - Messaggio: “Impossibile caricare i risultati. Riprova.”
+
+## UX direction (light + dark, casual ma premium)
+
+- Visual tone: playful social gaming, non infantile.
+- Core mood: geometrie morbide, CTA ad alto contrasto, card soft-glass, micro-animazioni.
+- Accessibilità baseline: contrasto AA, touch target 44px, fallback reduced motion.
+
+## Venue admin roadmap (post-MVP)
+
+- Dashboard gestione tavoli/QR per venue.
+- Sfide personalizzate con premi e scadenze.
+- Analytics aggregate privacy-safe, senza identificazione personale.
