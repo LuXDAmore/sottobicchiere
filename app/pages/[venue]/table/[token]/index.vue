@@ -27,7 +27,7 @@
                 <u-icon class="mb-4 size-12 text-error-500" name="i-lucide-qr-code-off" />
                 <h1 class="font-bold font-display text-2xl text-highlighted">{{ $t('table.invalid_qr_title') }}</h1>
                 <p class="mt-2 text-muted text-sm">{{ $t('table.invalid_qr_description') }}</p>
-                <u-button class="mt-4" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.reconnect')" variant="soft" @click="refreshTableInfo" />
+                <u-button class="mt-4" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.reconnect')" variant="soft" @click="refreshTableInfo()" />
             </div>
         </template>
 
