@@ -1,6 +1,10 @@
 import type { ClientMessage, ServerMessage } from '../../../shared/types/ws';
 import type { PlayerColor } from '../../../shared/utils/colors';
 
+import { and, eq, gt } from 'drizzle-orm';
+
+import { tableSessions } from '../../db/schema';
+import { registerTablePeer, unregisterTablePeer } from '../../utils/table-ws-broker';
 import {
     addPlayer,
     cleanupSession,
@@ -55,7 +59,7 @@ function broadcast(
 
 export default defineWebSocketHandler( {
 
-    open( peer ) {
+    async open( peer ) {
 
         const url = new URL( peer.request.url ?? '', 'http://x' )
             , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? ''
@@ -83,6 +87,7 @@ export default defineWebSocketHandler( {
         } );
 
         peer.subscribe( topic( tableSessionId ) );
+        registerTablePeer( tableSessionId, peer.id, peer );
 
         broadcast( peer, tableSessionId, {
             player: {
@@ -97,6 +102,20 @@ export default defineWebSocketHandler( {
             players: getPlayers( session ),
             type: 'players:sync',
         } );
+        const persistedSession = await db.select({ selectedGame: tableSessions.selectedGame, gameMode: tableSessions.gameMode, lockedAt: tableSessions.lockedAt, hostPlayerId: tableSessions.hostPlayerId })
+            .from(tableSessions)
+            .where(and(eq(tableSessions.id, tableSessionId), gt(tableSessions.expiresAt, new Date())))
+            .limit(1)
+            .then(( rows: any[] ) => rows[0] ?? null);
+
+        if (persistedSession?.selectedGame && persistedSession.hostPlayerId) {
+            emit(peer, { type: 'game:selected', selectedGame: persistedSession.selectedGame, gameMode: persistedSession.gameMode ?? null, hostPlayerId: persistedSession.hostPlayerId });
+        }
+
+        if (persistedSession?.lockedAt) {
+            emit(peer, { type: 'game:locked', lockedAt: persistedSession.lockedAt.toISOString() });
+        }
+
 
         // Re-sync game state for reconnecting players across all active phases
         if( session.game ) {
@@ -338,6 +357,8 @@ export default defineWebSocketHandler( {
             , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? '';
 
         if( ! tableSessionId ) return;
+
+        unregisterTablePeer( tableSessionId, peer.id );
 
         const session = findSession( tableSessionId );
 

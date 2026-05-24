@@ -35,7 +35,7 @@ Aggiornato: 2026-05-24
 - [x] Layout `game` (full-screen, minimal chrome)
 - [x] Pagina welcome `index.vue` (QR scan prompt, branding, onboarding)
 - [x] Rotta dinamica `/[venue]/table/[token]` — join tavolo (fix demo fallback)
-- [ ] Pagina lobby tavolo — lista giocatori, scelta gruppo, countdown
+- [x] Pagina lobby tavolo — lista giocatori, scelta gruppo, countdown (selezione gioco host + lock realtime)
 
 ## i18n (fase 1)
 
