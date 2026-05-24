@@ -98,6 +98,24 @@ public/              Asset statici
 docs/                Documentazione tecnica e di prodotto
 ```
 
+
+## Cleanup sessioni scadute (cron Nitro)
+
+- Cron configurato in `nuxt.config.ts`: `0 6 * * *`
+- Timezone operativa Nitro Scheduled Tasks: **UTC**
+- Significato operativo: il cleanup gira ogni giorno alle **06:00 UTC**.
+
+### Conversione oraria locale (venue)
+
+L'orario locale cambia in base al fuso del locale (e all'eventuale ora legale). Esempi:
+
+- Venue su `Europe/Rome`: in inverno `06:00 UTC = 07:00` locali; in estate `06:00 UTC = 08:00` locali.
+- Venue su `America/New_York`: in inverno `06:00 UTC = 01:00` locali; in estate `06:00 UTC = 02:00` locali.
+
+Usare sempre UTC come riferimento canonico per evitare ambiguità tra venue in fusi diversi.
+
+Endpoint interno health cleanup: `GET /api/internal/cleanup-health` (header `x-cron-secret` o query `?secret=` se `CRON_SECRET` è configurato).
+
 ## Shared Runtime
 
 Il codice in `shared/` è framework-neutral: nessun composable Vue, nessun helper Nitro, nessun client DB. Solo tipi TypeScript puri e utility funzionali.
