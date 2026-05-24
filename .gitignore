@@ -92,8 +92,6 @@ yarn-error.log
 # Temp directories
 .temp
 .tmp
-*.sql
-!server/db/migrations/postgresql/*.sql
 *.sqlite
 *.sqlite3
 .cache
