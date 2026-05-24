@@ -1,6 +1,3 @@
-import type { JoinResponse } from '../../shared/types';
-import type { PlayerColor } from '../../shared/utils/colors';
-
 import { defineStore } from 'pinia';
 
 interface PlayerState {

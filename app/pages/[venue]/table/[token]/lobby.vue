@@ -275,10 +275,6 @@
 </template>
 
 <script setup lang="ts">
-import type { GameCategory } from '../../../../../shared/utils/games';
-
-import { GAME_DEFINITIONS, getGamesByCategory } from '../../../../../shared/utils/games';
-
 definePageMeta( { layout: 'game' } );
 
 const route = useRoute()

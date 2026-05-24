@@ -155,8 +155,6 @@
 </template>
 
 <script setup lang="ts">
-import type { ActiveSessionSummary, JoinResponse } from '../../../../../shared/types';
-
 const route = useRoute()
     , { t } = useI18n()
     , playerStore = usePlayerStore()

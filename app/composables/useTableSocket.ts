@@ -1,5 +1,3 @@
-import type { ClientMessage, DatingInboxMessage, ServerMessage, SessionMode, WsPlayer } from '../../shared/types/ws';
-
 export interface LobbyGameSelection {
     selectedGame: string | null;
     gameMode: string | null;
