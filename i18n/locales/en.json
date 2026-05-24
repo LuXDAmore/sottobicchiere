@@ -30,7 +30,8 @@
         "join_button": "Join",
         "joining": "Joining…",
         "join_error_generic": "Error while joining. Please try again.",
-        "create_table_button": "Create table"
+        "create_table_button": "Create table",
+        "join_table_button": "Join table"
     },
     "lobby": {
         "page_title": "Lobby — {venue}",

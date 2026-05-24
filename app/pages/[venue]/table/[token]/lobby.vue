@@ -225,7 +225,19 @@
         remainingSeconds.value = sessionMeta.value.remainingSeconds;
     });
 
-    if (import.meta.client) setInterval(() => { if (remainingSeconds.value > 0) remainingSeconds.value -= 1; }, 1000);
+    let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+    onMounted(() => {
+        if (import.meta.client) {
+            countdownTimer = setInterval(() => {
+                if (remainingSeconds.value > 0) remainingSeconds.value -= 1;
+            }, 1000);
+        }
+    });
+
+    onUnmounted(() => {
+        if (countdownTimer) clearInterval(countdownTimer);
+    });
 
     watch( wsError, error => {
 

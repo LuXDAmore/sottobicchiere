@@ -72,7 +72,7 @@ export default defineEventHandler( async event => {
     if( groupName ) {
         const existingGroup = await db.select( { id: groups.id } ).from( groups )
             .where( and( eq( groups.tableSessionId, session.id ), eq( sql`lower(${ groups.name })`, groupName.toLowerCase() ) ) )
-            .limit( 1 ).then( ( rows: { id: string; expiresAt: Date }[] ) => rows[ 0 ] ?? null );
+            .limit( 1 ).then( ( rows: { id: string }[] ) => rows[ 0 ] ?? null );
 
         if( existingGroup ) groupId = existingGroup.id;
         else {
