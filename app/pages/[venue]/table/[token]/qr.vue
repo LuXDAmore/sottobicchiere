@@ -33,7 +33,7 @@
                     icon="i-lucide-refresh-cw"
                     :label="$t('lobby.reconnect')"
                     variant="soft"
-                    @click="refreshTableInfo"
+                    @click="refreshTableInfo()"
                 />
             </div>
         </template>
