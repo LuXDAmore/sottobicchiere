@@ -4,7 +4,8 @@ import type { PlayerColor } from '../../../shared/utils/colors';
 import { and, eq, gt } from 'drizzle-orm';
 
 import { tableSessions } from '../../db/schema';
-import { registerTablePeer, unregisterTablePeer } from '../../utils/table-ws-broker';
+import { createDatingInboxMessage, getRoomStatus, isTableAvailable, mapDatingRoom, removeTableFromDatingRoom, setTableAvailability, validateDatingMessage } from '../../utils/dating-room';
+import { getPeersForTable, registerTablePeer, unregisterTablePeer } from '../../utils/table-ws-broker';
 import {
     addPlayer,
     cleanupSession,
@@ -102,7 +103,7 @@ export default defineWebSocketHandler( {
             players: getPlayers( session ),
             type: 'players:sync',
         } );
-        const persistedSession = await db.select({ selectedGame: tableSessions.selectedGame, gameMode: tableSessions.gameMode, lockedAt: tableSessions.lockedAt, hostPlayerId: tableSessions.hostPlayerId })
+        const persistedSession = await db.select({ selectedGame: tableSessions.selectedGame, gameMode: tableSessions.gameMode, lockedAt: tableSessions.lockedAt, hostPlayerId: tableSessions.hostPlayerId, sessionMode: tableSessions.sessionMode })
             .from(tableSessions)
             .where(and(eq(tableSessions.id, tableSessionId), gt(tableSessions.expiresAt, new Date())))
             .limit(1)
@@ -110,6 +111,13 @@ export default defineWebSocketHandler( {
 
         if (persistedSession?.selectedGame && persistedSession.hostPlayerId) {
             emit(peer, { type: 'game:selected', selectedGame: persistedSession.selectedGame, gameMode: persistedSession.gameMode ?? null, hostPlayerId: persistedSession.hostPlayerId });
+        }
+
+        if (persistedSession?.sessionMode) {
+            emit(peer, { type: 'session:mode:sync', mode: persistedSession.sessionMode as 'board' | 'dating' | 'preserata' });
+            setTableAvailability(tableSessionId, persistedSession.sessionMode === 'dating');
+            const status = getRoomStatus(tableSessionId);
+            emit(peer, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable });
         }
 
         if (persistedSession?.lockedAt) {
@@ -172,7 +180,7 @@ export default defineWebSocketHandler( {
 
     },
 
-    message( peer, message ) {
+    async message( peer, message ) {
 
         const url = new URL( peer.request.url ?? '', 'http://x' )
             , tableSessionId = url.searchParams.get( 'tableSessionId' ) ?? ''
@@ -202,6 +210,80 @@ export default defineWebSocketHandler( {
                 message: 'Invalid JSON',
                 type: 'error',
             } );
+            return;
+
+        }
+
+
+        if( data.type === 'session:mode:set' ) {
+
+            const persistedSession = await db
+                .select( { hostPlayerId: tableSessions.hostPlayerId } )
+                .from( tableSessions )
+                .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) )
+                .limit( 1 )
+                .then( ( rows: { hostPlayerId: string | null }[] ) => rows[ 0 ] ?? null );
+
+            if( !persistedSession ) {
+                emit( peer, { type: 'error', message: 'Sessione non trovata' } );
+                return;
+            }
+
+            const hostPlayerId = persistedSession.hostPlayerId ?? playerId;
+
+            if( hostPlayerId !== playerId ) {
+                emit( peer, { type: 'error', message: 'Solo host può impostare la modalità' } );
+                return;
+            }
+
+            await db.update( tableSessions )
+                .set( { sessionMode: data.mode, hostPlayerId } )
+                .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) );
+
+            setTableAvailability( tableSessionId, data.mode === 'dating' );
+            broadcast( peer, tableSessionId, { type: 'session:mode:sync', mode: data.mode } );
+            const status = getRoomStatus( tableSessionId );
+            broadcast( peer, tableSessionId, { type: 'dating:room:status', availableTableSessionIds: status.available, unavailableTableSessionIds: status.unavailable } );
+            return;
+
+        }
+
+        if( data.type === 'dating:message:send' ) {
+
+            const persistedSession = await db
+                .select( { sessionMode: tableSessions.sessionMode } )
+                .from( tableSessions )
+                .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) )
+                .limit( 1 )
+                .then( ( rows: { sessionMode: string }[] ) => rows[ 0 ] ?? null );
+
+            if( !persistedSession || persistedSession.sessionMode !== 'dating' ) {
+                emit( peer, { type: 'error', message: 'Modalità dating non attiva' } );
+                return;
+            }
+
+            if( !isTableAvailable( data.toTableSessionId ) ) {
+                emit( peer, { type: 'error', message: 'Tavolo destinatario non disponibile' } );
+                return;
+            }
+
+            const reason = validateDatingMessage( data.body, Date.now(), playerId, tableSessionId, data.toTableSessionId );
+
+            if( reason ) {
+                emit( peer, { type: 'error', message: reason } );
+                return;
+            }
+
+            mapDatingRoom( tableSessionId, data.toTableSessionId );
+            const datingMessage = createDatingInboxMessage( tableSessionId, data.toTableSessionId, data.body );
+
+            broadcast( peer, tableSessionId, { type: 'dating:message:new', message: datingMessage } );
+
+            const targetPeers = getPeersForTable( data.toTableSessionId );
+            for( const targetPeer of targetPeers ) {
+                targetPeer.send( JSON.stringify( { type: 'dating:message:new', message: datingMessage } ) );
+            }
+
             return;
 
         }
@@ -359,6 +441,10 @@ export default defineWebSocketHandler( {
         if( ! tableSessionId ) return;
 
         unregisterTablePeer( tableSessionId, peer.id );
+
+        if( getPeersForTable( tableSessionId ).length === 0 ) {
+            removeTableFromDatingRoom( tableSessionId );
+        }
 
         const session = findSession( tableSessionId );
 

@@ -1,4 +1,4 @@
-import type { ClientMessage, ServerMessage, WsPlayer } from '../../shared/types/ws';
+import type { ClientMessage, DatingInboxMessage, ServerMessage, SessionMode, WsPlayer } from '../../shared/types/ws';
 
 export interface LobbyGameSelection {
     selectedGame: string | null;
@@ -29,6 +29,9 @@ const _useTableSocket = createGlobalState( () => {
         , gameState = ref<ThumbsClientState | null>( null )
         , wsError = ref<string | null>( null )
         , gameSelection = ref<LobbyGameSelection>( { selectedGame: null, gameMode: null, lockedAt: null, hostPlayerId: null } )
+        , sessionMode = ref<SessionMode>( 'board' )
+        , datingInbox = ref<DatingInboxMessage[]>( [] )
+        , datingRoomStatus = ref<{ availableTableSessionIds: string[]; unavailableTableSessionIds: string[] }>( { availableTableSessionIds: [], unavailableTableSessionIds: [] } )
 
         , wsUrl = computed<string | undefined>( () => {
 
@@ -182,6 +185,27 @@ const _useTableSocket = createGlobalState( () => {
                 break;
 
             }
+            case 'dating:message:new': {
+
+                datingInbox.value = [ message.message, ...datingInbox.value ].slice(0, 100);
+                break;
+
+            }
+            case 'dating:room:status': {
+
+                datingRoomStatus.value = {
+                    availableTableSessionIds: message.availableTableSessionIds,
+                    unavailableTableSessionIds: message.unavailableTableSessionIds,
+                };
+                break;
+
+            }
+            case 'session:mode:sync': {
+
+                sessionMode.value = message.mode;
+                break;
+
+            }
             case 'error': {
 
                 wsError.value = message.message;
@@ -230,6 +254,18 @@ const _useTableSocket = createGlobalState( () => {
 
     }
 
+    function setSessionMode( mode: SessionMode ) {
+
+        send( { type: 'session:mode:set', mode } );
+
+    }
+
+    function sendDatingMessage( toTableSessionId: string, body: string ) {
+
+        send( { type: 'dating:message:send', toTableSessionId, body } );
+
+    }
+
     function nextRound() {
 
         send( { type: 'game:next' } );
@@ -241,10 +277,15 @@ const _useTableSocket = createGlobalState( () => {
     return {
         close,
         gameSelection,
+        datingInbox,
+        datingRoomStatus,
         gameState,
         isHost,
         nextRound,
         open,
+        sendDatingMessage,
+        sessionMode,
+        setSessionMode,
         players,
         startGame,
         status,
