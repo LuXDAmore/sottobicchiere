@@ -1,4 +1,5 @@
 import {
+    boolean,
     index,
     integer,
     jsonb,
@@ -65,6 +66,7 @@ export const playerSessions = pgTable( 'player_sessions', {
     groupId: uuid( 'group_id' ).references( () => groups.id ),
     nickname: text( 'nickname' ).notNull(),
     color: text( 'color' ).notNull(),
+    isHost: boolean( 'is_host' ).notNull().default( false ),
     joinedAt: timestamp( 'joined_at', { withTimezone: true } ).notNull().defaultNow(),
 } );
 

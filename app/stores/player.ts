@@ -14,11 +14,13 @@ interface PlayerState {
     qrToken: string | null;
     groupId: string | null;
     expiresAt: string | null;
+    isHost: boolean;
 }
 
 export const usePlayerStore = defineStore( 'player', {
     state: (): PlayerState => ( {
         expiresAt: null,
+        isHost: false,
         groupId: null,
         playerId: null,
         playerColor: null,
@@ -53,6 +55,7 @@ export const usePlayerStore = defineStore( 'player', {
             this.qrToken = data.qrToken;
             this.groupId = data.groupId;
             this.expiresAt = data.expiresAt;
+            this.isHost = data.isHost;
 
         },
         leave() {

@@ -67,6 +67,12 @@
                 />
             </div>
 
+            <section v-if="sessionMeta" class="rounded-lg border border-[var(--ui-border)] p-3 text-sm">
+                <p><strong>{{ $t('lobby.session_status') }}:</strong> {{ sessionMeta.status }}</p>
+                <p><strong>{{ $t('lobby.session_host') }}:</strong> {{ sessionMeta.hostNickname ?? '-' }}</p>
+                <p><strong>{{ $t('lobby.session_remaining') }}:</strong> {{ Math.max(0, remainingSeconds) }}s</p>
+            </section>
+
             <!-- Players section -->
             <section>
                 <div class="flex gap-2 items-center mb-3">
@@ -196,7 +202,9 @@
               players, gameState, status, open, close, wsError,
           } = useTableSocket()
 
-          , isLeaving = ref( false );
+          , isLeaving = ref( false )
+          , { data: sessionMeta } = await useFetch(`/api/${ venueSlug }/table/${ qrToken }/session`)
+          , remainingSeconds = ref(0);
 
     onMounted( () => {
 
@@ -211,6 +219,13 @@
     } );
 
     onUnmounted( () => close() );
+
+    watchEffect(() => {
+        if (!sessionMeta.value) return;
+        remainingSeconds.value = sessionMeta.value.remainingSeconds;
+    });
+
+    if (import.meta.client) setInterval(() => { if (remainingSeconds.value > 0) remainingSeconds.value -= 1; }, 1000);
 
     watch( wsError, error => {
 

@@ -29,7 +29,8 @@
         "group_placeholder": "Nome del gruppo",
         "join_button": "Entra",
         "joining": "Ingresso in corso…",
-        "join_error_generic": "Errore durante l'ingresso. Riprova."
+        "join_error_generic": "Errore durante l'ingresso. Riprova.",
+        "create_table_button": "Crea tavolo"
     },
     "lobby": {
         "page_title": "Lobby — {venue}",
@@ -42,7 +43,10 @@
         "leave": "Esci",
         "connecting": "Connessione in corso…",
         "disconnected": "Connessione persa, riconnessione…",
-        "reconnect": "Riconnetti"
+        "reconnect": "Riconnetti",
+        "session_status": "Stato sessione",
+        "session_host": "Host",
+        "session_remaining": "Tempo residuo"
     },
     "game": {
         "thumbs": {

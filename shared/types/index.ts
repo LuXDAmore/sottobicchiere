@@ -22,4 +22,14 @@ export interface JoinResponse extends TableInfo {
     groupId: string | null;
     expiresAt: string;
     qrToken: string;
+    isHost: boolean;
+}
+
+export interface TableSessionMeta {
+    id: string;
+    status: 'active' | 'expired';
+    hostPlayerId: string | null;
+    hostNickname: string | null;
+    expiresAt: string;
+    remainingSeconds: number;
 }
