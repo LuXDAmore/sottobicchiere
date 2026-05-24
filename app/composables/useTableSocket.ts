@@ -1,5 +1,12 @@
 import type { ClientMessage, ServerMessage, WsPlayer } from '../../shared/types/ws';
 
+export interface LobbyGameSelection {
+    selectedGame: string | null;
+    gameMode: string | null;
+    lockedAt: string | null;
+    hostPlayerId: string | null;
+}
+
 export interface ThumbsClientState {
     phase: 'finished' | 'reveal' | 'voting';
     roundIndex: number;
@@ -21,6 +28,7 @@ const _useTableSocket = createGlobalState( () => {
         , players = ref<WsPlayer[]>( [] )
         , gameState = ref<ThumbsClientState | null>( null )
         , wsError = ref<string | null>( null )
+        , gameSelection = ref<LobbyGameSelection>( { selectedGame: null, gameMode: null, lockedAt: null, hostPlayerId: null } )
 
         , wsUrl = computed<string | undefined>( () => {
 
@@ -162,6 +170,18 @@ const _useTableSocket = createGlobalState( () => {
                 break;
 
             }
+            case 'game:selected': {
+
+                gameSelection.value = { ...gameSelection.value, selectedGame: message.selectedGame, gameMode: message.gameMode, hostPlayerId: message.hostPlayerId };
+                break;
+
+            }
+            case 'game:locked': {
+
+                gameSelection.value = { ...gameSelection.value, lockedAt: message.lockedAt };
+                break;
+
+            }
             case 'error': {
 
                 wsError.value = message.message;
@@ -220,6 +240,7 @@ const _useTableSocket = createGlobalState( () => {
 
     return {
         close,
+        gameSelection,
         gameState,
         isHost,
         nextRound,
