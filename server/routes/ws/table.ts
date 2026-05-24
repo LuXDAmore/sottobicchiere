@@ -5,7 +5,7 @@ import { and, eq, gt } from 'drizzle-orm';
 import { useTimeoutFn } from '@vueuse/core';
 
 import { tableSessions } from '../../db/schema';
-import { DEMO_TABLE_SESSION_ID } from '../../utils/demo-session';
+import { DEMO_TABLE_SESSION_ID, getDemoPersistedState, setDemoSessionMode } from '../../utils/demo-session';
 import { createDatingInboxMessage, getRoomStatus, isTableAvailable, mapDatingRoom, removeTableFromDatingRoom, setTableAvailability, validateDatingMessage } from '../../utils/dating-room';
 import { getPeersForTable, registerTablePeer, unregisterTablePeer } from '../../utils/table-ws-broker';
 import {
@@ -139,26 +139,57 @@ export default defineWebSocketHandler( {
             players: getPlayers( session ),
             type: 'players:sync',
         } );
-        const persistedSession = await db.select({ selectedGame: tableSessions.selectedGame, gameMode: tableSessions.gameMode, lockedAt: tableSessions.lockedAt, hostPlayerId: tableSessions.hostPlayerId, sessionMode: tableSessions.sessionMode })
-            .from(tableSessions)
-            .where(and(eq(tableSessions.id, tableSessionId), gt(tableSessions.expiresAt, new Date())))
-            .limit(1)
-            .then(( rows: any[] ) => rows[0] ?? null);
 
-        if (persistedSession?.selectedGame && persistedSession.hostPlayerId) {
-            emit(peer, { type: 'game:selected', selectedGame: persistedSession.selectedGame, gameMode: persistedSession.gameMode ?? null, hostPlayerId: persistedSession.hostPlayerId });
+        // Resolve persisted session state — for demo use in-memory cache to avoid
+        // DB queries (which would fail if the DB is unreachable on a cold start).
+        let syncSelectedGame: string | null = null;
+        let syncGameMode: string | null = null;
+        let syncHostPlayerId: string | null = null;
+        let syncLockedAt: string | null = null;
+        let syncSessionMode: string = 'board';
+
+        if( tableSessionId === DEMO_TABLE_SESSION_ID ) {
+
+            const d = getDemoPersistedState();
+            syncSelectedGame = d.selectedGame;
+            syncGameMode = d.gameMode;
+            syncHostPlayerId = d.hostPlayerId;
+            syncLockedAt = d.lockedAt;
+            syncSessionMode = d.sessionMode;
+
+        } else {
+
+            const row = await db
+                .select( { selectedGame: tableSessions.selectedGame, gameMode: tableSessions.gameMode, lockedAt: tableSessions.lockedAt, hostPlayerId: tableSessions.hostPlayerId, sessionMode: tableSessions.sessionMode } )
+                .from( tableSessions )
+                .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) )
+                .limit( 1 )
+                .then( ( rows: any[] ) => rows[ 0 ] ?? null );
+
+            if( row ) {
+                syncSelectedGame = row.selectedGame ?? null;
+                syncGameMode = row.gameMode ?? null;
+                syncHostPlayerId = row.hostPlayerId ?? null;
+                syncLockedAt = row.lockedAt ? ( row.lockedAt as Date ).toISOString() : null;
+                syncSessionMode = row.sessionMode ?? 'board';
+            }
+
         }
 
-        if (persistedSession?.sessionMode) {
-            emit(peer, { type: 'session:mode:sync', mode: persistedSession.sessionMode as 'board' | 'dating' | 'preserata' });
+        if( syncSelectedGame && syncHostPlayerId ) {
+            emit( peer, { type: 'game:selected', selectedGame: syncSelectedGame, gameMode: syncGameMode ?? null, hostPlayerId: syncHostPlayerId } );
+        }
+
+        if( syncSessionMode ) {
+            emit( peer, { type: 'session:mode:sync', mode: syncSessionMode as 'board' | 'dating' | 'preserata' } );
         }
 
         // Always send current dating room status so new/reconnecting peers see the live pool
         const roomStatus = getRoomStatus( tableSessionId );
         emit( peer, { type: 'dating:room:status', availableTableSessionIds: roomStatus.available, unavailableTableSessionIds: roomStatus.unavailable } );
 
-        if (persistedSession?.lockedAt) {
-            emit(peer, { type: 'game:locked', lockedAt: persistedSession.lockedAt.toISOString() });
+        if( syncLockedAt ) {
+            emit( peer, { type: 'game:locked', lockedAt: syncLockedAt } );
         }
 
 
@@ -254,8 +285,9 @@ export default defineWebSocketHandler( {
 
         if( data.type === 'session:mode:set' ) {
 
-            // Demo session: no DB — just broadcast the mode change in-memory.
+            // Demo session: no DB — persist in-memory and broadcast.
             if( tableSessionId === DEMO_TABLE_SESSION_ID ) {
+                setDemoSessionMode( data.mode );
                 broadcast( peer, tableSessionId, { type: 'session:mode:sync', mode: data.mode } );
                 emit( peer, { type: 'session:mode:sync', mode: data.mode } );
                 return;

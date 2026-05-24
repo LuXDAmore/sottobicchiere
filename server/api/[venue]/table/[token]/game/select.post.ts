@@ -5,7 +5,7 @@ import {
     playerSessions,
     tableSessions,
 } from '../../../../../db/schema';
-import { DEMO_TABLE_SESSION_ID } from '../../../../../utils/demo-session';
+import { DEMO_TABLE_SESSION_ID, setDemoGameSelected } from '../../../../../utils/demo-session';
 import { resolveTableRow } from '../../../../../utils/table-resolver';
 import { emitTableEvent } from '../../../../../utils/table-ws-broker';
 
@@ -50,14 +50,17 @@ export default defineEventHandler( async event => {
         throw createError( {
             statusCode: 404,
             statusMessage: 'TABLE_NOT_FOUND',
-            message: 'Tavolo non trovato o QR code non valido.',
+            message: 'QR code non riconosciuto. Chiedi al personale del locale.',
         } );
 
     }
 
     if( table.tableId === 'demo-table-001' ) {
 
-        const lockedAt = new Date();
+        const lockedAt = new Date()
+            , lockedAtIso = lockedAt.toISOString();
+
+        setDemoGameSelected( body.selectedGame, body.gameMode ?? null, body.playerId, lockedAtIso );
 
         emitTableEvent( DEMO_TABLE_SESSION_ID, {
             type: 'game:selected',
@@ -68,14 +71,14 @@ export default defineEventHandler( async event => {
 
         emitTableEvent( DEMO_TABLE_SESSION_ID, {
             type: 'game:locked',
-            lockedAt: lockedAt.toISOString(),
+            lockedAt: lockedAtIso,
         } );
 
         return {
             ok: true,
             selectedGame: body.selectedGame,
             gameMode: body.gameMode ?? null,
-            lockedAt: lockedAt.toISOString(),
+            lockedAt: lockedAtIso,
             hostPlayerId: body.playerId,
         };
 
