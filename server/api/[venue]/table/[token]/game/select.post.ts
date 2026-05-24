@@ -5,6 +5,7 @@ import {
     playerSessions,
     tableSessions,
 } from '../../../../../db/schema';
+import { DEMO_TABLE_SESSION_ID, setDemoGameSelected } from '../../../../../utils/demo-session';
 import { resolveTableRow } from '../../../../../utils/table-resolver';
 import { emitTableEvent } from '../../../../../utils/table-ws-broker';
 
@@ -23,7 +24,8 @@ export default defineEventHandler( async event => {
 
         throw createError( {
             statusCode: 400,
-            message: 'Parametri mancanti',
+            statusMessage: 'MISSING_ROUTE_PARAMS',
+            message: 'Parametri mancanti nel link. Controlla il QR code.',
         } );
 
     }
@@ -34,7 +36,8 @@ export default defineEventHandler( async event => {
 
         throw createError( {
             statusCode: 422,
-            message: 'Payload non valido',
+            statusMessage: 'INVALID_PAYLOAD',
+            message: 'Selezione gioco non valida. Riprova.',
         } );
 
     }
@@ -42,12 +45,42 @@ export default defineEventHandler( async event => {
     const body = parsed.data
         , table = await resolveTableRow( venueSlug, qrToken );
 
-    if( ! table || table.tableId === 'demo-table-001' ) {
+    if( ! table ) {
 
         throw createError( {
             statusCode: 404,
-            message: 'Tavolo non trovato',
+            statusMessage: 'TABLE_NOT_FOUND',
+            message: 'QR code non riconosciuto. Chiedi al personale del locale.',
         } );
+
+    }
+
+    if( table.tableId === 'demo-table-001' ) {
+
+        const lockedAt = new Date()
+            , lockedAtIso = lockedAt.toISOString();
+
+        setDemoGameSelected( body.selectedGame, body.gameMode ?? null, body.playerId, lockedAtIso );
+
+        emitTableEvent( DEMO_TABLE_SESSION_ID, {
+            type: 'game:selected',
+            selectedGame: body.selectedGame,
+            gameMode: body.gameMode ?? null,
+            hostPlayerId: body.playerId,
+        } );
+
+        emitTableEvent( DEMO_TABLE_SESSION_ID, {
+            type: 'game:locked',
+            lockedAt: lockedAtIso,
+        } );
+
+        return {
+            ok: true,
+            selectedGame: body.selectedGame,
+            gameMode: body.gameMode ?? null,
+            lockedAt: lockedAtIso,
+            hostPlayerId: body.playerId,
+        };
 
     }
 
@@ -65,7 +98,8 @@ export default defineEventHandler( async event => {
 
         throw createError( {
             statusCode: 403,
-            message: 'Player non trovato',
+            statusMessage: 'PLAYER_NOT_FOUND',
+            message: 'Giocatore non riconosciuto. Torna alla lobby e riprova.',
         } );
 
     }
@@ -89,7 +123,8 @@ export default defineEventHandler( async event => {
 
         throw createError( {
             statusCode: 404,
-            message: 'Sessione non trovata o scaduta',
+            statusMessage: 'SESSION_NOT_FOUND',
+            message: 'La sessione è scaduta. Torna alla lobby e riprova.',
         } );
 
     }
@@ -98,7 +133,8 @@ export default defineEventHandler( async event => {
 
         throw createError( {
             statusCode: 409,
-            message: 'Gioco già bloccato',
+            statusMessage: 'GAME_ALREADY_LOCKED',
+            message: 'Un gioco è già stato selezionato per questa sessione.',
         } );
 
     }
@@ -107,7 +143,8 @@ export default defineEventHandler( async event => {
 
         throw createError( {
             statusCode: 403,
-            message: 'Solo host può selezionare il gioco',
+            statusMessage: 'NOT_HOST',
+            message: 'Solo l\'host può selezionare il gioco.',
         } );
 
     }

@@ -32,7 +32,7 @@
         "group_placeholder": "Group name",
         "join_button": "Join",
         "joining": "Joining…",
-        "join_error_generic": "Error while joining. Please try again.",
+        "join_error_generic": "Unexpected error while joining. Check your connection and try again.",
         "create_table_button": "Create new group",
         "join_table_button": "Join",
         "active_sessions_title": "Active groups at this table",
@@ -85,9 +85,9 @@
         "tab_games": "Games",
         "game_select_pending_toast": "Selecting game…",
         "game_select_success_toast": "Game selected successfully.",
-        "game_select_error_toast": "Could not select game. Please try again.",
+        "game_select_error_toast": "Could not select game. Please try again in a moment.",
         "leave_pending_toast": "Leaving lobby…",
-        "leave_error_toast": "Error while leaving lobby.",
+        "leave_error_toast": "Error while leaving lobby. Please try again.",
         "dating_message_sending_toast": "Sending anonymous message…"
     },
     "game": {

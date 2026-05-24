@@ -38,7 +38,11 @@ export const isDemoQr = ( venueSlug: string, qrToken: string ) => venueSlug === 
 
 export const resolveTableRow = async ( venueSlug: string, qrToken: string ): Promise<ResolvedTableRow | null> => {
 
-    const row = await db
+    // Check demo first — avoids any DB query for the demo path and makes the demo
+    // resilient to database unavailability (cold starts, timeouts, etc.).
+    if( isDemoFallbackEnabled() && isDemoQr( venueSlug, qrToken ) ) return DEMO_TABLE;
+
+    return db
         .select( {
             tableId: tables.id,
             tableNumber: tables.tableNumber,
@@ -50,10 +54,5 @@ export const resolveTableRow = async ( venueSlug: string, qrToken: string ): Pro
         .where( and( eq( tables.qrToken, qrToken ), eq( venues.slug, venueSlug ) ) )
         .limit( 1 )
         .then( ( rows: ResolvedTableRow[] ) => rows[ 0 ] ?? null );
-
-    if( row ) return row;
-    if( isDemoFallbackEnabled() && isDemoQr( venueSlug, qrToken ) ) return DEMO_TABLE;
-
-    return null;
 
 };

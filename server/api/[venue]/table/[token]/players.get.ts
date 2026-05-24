@@ -12,7 +12,8 @@ export default defineEventHandler( async event => {
 
         throw createError( {
             statusCode: 400,
-            message: 'Parametri mancanti',
+            statusMessage: 'MISSING_ROUTE_PARAMS',
+            message: 'Parametri mancanti nel link. Controlla il QR code.',
         } );
 
     }
@@ -21,11 +22,10 @@ export default defineEventHandler( async event => {
 
     if( ! tableRow ) {
 
-        if( venueSlug === 'demo' && qrToken === 'demo-001' ) return [];
-
         throw createError( {
             statusCode: 404,
-            message: 'QR code non valido',
+            statusMessage: 'TABLE_NOT_FOUND',
+            message: 'QR code non riconosciuto. Chiedi al personale del locale.',
         } );
 
     }
