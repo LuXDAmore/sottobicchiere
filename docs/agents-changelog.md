@@ -5,6 +5,48 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+
+## 2026-05-24 — Timeout resiliente con VueUse (`useTimeoutFn`)
+
+- `server/routes/ws/table.ts` — sostituito `setTimeout` (grace period su `player:left`) con `useTimeoutFn` per uniformare l'uso dei timer con utility VueUse/Nuxt auto-import compatibili e ridurre logica imperativa raw.
+
+---
+
+## 2026-05-24 — Fix feedback dating send (no timeout fragile)
+
+- `app/pages/[venue]/table/[token]/lobby.vue` — rimosso reset `setTimeout(300ms)` per `isSendingDating`; ora lo stato pending si chiude su ack WS (`dating:message:new` coerente con sender/target/body) o su `wsError`.
+- `i18n/locales/it.json` e `i18n/locales/en.json` — rimossa chiave orfana `dating_message_sent_toast` (non usata).
+
+---
+
+## 2026-05-24 — Fix commenti PR: toast thumbs/lobby + UUID demo session/create
+
+- `app/pages/[venue]/table/[token]/game/thumbs.vue` — corrette condizioni toast: `vote_success` mostrato solo quando il voto locale è impostato; `start_success` mostrato una sola volta su transizione reale (pending start → phase voting), evitando duplicati a ogni update `gameState`.
+- `app/pages/[venue]/table/[token]/lobby.vue` — `dating` non mostra più success ottimistico fuorviante: ora feedback di invio in corso; per `selectGame` il success toast è agganciato alla conferma WS (`lockedAt`) invece che alla sola risposta HTTP.
+- `server/api/[venue]/table/[token]/session/create.post.ts` — demo branch aggiornato con stesso UUID-safe `tableSessionId` del join demo.
+- `server/utils/demo-session.ts` — nuova costante condivisa `DEMO_TABLE_SESSION_ID` usata da join/session-create per evitare drift.
+- `server/api/[venue]/table/[token]/join.post.ts` — usa la costante condivisa demo session id.
+
+---
+
+## 2026-05-24 — Toast UX uniforme per azioni async
+
+- `app/pages/[venue]/table/[token]/lobby.vue` — aggiunti toast pending/success/error per selezione gioco, uscita lobby e invio messaggi dating.
+- `app/pages/[venue]/table/[token]/game/thumbs.vue` — aggiunti toast per azioni async di gioco (start, voto, prossimo round, ritorno lobby) con cleanup su error/disconnessione.
+- `i18n/locales/it.json` — nuove chiavi traduzione toast per lobby e game thumbs.
+- `i18n/locales/en.json` — nuove chiavi traduzione toast per lobby e game thumbs.
+
+---
+
+## 2026-05-24 — UX error handling + fix server error su demo01
+
+- `app/pages/[venue]/table/[token]/index.vue` — migliorata UX join: toast di stato per azioni async (pending/success/error) e messaggi d'errore più espliciti in pagina.
+- `i18n/locales/it.json` — aggiunte stringhe toast per join (`join_pending_toast`, `join_success_toast`).
+- `i18n/locales/en.json` — aggiunte stringhe toast per join (`join_pending_toast`, `join_success_toast`).
+- `server/api/[venue]/table/[token]/join.post.ts` — messaggi errore server più parlanti con `statusMessage` esplicito; fix demo session id con UUID valido (`00000000-0000-4000-8000-000000000001`) per evitare errori downstream quando si inseriscono nome e gruppo nel demo.
+
+---
+
 ## 2026-05-24 — MVP: fix QR demo, multi-sessione, dating per-player, UI refactor
 
 **Obiettivo**: Far funzionare il demo QR, aggiungere il join flow multi-gruppo per tavolo, trasformare il dating in toggle individuale, rivedere l'UI con tre sezioni e aggiornare tutta la documentazione.

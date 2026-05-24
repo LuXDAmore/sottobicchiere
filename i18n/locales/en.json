@@ -41,7 +41,9 @@
         "session_game_in_progress": "Game in progress",
         "session_join": "Join",
         "session_host_label": "Host: {name}",
-        "or_create_new": "or create a new group"
+        "or_create_new": "or create a new group",
+        "join_pending_toast": "Joining your table…",
+        "join_success_toast": "All set {name}, you're in."
     },
     "lobby": {
         "page_title": "Lobby — {venue}",
@@ -80,7 +82,13 @@
         "game_category_preserata": "Pre-party",
         "game_category_both": "Versatile",
         "tab_players": "Players",
-        "tab_games": "Games"
+        "tab_games": "Games",
+        "game_select_pending_toast": "Selecting game…",
+        "game_select_success_toast": "Game selected successfully.",
+        "game_select_error_toast": "Could not select game. Please try again.",
+        "leave_pending_toast": "Leaving lobby…",
+        "leave_error_toast": "Error while leaving lobby.",
+        "dating_message_sending_toast": "Sending anonymous message…"
     },
     "game": {
         "thumbs": {
@@ -101,7 +109,14 @@
             "show_results": "Show final results →",
             "finished_title": "Game over!",
             "play_again": "Play again",
-            "back_lobby": "Back to lobby"
+            "back_lobby": "Back to lobby",
+            "back_lobby_pending_toast": "Returning to lobby…",
+            "back_lobby_error_toast": "Could not return to lobby.",
+            "start_pending_toast": "Starting game…",
+            "start_success_toast": "Game started.",
+            "vote_pending_toast": "Submitting vote…",
+            "vote_success_toast": "Vote submitted.",
+            "next_round_pending_toast": "Moving to next round…"
         },
         "word_blitz": {
             "title": "Word Blitz",

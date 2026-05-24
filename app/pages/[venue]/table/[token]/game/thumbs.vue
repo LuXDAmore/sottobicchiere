@@ -366,6 +366,9 @@
             isStartingGame.value = false;
             isSubmittingVote.value = false;
             isAdvancingRound.value = false;
+            toast.remove( 'thumbs-start-loading' );
+            toast.remove( 'thumbs-vote-loading' );
+            toast.remove( 'thumbs-next-round-loading' );
 
             wsError.value = null;
 
@@ -385,7 +388,7 @@
 
     } );
 
-    watch( gameState, state => {
+    watch( gameState, ( state, previousState ) => {
 
         if( ! state ) {
 
@@ -395,9 +398,22 @@
 
         }
 
-        if( state.phase === 'voting' && ! state.myVote ) isSubmittingVote.value = false;
-        if( state.phase !== 'reveal' ) isAdvancingRound.value = false;
-        if( state.phase === 'voting' || state.phase === 'finished' ) isStartingGame.value = false;
+        if( isSubmittingVote.value && state.myVote ) {
+            isSubmittingVote.value = false;
+            toast.remove( 'thumbs-vote-loading' );
+            toast.add( { color: 'success', description: t( 'game.thumbs.vote_success_toast' ), duration: 2200, icon: 'i-lucide-check-circle-2' } );
+        }
+
+        if( isAdvancingRound.value && state.phase === 'voting' && previousState?.phase === 'reveal' ) {
+            isAdvancingRound.value = false;
+            toast.remove( 'thumbs-next-round-loading' );
+        }
+
+        if( isStartingGame.value && state.phase === 'voting' && previousState?.phase !== 'voting' ) {
+            isStartingGame.value = false;
+            toast.remove( 'thumbs-start-loading' );
+            toast.add( { color: 'success', description: t( 'game.thumbs.start_success_toast' ), duration: 2200, icon: 'i-lucide-check-circle-2' } );
+        }
 
     }, { deep: true } );
 
@@ -418,11 +434,20 @@
         if( isGoingBack.value ) return;
 
         isGoingBack.value = true;
+        const leavingGameToastId = 'thumbs-back-lobby-loading';
+        toast.add( { id: leavingGameToastId, color: 'primary', description: t( 'game.thumbs.back_lobby_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
 
         try {
 
             close();
             await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
+            toast.remove( leavingGameToastId );
+
+        } catch( exception: unknown ) {
+
+            toast.remove( leavingGameToastId );
+            const fetchError = exception as { data?: { message?: string } };
+            toast.add( { color: 'error', description: fetchError.data?.message ?? t( 'game.thumbs.back_lobby_error_toast' ), duration: 4500, icon: 'i-lucide-circle-alert' } );
 
         } finally {
 
@@ -437,6 +462,7 @@
         if( isStartingGame.value || status.value !== 'OPEN' ) return;
 
         isStartingGame.value = true;
+        toast.add( { id: 'thumbs-start-loading', color: 'primary', description: t( 'game.thumbs.start_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
         startGame();
 
     }
@@ -446,6 +472,7 @@
         if( isSubmittingVote.value || status.value !== 'OPEN' ) return;
 
         isSubmittingVote.value = true;
+        toast.add( { id: 'thumbs-vote-loading', color: 'primary', description: t( 'game.thumbs.vote_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
         vote( choice );
 
     }
@@ -455,6 +482,7 @@
         if( isAdvancingRound.value || status.value !== 'OPEN' ) return;
 
         isAdvancingRound.value = true;
+        toast.add( { id: 'thumbs-next-round-loading', color: 'primary', description: t( 'game.thumbs.next_round_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
         nextRound();
 
     }

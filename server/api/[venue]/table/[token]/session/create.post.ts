@@ -1,4 +1,5 @@
 import { tableSessions } from '../../../../../db/schema';
+import { DEMO_TABLE_SESSION_ID } from '../../../../../utils/demo-session';
 import { resolveTableRow } from '../../../../../utils/table-resolver';
 
 export default defineEventHandler( async event => {
@@ -14,7 +15,7 @@ export default defineEventHandler( async event => {
 
     if( tableRow.tableId === 'demo-table-001' ) return {
         expiresAt: new Date( Date.now() + ( 8 * 60 * 60 * 1000 ) ).toISOString(),
-        tableSessionId: 'demo-session-001',
+        tableSessionId: DEMO_TABLE_SESSION_ID,
     };
 
     const now = new Date()

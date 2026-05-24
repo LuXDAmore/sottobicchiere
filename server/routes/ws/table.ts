@@ -2,6 +2,7 @@ import type { ClientMessage, ServerMessage } from '../../../shared/types/ws';
 import type { PlayerColor } from '../../../shared/utils/colors';
 
 import { and, eq, gt } from 'drizzle-orm';
+import { useTimeoutFn } from '@vueuse/core';
 
 import { tableSessions } from '../../db/schema';
 import { createDatingInboxMessage, getRoomStatus, isTableAvailable, mapDatingRoom, removeTableFromDatingRoom, setTableAvailability, validateDatingMessage } from '../../utils/dating-room';
@@ -526,7 +527,7 @@ export default defineWebSocketHandler( {
 
         if( player ) {
 
-            setTimeout( () => {
+            useTimeoutFn( () => {
 
                 // Only broadcast player:left if the player hasn't reconnected during the grace period
                 const currentSession = findSession( tableSessionId );

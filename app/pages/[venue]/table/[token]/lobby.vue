@@ -308,7 +308,10 @@ const route = useRoute()
     , activeTab = ref<'players' | 'games'>( 'players' )
     , activeGameCategory = ref<'all' | GameCategory>( 'all' )
     , datingTarget = ref( '' )
-    , datingBody = ref( '' );
+    , datingBody = ref( '' )
+    , isSendingDating = ref( false )
+    , pendingSelectedGame = ref<string | null>( null )
+    , pendingDatingMessage = ref<{ body: string; toTableSessionId: string } | null>( null );
 
 // Game categories for filter tabs
 const gameCategories = computed( () => [
@@ -339,6 +342,12 @@ onUnmounted( () => close() );
 
 watch( wsError, error => {
     if( error ) {
+        pendingSelectedGame.value = null;
+        isSelectingGame.value = false;
+        toast.remove( 'lobby-select-game-loading' );
+        toast.remove( 'lobby-dating-send-loading' );
+        isSendingDating.value = false;
+        pendingDatingMessage.value = null;
         toast.add( { color: 'error', description: error, duration: 4000 } );
         wsError.value = null;
     }
@@ -347,6 +356,29 @@ watch( wsError, error => {
 watch( gameState, state => {
     if( state && ( state.phase === 'voting' || state.phase === 'reveal' ) )
         navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
+} );
+
+watch( () => gameSelection.value.lockedAt, ( lockedAt, previousLockedAt ) => {
+    if( ! pendingSelectedGame.value || ! lockedAt || lockedAt === previousLockedAt ) return;
+
+    toast.remove( 'lobby-select-game-loading' );
+    toast.add( { color: 'success', description: t( 'lobby.game_select_success_toast' ), duration: 2500, icon: 'i-lucide-check-circle-2' } );
+    pendingSelectedGame.value = null;
+    isSelectingGame.value = false;
+} );
+
+watch( () => datingInbox.value[ 0 ], latestMessage => {
+    if( ! latestMessage || ! pendingDatingMessage.value ) return;
+
+    const isOwnAck = latestMessage.fromTableSessionId === playerStore.tableSessionId
+        && latestMessage.toTableSessionId === pendingDatingMessage.value.toTableSessionId
+        && latestMessage.body.trim() === pendingDatingMessage.value.body.trim();
+
+    if( ! isOwnAck ) return;
+
+    toast.remove( 'lobby-dating-send-loading' );
+    isSendingDating.value = false;
+    pendingDatingMessage.value = null;
 } );
 
 // Clear unread when dating panel is open
@@ -368,8 +400,14 @@ function formatTime( isoString: string ): string {
 }
 
 function onSendDating() {
-    if( ! datingTarget.value || ! datingBody.value.trim() ) return;
-    sendDatingMessage( datingTarget.value, datingBody.value );
+    if( ! datingTarget.value || ! datingBody.value.trim() || isSendingDating.value ) return;
+
+    const messageBody = datingBody.value.trim();
+
+    isSendingDating.value = true;
+    pendingDatingMessage.value = { body: messageBody, toTableSessionId: datingTarget.value };
+    toast.add( { id: 'lobby-dating-send-loading', color: 'primary', description: t( 'lobby.dating_message_sending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+    sendDatingMessage( datingTarget.value, messageBody );
     datingBody.value = '';
 }
 
@@ -377,23 +415,39 @@ async function selectGame( selectedGame: 'thumbs' | 'word-blitz' ) {
     if( ! isHostSelector.value || gameSelection.value.lockedAt || isSelectingGame.value ) return;
 
     isSelectingGame.value = true;
+    pendingSelectedGame.value = selectedGame;
+    const selectingToastId = 'lobby-select-game-loading';
+    toast.add( { id: selectingToastId, color: 'primary', description: t( 'lobby.game_select_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+
     try {
         await $fetch( `/api/${ venueSlug }/table/${ qrToken }/game/select`, {
             method: 'POST',
             body: { selectedGame, gameMode: 'default', playerId: playerStore.playerId },
         } );
-    } finally {
+    } catch( exception: unknown ) {
+        pendingSelectedGame.value = null;
         isSelectingGame.value = false;
+        toast.remove( selectingToastId );
+        const fetchError = exception as { data?: { message?: string } };
+        toast.add( { color: 'error', description: fetchError.data?.message ?? t( 'lobby.game_select_error_toast' ), duration: 4500, icon: 'i-lucide-circle-alert' } );
     }
 }
 
 async function handleLeave() {
     if( isLeaving.value ) return;
     isLeaving.value = true;
+    const leavingToastId = 'lobby-leaving-loading';
+    toast.add( { id: leavingToastId, color: 'primary', description: t( 'lobby.leave_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+
     try {
         close();
         playerStore.leave();
         await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }` ) );
+        toast.remove( leavingToastId );
+    } catch( exception: unknown ) {
+        toast.remove( leavingToastId );
+        const fetchError = exception as { data?: { message?: string } };
+        toast.add( { color: 'error', description: fetchError.data?.message ?? t( 'lobby.leave_error_toast' ), duration: 4500, icon: 'i-lucide-circle-alert' } );
     } finally {
         isLeaving.value = false;
     }
