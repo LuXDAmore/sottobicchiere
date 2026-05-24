@@ -6,7 +6,7 @@ import { resolveTableRow } from '../../../../../utils/table-resolver';
 export default defineEventHandler(async event => {
   const venueSlug = getRouterParam(event, 'venue');
   const qrToken = getRouterParam(event, 'token');
-  if (!venueSlug || !qrToken) throw createError({ statusCode: 400, message: 'Parametri mancanti' });
+  if (!venueSlug || !qrToken) throw createError({ statusCode: 400, statusMessage: 'MISSING_ROUTE_PARAMS', message: 'Parametri mancanti nel link. Controlla il QR code.' });
 
   const table = await resolveTableRow(venueSlug, qrToken);
   if (!table || table.tableId === 'demo-table-001') return { selectedGame: null, gameMode: null, lockedAt: null, hostPlayerId: null };

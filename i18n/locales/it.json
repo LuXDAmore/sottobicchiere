@@ -32,7 +32,7 @@
         "group_placeholder": "Nome del gruppo",
         "join_button": "Entra",
         "joining": "Ingresso in corso…",
-        "join_error_generic": "Errore durante l'ingresso. Riprova.",
+        "join_error_generic": "Errore imprevisto durante l'ingresso. Controlla la connessione e riprova.",
         "create_table_button": "Crea nuovo gruppo",
         "join_table_button": "Unisciti",
         "active_sessions_title": "Gruppi attivi al tavolo",
@@ -85,9 +85,9 @@
         "tab_games": "Giochi",
         "game_select_pending_toast": "Selezione gioco in corso…",
         "game_select_success_toast": "Gioco selezionato con successo.",
-        "game_select_error_toast": "Non sono riuscito a selezionare il gioco. Riprova.",
+        "game_select_error_toast": "Non è stato possibile selezionare il gioco. Riprova tra qualche secondo.",
         "leave_pending_toast": "Uscita dalla lobby in corso…",
-        "leave_error_toast": "Errore durante l’uscita dalla lobby.",
+        "leave_error_toast": "Errore durante l’uscita dalla lobby. Riprova.",
         "dating_message_sending_toast": "Invio messaggio anonimo in corso…"
     },
     "game": {

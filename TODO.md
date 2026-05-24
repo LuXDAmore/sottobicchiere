@@ -50,6 +50,11 @@ Aggiornato: 2026-05-24
 - [x] Fix `isDemoFallbackEnabled()` — default `true` in non-production
 - [x] Aggiornare `.env.example` default demo fallback a `true`
 - [x] Fix `nuxt.config.ts` default `enableDemoFallback`
+- [x] Fix `resolveTableRow`: controllo demo prima della query DB (demo resiliente a DB irraggiungibile)
+- [x] Fix `select.post.ts`: path demo via WS broker in-memory (no 404 su selezione gioco)
+- [x] Fix `ws/table.ts`: guard demo per `session:mode:set`, messaggi di errore italiani
+- [x] Miglioramento messaggi di errore backend (statusMessage + testi user-friendly)
+- [x] Miglioramento messaggi di errore frontend (fallback i18n più specifici)
 
 ### Join flow multi-sessione
 - [x] Nuovo endpoint `GET /api/[venue]/table/[token]/sessions` — lista sessioni attive

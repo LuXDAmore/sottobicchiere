@@ -6,6 +6,32 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 ---
 
 
+## 2026-05-24 — Fix creazione gruppo demo + miglioramento messaggi di errore
+
+### Root cause fix
+- `server/utils/table-resolver.ts` — spostato il controllo demo **prima** della query al DB in `resolveTableRow`. Precedentemente la query avveniva sempre per prima: se il DB era irraggiungibile (cold start serverless, timeout), il path demo non veniva mai raggiunto e si otteneva un 500. Ora la demo non tocca mai il database.
+
+### Fix: selezione gioco nella demo
+- `server/api/[venue]/table/[token]/game/select.post.ts` — aggiunto path demo: emette `game:selected` e `game:locked` via WS broker in-memory (DEMO_TABLE_SESSION_ID) senza query DB. In precedenza la demo riceveva sempre 404 "Tavolo non trovato".
+
+### Fix: session:mode:set WebSocket in demo
+- `server/routes/ws/table.ts` — aggiunto guard per `tableSessionId === DEMO_TABLE_SESSION_ID` nel handler `session:mode:set`: ora esegue il broadcast in-memory senza query DB, evitando l'errore "Sessione non trovata" per la demo.
+
+### Miglioramento messaggi di errore (backend)
+- `server/routes/ws/table.ts` — tutti i messaggi di errore tradotti in italiano: "Missing connection params", "Invalid JSON", "Game already in progress", "Need at least 2 players", "No active voting round", "Only the host can advance rounds", "Voting still in progress", "No active game to advance", "Failed to advance round".
+- Aggiunto `statusMessage` machine-readable su tutti i `createError()` negli endpoint API.
+- Migliorati i testi user-facing: più specifici e azionabili (es. "QR code non riconosciuto. Chiedi al personale del locale." invece di "QR code non valido").
+
+### Miglioramento messaggi di errore (frontend)
+- `i18n/locales/it.json` — `join_error_generic`, `game_select_error_toast`, `leave_error_toast` aggiornati con testi più informativi.
+- `i18n/locales/en.json` — stesse chiavi aggiornate in inglese.
+
+### Cleanup
+- `server/api/[venue]/table/[token]/index.get.ts` — rimosso fallback hardcoded per demo (`venueSlug === 'demo' && qrToken === 'demo-001'`) reso obsoleto dal fix in `resolveTableRow`.
+- `server/api/[venue]/table/[token]/players.get.ts` — rimosso analogo fallback hardcoded obsoleto.
+
+---
+
 ## 2026-05-24 — Timeout resiliente con VueUse (`useTimeoutFn`)
 
 - `server/routes/ws/table.ts` — sostituito `setTimeout` (grace period su `player:left`) con `useTimeoutFn` per uniformare l'uso dei timer con utility VueUse/Nuxt auto-import compatibili e ridurre logica imperativa raw.

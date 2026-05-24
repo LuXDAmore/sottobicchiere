@@ -7,10 +7,10 @@ export default defineEventHandler( async event => {
     const venueSlug = getRouterParam( event, 'venue' )
         , qrToken = getRouterParam( event, 'token' );
 
-    if( ! venueSlug || ! qrToken ) throw createError( { statusCode: 400, message: 'Parametri mancanti' } );
+    if( ! venueSlug || ! qrToken ) throw createError( { statusCode: 400, statusMessage: 'MISSING_ROUTE_PARAMS', message: 'Parametri mancanti nel link. Controlla il QR code.' } );
 
     const tableRow = await resolveTableRow( venueSlug, qrToken );
-    if( ! tableRow ) throw createError( { statusCode: 404, message: 'QR code non valido' } );
+    if( ! tableRow ) throw createError( { statusCode: 404, statusMessage: 'TABLE_NOT_FOUND', message: 'QR code non riconosciuto. Chiedi al personale del locale.' } );
 
     const now = new Date();
 

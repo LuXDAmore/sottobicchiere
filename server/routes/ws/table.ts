@@ -5,6 +5,7 @@ import { and, eq, gt } from 'drizzle-orm';
 import { useTimeoutFn } from '@vueuse/core';
 
 import { tableSessions } from '../../db/schema';
+import { DEMO_TABLE_SESSION_ID } from '../../utils/demo-session';
 import { createDatingInboxMessage, getRoomStatus, isTableAvailable, mapDatingRoom, removeTableFromDatingRoom, setTableAvailability, validateDatingMessage } from '../../utils/dating-room';
 import { getPeersForTable, registerTablePeer, unregisterTablePeer } from '../../utils/table-ws-broker';
 import {
@@ -106,7 +107,7 @@ export default defineWebSocketHandler( {
         if( ! tableSessionId || ! playerId || ! nickname || ! color ) {
 
             emit( peer, {
-                message: 'Missing connection params',
+                message: 'Parametri di connessione mancanti.',
                 type: 'error',
             } );
             peer.close();
@@ -225,7 +226,7 @@ export default defineWebSocketHandler( {
         if( ! tableSessionId || ! playerId ) {
 
             emit( peer, {
-                message: 'Missing connection params',
+                message: 'Parametri di connessione mancanti.',
                 type: 'error',
             } );
             return;
@@ -243,7 +244,7 @@ export default defineWebSocketHandler( {
         } catch{
 
             emit( peer, {
-                message: 'Invalid JSON',
+                message: 'Formato del messaggio non valido.',
                 type: 'error',
             } );
             return;
@@ -253,6 +254,13 @@ export default defineWebSocketHandler( {
 
         if( data.type === 'session:mode:set' ) {
 
+            // Demo session: no DB — just broadcast the mode change in-memory.
+            if( tableSessionId === DEMO_TABLE_SESSION_ID ) {
+                broadcast( peer, tableSessionId, { type: 'session:mode:sync', mode: data.mode } );
+                emit( peer, { type: 'session:mode:sync', mode: data.mode } );
+                return;
+            }
+
             const persistedSession = await db
                 .select( { hostPlayerId: tableSessions.hostPlayerId } )
                 .from( tableSessions )
@@ -260,15 +268,15 @@ export default defineWebSocketHandler( {
                 .limit( 1 )
                 .then( ( rows: { hostPlayerId: string | null }[] ) => rows[ 0 ] ?? null );
 
-            if( !persistedSession ) {
-                emit( peer, { type: 'error', message: 'Sessione non trovata' } );
+            if( ! persistedSession ) {
+                emit( peer, { type: 'error', message: 'Sessione non trovata o scaduta.' } );
                 return;
             }
 
             const hostPlayerId = persistedSession.hostPlayerId ?? playerId;
 
             if( hostPlayerId !== playerId ) {
-                emit( peer, { type: 'error', message: 'Solo host può impostare la modalità' } );
+                emit( peer, { type: 'error', message: 'Solo l\'host può impostare la modalità della sessione.' } );
                 return;
             }
 
@@ -342,7 +350,7 @@ export default defineWebSocketHandler( {
             if( session.game && session.game.phase !== 'finished' ) {
 
                 emit( peer, {
-                    message: 'Game already in progress',
+                    message: 'Una partita è già in corso.',
                     type: 'error',
                 } );
                 return;
@@ -354,7 +362,7 @@ export default defineWebSocketHandler( {
             if( ! game ) {
 
                 emit( peer, {
-                    message: 'Need at least 2 players',
+                    message: 'Servono almeno 2 giocatori per iniziare.',
                     type: 'error',
                 } );
                 return;
@@ -382,7 +390,7 @@ export default defineWebSocketHandler( {
             if( result.votedCount === 0 ) {
 
                 emit( peer, {
-                    message: 'No active voting round',
+                    message: 'Nessuna votazione attiva al momento.',
                     type: 'error',
                 } );
                 return;
@@ -424,7 +432,7 @@ export default defineWebSocketHandler( {
             if( ! session.game || session.game.hostPlayerId !== playerId ) {
 
                 emit( peer, {
-                    message: 'Only the host can advance rounds',
+                    message: 'Solo l\'host può avanzare al round successivo.',
                     type: 'error',
                 } );
                 return;
@@ -434,7 +442,7 @@ export default defineWebSocketHandler( {
             if( session.game.phase !== 'reveal' ) {
 
                 emit( peer, {
-                    message: session.game.phase === 'voting' ? 'Voting still in progress' : 'No active game to advance',
+                    message: session.game.phase === 'voting' ? 'La votazione è ancora in corso.' : 'Nessuna partita da avanzare.',
                     type: 'error',
                 } );
                 return;
@@ -446,7 +454,7 @@ export default defineWebSocketHandler( {
             if( ! game ) {
 
                 emit( peer, {
-                    message: 'Failed to advance round',
+                    message: 'Avanzamento al round successivo non riuscito.',
                     type: 'error',
                 } );
                 return;
