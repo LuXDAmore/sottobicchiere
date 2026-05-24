@@ -119,3 +119,12 @@ Nitro scheduled task `cleanup-expired-sessions` (ogni notte alle 03:00):
 DELETE FROM table_sessions WHERE expires_at < now();
 -- CASCADE: cancella automaticamente player_sessions e groups associati
 ```
+
+
+## Procedura operativa: genera QR + seed tavoli
+
+1. Inserisci/aggiorna la venue in `venues` (slug stabile).
+2. Genera i token QR per ogni tavolo (es. `roma-001`, `roma-002`) e popolali nella tabella `tables`.
+3. Mantieni una migrazione SQL di seed idempotente (con `ON CONFLICT`) in `server/db/migrations/postgresql/`.
+4. Esegui le migrazioni in ambiente target prima di stampare i QR: in produzione le API rispondono 404 solo per token realmente inesistenti.
+5. Usa il fallback `demo/demo-001` esclusivamente in demo/dev impostando `NUXT_ENABLE_DEMO_FALLBACK=true`.

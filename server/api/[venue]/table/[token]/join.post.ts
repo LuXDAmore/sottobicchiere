@@ -1,10 +1,4 @@
-import {
-    and,
-    desc,
-    eq,
-    gt,
-    sql,
-} from 'drizzle-orm';
+import { and, desc, eq, gt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { pickAvailableColor } from '../../../../../shared/utils/colors';
@@ -12,9 +6,8 @@ import {
     groups,
     playerSessions,
     tableSessions,
-    tables,
-    venues,
 } from '../../../../db/schema';
+import { resolveTableRow } from '../../../../utils/table-resolver';
 
 const joinSchema = z.object( {
     nickname: z.string().min( 1 ).max( 20 ).trim(),
@@ -50,18 +43,7 @@ export default defineEventHandler( async event => {
     const { nickname, groupName } = parsed.data
 
         // 1. Trova il tavolo
-        , tableRow = await db
-            .select( {
-                id: tables.id,
-                tableNumber: tables.tableNumber,
-                venueName: venues.name,
-                venueSlug: venues.slug,
-            } )
-            .from( tables )
-            .innerJoin( venues, eq( tables.venueId, venues.id ) )
-            .where( and( eq( tables.qrToken, qrToken ), eq( venues.slug, venueSlug ) ) )
-            .limit( 1 )
-            .then( ( rows: { id: string; tableNumber: number; venueName: string; venueSlug: string }[] ) => rows[ 0 ] ?? null );
+        , tableRow = await resolveTableRow( venueSlug, qrToken );
 
     if( ! tableRow ) {
 
@@ -91,6 +73,19 @@ export default defineEventHandler( async event => {
 
     }
 
+    if( tableRow.tableId === 'demo-table-001' ) return {
+        expiresAt: new Date( Date.now() + ( 8 * 60 * 60 * 1000 ) ).toISOString(),
+        groupId: null,
+        playerId: crypto.randomUUID(),
+        playerColor: '#4F46E5',
+        playerNickname: nickname,
+        qrToken,
+        tableNumber: tableRow.tableNumber,
+        tableSessionId: 'demo-session-001',
+        venueName: tableRow.venueName,
+        venueSlug: tableRow.venueSlug,
+    };
+
     const now = new Date()
         , expiresAt = new Date( now.getTime() + ( 8 * 60 * 60 * 1000 ) );
 
@@ -104,7 +99,7 @@ export default defineEventHandler( async event => {
             id: tableSessions.id,
         } )
         .from( tableSessions )
-        .where( and( eq( tableSessions.tableId, tableRow.id ), gt( tableSessions.expiresAt, now ) ) )
+        .where( and( eq( tableSessions.tableId, tableRow.tableId ), gt( tableSessions.expiresAt, now ) ) )
         .orderBy( desc( tableSessions.startedAt ) )
         .limit( 1 )
         .then( ( rows: { id: string; expiresAt: Date }[] ) => rows[ 0 ] ?? null );
@@ -115,7 +110,7 @@ export default defineEventHandler( async event => {
             .insert( tableSessions )
             .values( {
                 expiresAt,
-                tableId: tableRow.id,
+                tableId: tableRow.tableId,
             } )
             .returning( {
                 expiresAt: tableSessions.expiresAt,

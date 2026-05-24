@@ -283,6 +283,7 @@ export default defineNuxtConfig(
             public: {
 
                 appEnvironment,
+                enableDemoFallback: process.env.NUXT_ENABLE_DEMO_FALLBACK || 'false',
 
                 portal: {
                     colors: process.env.NUXT_COLORS,

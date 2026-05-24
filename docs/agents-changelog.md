@@ -77,3 +77,21 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - Maggiore chiarezza tra ciò che è già implementato, in corso, e post-MVP.
 - Base condivisa per frontend/backend su UX flow e contratti API.
 - Riduzione ambiguità di prodotto su famiglie di game mode e relativi vincoli.
+
+
+## 2026-05-24 — Fallback demo controllato + seed tavoli + test API
+
+- `server/utils/table-resolver.ts` — introdotto resolver condiviso venue/table con fallback demo `demo/demo-001` dietro flag runtime `NUXT_ENABLE_DEMO_FALLBACK`.
+- `server/api/[venue]/table/[token]/{index.get,join.post,players.get}.ts` — aggiornate le API: fallback solo in demo/dev (flag), in produzione 404 solo per QR inesistente.
+- `nuxt.config.ts` e `.env.example` — aggiunto `NUXT_ENABLE_DEMO_FALLBACK` in runtime config pubblico.
+- `server/db/migrations/postgresql/0001_seed_venues_tables.sql` — seed iniziale idempotente per venue e tavoli reali + demo.
+- `test/unit/table-resolver.test.ts` — aggiunti test per fallback demo attivo/disattivo e casi QR demo/reale.
+- `docs/database-schema.md` — aggiunta procedura operativa “genera QR + seed tavoli”.
+
+
+## 2026-05-24 — Fix bug fallback demo in produzione + copertura casi QR reale
+
+- `server/utils/table-resolver.ts` — corretto bug logico: fallback demo ora forzato `false` in `production` anche con flag/env impostati.
+- `test/unit/table-resolver.test.ts` — estesi i test per coprire: production override, QR reale esistente, QR reale inesistente e fallback demo attivo.
+
+- Migrazioni DB spostate in `server/database/migrations` (path di default NuxtHub) e rimossa la chiave `hub.db.migrationsDirs` da `nuxt.config.ts`.
