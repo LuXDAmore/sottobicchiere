@@ -17,6 +17,10 @@ Aggiornato: 2026-05-24
 - [x] Creare docs/database-schema.md
 - [x] Creare docs/design.md
 - [x] Creare docs/agents-changelog.md
+- [x] Espandere docs/product-foundations.md (journey, ruoli, lock, errori UI)
+- [x] Creare docs/game-modes.md
+- [x] Creare docs/api-contracts.md
+- [x] Allineare README.md alle capability MVP effettive
 - [ ] Creare il logo SVG placeholder di Sottobicchiere
 
 ## Database (fase 1)

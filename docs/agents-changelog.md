@@ -60,3 +60,20 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - Aggiornata schedulazione cleanup sessioni Nitro a `0 6 * * *` (06:00 UTC).
 - Creata `docs/product-foundations.md` con obiettivi prodotto, flussi, modalità (inclusa dating mode), e policy cleanup dati.
 - Aggiornato `TODO.md` con task completati e data header.
+## 2026-05-24 — Milestone documentazione prodotto/API MVP
+
+**Obiettivo**: Consolidare documentazione funzionale MVP (journey, modalità gioco, contratti API) e riallineare README/TODO allo stato reale.
+
+### File modificati/creati
+
+- `docs/product-foundations.md` — espanso con user journey completo, ruoli host/player, regole sessione+lock, errori utente e messaggi UI previsti.
+- `docs/game-modes.md` — nuovo documento con differenze tra giochi da tavolo, giochi preserata e dating mode.
+- `docs/api-contracts.md` — nuovo documento con request/response payload per endpoint core MVP + codici errore.
+- `README.md` — aggiunta sezione “Capability MVP attuali” e allineamento descrizione scope MVP.
+- `TODO.md` — aggiornato stato milestone documentale e data ultimo aggiornamento.
+
+### Outcome
+
+- Maggiore chiarezza tra ciò che è già implementato, in corso, e post-MVP.
+- Base condivisa per frontend/backend su UX flow e contratti API.
+- Riduzione ambiguità di prodotto su famiglie di game mode e relativi vincoli.
