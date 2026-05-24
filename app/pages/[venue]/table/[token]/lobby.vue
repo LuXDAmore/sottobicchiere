@@ -67,6 +67,14 @@
                 />
             </div>
 
+            <section v-if="isSessionMetaLoading" class="rounded-lg border border-[var(--ui-border)] p-3">
+                <div class="space-y-2">
+                    <u-skeleton class="h-4 w-40" />
+                    <u-skeleton class="h-4 w-52" />
+                    <u-skeleton class="h-4 w-36" />
+                </div>
+            </section>
+
             <section v-if="sessionMetaPending" class="rounded-lg border border-[var(--ui-border)] p-3 text-sm">
                 <div class="space-y-2">
                     <u-skeleton class="h-4 w-44" />
@@ -87,6 +95,32 @@
                 <u-button class="mt-2" color="neutral" icon="i-lucide-refresh-cw" :label="$t('lobby.refresh_session')" size="xs" variant="ghost" @click="() => refreshSessionMeta()" />
             </section>
 
+
+            <section class="rounded-lg border border-[var(--ui-border)] p-3">
+                <p class="font-semibold text-sm mb-2">Modalità sessione</p>
+                <div class="flex gap-2 flex-wrap">
+                    <u-button size="xs" :variant="sessionMode === 'board' ? 'solid' : 'outline'" :disabled="!isHostSelector" @click="setSessionMode('board')">board</u-button>
+                    <u-button size="xs" :variant="sessionMode === 'preserata' ? 'solid' : 'outline'" :disabled="!isHostSelector" @click="setSessionMode('preserata')">preserata</u-button>
+                    <u-button size="xs" :variant="sessionMode === 'dating' ? 'solid' : 'outline'" :disabled="!isHostSelector" @click="setSessionMode('dating')">dating</u-button>
+                </div>
+            </section>
+
+            <section v-if="sessionMode === 'dating'" class="rounded-lg border border-[var(--ui-border)] p-3">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="font-semibold text-sm">Inbox anonima</p>
+                    <u-badge color="primary" variant="soft">{{ datingInbox.length }} nuovi</u-badge>
+                </div>
+                <p class="text-xs text-muted mb-2">Tavoli disponibili: {{ datingRoomStatus.availableTableSessionIds.length }} / non disponibili: {{ datingRoomStatus.unavailableTableSessionIds.length }}</p>
+                <div class="flex gap-2 mb-2">
+                    <u-input v-model="datingTarget" size="sm" placeholder="tableSessionId target" />
+                    <u-input v-model="datingBody" size="sm" placeholder="Messaggio anonimo" />
+                    <u-button size="sm" @click="onSendDating">Invia</u-button>
+                </div>
+                <div class="space-y-1 max-h-40 overflow-auto">
+                    <p v-for="msg in datingInbox" :key="msg.id" class="text-xs">{{ msg.createdAt }} · {{ msg.body }}</p>
+                </div>
+            </section>
+
             <!-- Players section -->
             <section>
                 <div class="flex gap-2 items-center mb-3">
@@ -103,7 +137,11 @@
                     />
                 </div>
 
-                <div class="flex flex-wrap gap-2">
+                <div v-if="isWsBootstrapping" class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <u-skeleton v-for="index in 6" :key="index" class="h-10 w-full rounded-full" />
+                </div>
+
+                <div v-else class="flex flex-wrap gap-2">
                     <div
                         v-for="player in players"
                         :key="player.id"
@@ -172,12 +210,18 @@
           , qrToken = route.params.token as string
 
           , {
-              players, gameSelection, gameState, status, open, close, wsError,
+              players, gameSelection, gameState, status, open, close, wsError, sessionMode, setSessionMode, datingInbox, datingRoomStatus, sendDatingMessage,
           } = useTableSocket()
 
           , isLeaving = ref( false )
           , {
               data: sessionMeta,
+              pending: isSessionMetaLoading,
+          } = await useLazyAsyncData(
+              `table-session-meta-${ venueSlug }-${ qrToken }`,
+              () => $fetch( `/api/${ venueSlug }/table/${ qrToken }/session` ),
+           )
+ , {
               pending: sessionMetaPending,
               error: sessionMetaError,
               refresh: refreshSessionMeta,
@@ -245,6 +289,15 @@
     } );
 
     const isHostSelector = computed( () => ! gameSelection.value.hostPlayerId || gameSelection.value.hostPlayerId === playerStore.playerId );
+    const isWsBootstrapping = computed( () => status.value === 'CONNECTING' && players.value.length === 0 );
+    const datingTarget = ref('');
+    const datingBody = ref('');
+
+    function onSendDating() {
+        if (!datingTarget.value || !datingBody.value) return;
+        sendDatingMessage(datingTarget.value, datingBody.value);
+        datingBody.value = '';
+    }
 
     async function selectGame( selectedGame: 'thumbs' | 'word-blitz' ) {
 

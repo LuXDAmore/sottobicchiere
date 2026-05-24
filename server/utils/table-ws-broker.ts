@@ -22,3 +22,7 @@ export function emitTableEvent(tableSessionId: string, message: ServerMessage) {
   const payload = JSON.stringify(message);
   peers.forEach(peer => peer.send(payload));
 }
+
+export function getPeersForTable(tableSessionId: string): PeerLike[] {
+  return [...(peersBySession.get(tableSessionId)?.values() ?? [])];
+}

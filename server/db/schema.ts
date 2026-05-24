@@ -46,6 +46,7 @@ export const tableSessions = pgTable(
             .$defaultFn( () => new Date( Date.now() + ( 8 * 60 * 60 * 1000 ) ) ),
         selectedGame: text( 'selected_game' ),
         gameMode: text( 'game_mode' ),
+        sessionMode: text( 'session_mode' ).notNull().default( 'board' ),
         lockedAt: timestamp( 'locked_at', { withTimezone: true } ),
         hostPlayerId: text( 'host_player_id' ),
     },
