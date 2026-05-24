@@ -25,7 +25,7 @@ Aggiornato: 2026-05-24
 
 ## Database (fase 1)
 
-- [ ] Schema Drizzle: `venues`, `tables`, `table_sessions`, `player_sessions`, `groups`
+- [x] Schema Drizzle: `venues`, `tables`, `table_sessions`, `player_sessions`, `groups`
 - [ ] Generare e applicare la prima migrazione
 - [ ] Scheduled task Nitro: `cleanup-expired-sessions` (TTL 8h)
 

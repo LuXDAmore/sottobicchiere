@@ -1,11 +1,7 @@
-import {
-    and,
-    desc,
-    eq,
-    gt,
-} from 'drizzle-orm';
+import { and, desc, eq, gt } from 'drizzle-orm';
 
-import { tableSessions, tables, venues } from '../../../../db/schema';
+import { tableSessions } from '../../../../db/schema';
+import { resolveTableRow } from '../../../../utils/table-resolver';
 
 export default defineEventHandler( async event => {
 
@@ -21,18 +17,7 @@ export default defineEventHandler( async event => {
 
     }
 
-    const row = await db
-        .select( {
-            tableId: tables.id,
-            tableNumber: tables.tableNumber,
-            venueName: venues.name,
-            venueSlug: venues.slug,
-        } )
-        .from( tables )
-        .innerJoin( venues, eq( tables.venueId, venues.id ) )
-        .where( and( eq( tables.qrToken, qrToken ), eq( venues.slug, venueSlug ) ) )
-        .limit( 1 )
-        .then( ( rows: { tableId: string; tableNumber: number; venueName: string; venueSlug: string }[] ) => rows[ 0 ] ?? null );
+    const row = await resolveTableRow( venueSlug, qrToken );
 
     if( ! row ) {
 
@@ -42,6 +27,13 @@ export default defineEventHandler( async event => {
         } );
 
     }
+
+    if( row.tableId === 'demo-table-001' ) return {
+        hasActiveSession: false,
+        tableNumber: row.tableNumber,
+        venueName: row.venueName,
+        venueSlug: row.venueSlug,
+    };
 
     const now = new Date()
         , activeSession = await db

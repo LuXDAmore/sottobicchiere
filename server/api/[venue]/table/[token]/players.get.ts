@@ -1,16 +1,7 @@
-import {
-    and,
-    desc,
-    eq,
-    gt,
-} from 'drizzle-orm';
+import { and, desc, eq, gt } from 'drizzle-orm';
 
-import {
-    playerSessions,
-    tableSessions,
-    tables,
-    venues,
-} from '../../../../db/schema';
+import { playerSessions, tableSessions } from '../../../../db/schema';
+import { resolveTableRow } from '../../../../utils/table-resolver';
 
 export default defineEventHandler( async event => {
 
@@ -26,13 +17,7 @@ export default defineEventHandler( async event => {
 
     }
 
-    const tableRow = await db
-        .select( { id: tables.id } )
-        .from( tables )
-        .innerJoin( venues, eq( tables.venueId, venues.id ) )
-        .where( and( eq( tables.qrToken, qrToken ), eq( venues.slug, venueSlug ) ) )
-        .limit( 1 )
-        .then( ( rows: { id: string }[] ) => rows[ 0 ] ?? null );
+    const tableRow = await resolveTableRow( venueSlug, qrToken );
 
     if( ! tableRow ) {
 
@@ -43,11 +28,13 @@ export default defineEventHandler( async event => {
 
     }
 
+    if( tableRow.tableId === 'demo-table-001' ) return [];
+
     const now = new Date()
         , session = await db
             .select( { id: tableSessions.id } )
             .from( tableSessions )
-            .where( and( eq( tableSessions.tableId, tableRow.id ), gt( tableSessions.expiresAt, now ) ) )
+            .where( and( eq( tableSessions.tableId, tableRow.tableId ), gt( tableSessions.expiresAt, now ) ) )
             .orderBy( desc( tableSessions.startedAt ) )
             .limit( 1 )
             .then( ( rows: { id: string }[] ) => rows[ 0 ] ?? null );
