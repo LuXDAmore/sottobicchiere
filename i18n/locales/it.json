@@ -41,7 +41,9 @@
         "session_game_in_progress": "Partita in corso",
         "session_join": "Unisciti",
         "session_host_label": "Host: {name}",
-        "or_create_new": "oppure crea un nuovo gruppo"
+        "or_create_new": "oppure crea un nuovo gruppo",
+        "join_pending_toast": "Ti stiamo facendo entrare nel tavolo…",
+        "join_success_toast": "Perfetto {name}, ingresso completato."
     },
     "lobby": {
         "page_title": "Lobby — {venue}",
@@ -80,7 +82,13 @@
         "game_category_preserata": "Pre-serata",
         "game_category_both": "Versatile",
         "tab_players": "Giocatori",
-        "tab_games": "Giochi"
+        "tab_games": "Giochi",
+        "game_select_pending_toast": "Selezione gioco in corso…",
+        "game_select_success_toast": "Gioco selezionato con successo.",
+        "game_select_error_toast": "Non sono riuscito a selezionare il gioco. Riprova.",
+        "leave_pending_toast": "Uscita dalla lobby in corso…",
+        "leave_error_toast": "Errore durante l’uscita dalla lobby.",
+        "dating_message_sent_toast": "Messaggio anonimo inviato."
     },
     "game": {
         "thumbs": {
@@ -101,7 +109,14 @@
             "show_results": "Vedi risultati finali →",
             "finished_title": "Fine del gioco!",
             "play_again": "Gioca ancora",
-            "back_lobby": "Torna alla lobby"
+            "back_lobby": "Torna alla lobby",
+            "back_lobby_pending_toast": "Ritorno alla lobby in corso…",
+            "back_lobby_error_toast": "Non sono riuscito a tornare alla lobby.",
+            "start_pending_toast": "Avvio partita in corso…",
+            "start_success_toast": "Partita avviata.",
+            "vote_pending_toast": "Invio voto in corso…",
+            "vote_success_toast": "Voto inviato.",
+            "next_round_pending_toast": "Passaggio al prossimo round…"
         },
         "word_blitz": {
             "title": "Word Blitz",

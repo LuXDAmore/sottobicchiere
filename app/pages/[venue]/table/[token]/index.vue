@@ -166,6 +166,7 @@ const route = useRoute()
     , joining = ref( false )
     , joinError = ref<string | null>( null )
     , selectedSessionId = ref<string | null>( null )
+    , toast = useToast()
 
     , {
         data: tableInfo,
@@ -199,6 +200,9 @@ async function handleJoin() {
     joining.value = true;
     joinError.value = null;
 
+    const loadingToastId = 'join-table-loading';
+    toast.add( { id: loadingToastId, color: 'primary', description: t( 'table.join_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+
     const isCreating = selectedSessionId.value === null;
 
     try {
@@ -214,14 +218,19 @@ async function handleJoin() {
 
         playerStore.join( data );
 
+        toast.remove( loadingToastId );
+        toast.add( { color: 'success', description: t( 'table.join_success_toast', { name: trimmed } ), duration: 2500, icon: 'i-lucide-check-circle-2' } );
+
         if( data.hasActiveGame && data.selectedGame ) {
             await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ data.selectedGame }` ) );
         } else {
             await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
         }
     } catch( exception: unknown ) {
+        toast.remove( loadingToastId );
         const fetchError = exception as { data?: { message?: string } };
         joinError.value = fetchError.data?.message ?? t( 'table.join_error_generic' );
+        toast.add( { color: 'error', description: joinError.value, duration: 4500, icon: 'i-lucide-circle-alert' } );
     } finally {
         joining.value = false;
     }

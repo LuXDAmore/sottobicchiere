@@ -16,15 +16,15 @@ export default defineEventHandler( async event => {
     const venueSlug = getRouterParam( event, 'venue' )
         , qrToken = getRouterParam( event, 'token' );
 
-    if( ! venueSlug || ! qrToken ) throw createError( { statusCode: 400, message: 'Parametri mancanti' } );
+    if( ! venueSlug || ! qrToken ) throw createError( { statusCode: 400, statusMessage: 'MISSING_ROUTE_PARAMS', message: 'Link incompleto: mancano i parametri del tavolo.' } );
 
     const parsed = joinSchema.safeParse( await readBody( event ) );
-    if( ! parsed.success ) throw createError( { statusCode: 422, message: 'Nickname non valido (1–20 caratteri)' } );
+    if( ! parsed.success ) throw createError( { statusCode: 422, statusMessage: 'INVALID_JOIN_PAYLOAD', message: 'Nickname non valido: usa da 1 a 20 caratteri.' } );
 
     const { nickname, groupName, createSession = false, sessionId: requestedSessionId } = parsed.data
         , tableRow = await resolveTableRow( venueSlug, qrToken );
 
-    if( ! tableRow ) throw createError( { statusCode: 404, message: 'QR code non valido' } );
+    if( ! tableRow ) throw createError( { statusCode: 404, statusMessage: 'TABLE_NOT_FOUND', message: 'QR code non valido o non più disponibile.' } );
 
     if( tableRow.tableId === 'demo-table-001' ) return {
         expiresAt: new Date( Date.now() + ( 8 * 60 * 60 * 1000 ) ).toISOString(),
@@ -37,7 +37,7 @@ export default defineEventHandler( async event => {
         qrToken,
         selectedGame: null,
         tableNumber: tableRow.tableNumber,
-        tableSessionId: 'demo-session-001',
+        tableSessionId: '00000000-0000-4000-8000-000000000001',
         venueName: tableRow.venueName,
         venueSlug: tableRow.venueSlug,
     };
@@ -60,7 +60,7 @@ export default defineEventHandler( async event => {
             .limit( 1 )
             .then( ( rows: { id: string; expiresAt: Date; lockedAt: Date | null; selectedGame: string | null }[] ) => rows[ 0 ] ?? null );
 
-        if( ! session ) throw createError( { statusCode: 404, message: 'Sessione non trovata o scaduta' } );
+        if( ! session ) throw createError( { statusCode: 404, statusMessage: 'SESSION_NOT_FOUND', message: 'La sessione selezionata non esiste più o è scaduta. Aggiorna la pagina e riprova.' } );
     } else if( ! createSession ) {
         session = await db
             .select( { id: tableSessions.id, expiresAt: tableSessions.expiresAt, lockedAt: tableSessions.lockedAt, selectedGame: tableSessions.selectedGame } )
@@ -79,7 +79,7 @@ export default defineEventHandler( async event => {
         session = created ? { ...created, lockedAt: null, selectedGame: null } : null;
     }
 
-    if( ! session ) throw createError( { statusCode: 500, message: 'Errore durante la creazione della sessione' } );
+    if( ! session ) throw createError( { statusCode: 500, statusMessage: 'SESSION_CREATE_FAILED', message: 'Non sono riuscito a creare la sessione di tavolo. Riprova tra qualche secondo.' } );
 
     const takenColors = await db.select( { color: playerSessions.color } ).from( playerSessions )
         .where( eq( playerSessions.tableSessionId, session.id ) ).then( ( rows: { color: string }[] ) => rows.map( ( r: { color: string } ) => r.color ) )
