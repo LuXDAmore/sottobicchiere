@@ -439,7 +439,6 @@
 
         try {
 
-            close();
             await navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
             toast.remove( leavingGameToastId );
 

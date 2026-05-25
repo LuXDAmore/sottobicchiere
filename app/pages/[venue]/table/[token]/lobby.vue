@@ -359,12 +359,18 @@ watch( gameState, state => {
 } );
 
 watch( () => gameSelection.value.lockedAt, ( lockedAt, previousLockedAt ) => {
-    if( ! pendingSelectedGame.value || ! lockedAt || lockedAt === previousLockedAt ) return;
+    if( ! lockedAt || lockedAt === previousLockedAt ) return;
 
-    toast.remove( 'lobby-select-game-loading' );
-    toast.add( { color: 'success', description: t( 'lobby.game_select_success_toast' ), duration: 2500, icon: 'i-lucide-check-circle-2' } );
-    pendingSelectedGame.value = null;
-    isSelectingGame.value = false;
+    // Clean up host-specific loading state
+    if( pendingSelectedGame.value ) {
+        toast.remove( 'lobby-select-game-loading' );
+        pendingSelectedGame.value = null;
+        isSelectingGame.value = false;
+    }
+
+    // Navigate all players (host and non-host) to the selected game page
+    const game = gameSelection.value.selectedGame;
+    if( game ) navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ game }` ) );
 } );
 
 watch( () => datingInbox.value[ 0 ], latestMessage => {

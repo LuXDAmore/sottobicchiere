@@ -159,19 +159,27 @@ export default defineWebSocketHandler( {
 
         } else {
 
-            const row = await db
-                .select( { selectedGame: tableSessions.selectedGame, gameMode: tableSessions.gameMode, lockedAt: tableSessions.lockedAt, hostPlayerId: tableSessions.hostPlayerId, sessionMode: tableSessions.sessionMode } )
-                .from( tableSessions )
-                .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) )
-                .limit( 1 )
-                .then( ( rows: any[] ) => rows[ 0 ] ?? null );
+            try {
 
-            if( row ) {
-                syncSelectedGame = row.selectedGame ?? null;
-                syncGameMode = row.gameMode ?? null;
-                syncHostPlayerId = row.hostPlayerId ?? null;
-                syncLockedAt = row.lockedAt ? ( row.lockedAt as Date ).toISOString() : null;
-                syncSessionMode = row.sessionMode ?? 'board';
+                const row = await db
+                    .select( { selectedGame: tableSessions.selectedGame, gameMode: tableSessions.gameMode, lockedAt: tableSessions.lockedAt, hostPlayerId: tableSessions.hostPlayerId, sessionMode: tableSessions.sessionMode } )
+                    .from( tableSessions )
+                    .where( and( eq( tableSessions.id, tableSessionId ), gt( tableSessions.expiresAt, new Date() ) ) )
+                    .limit( 1 )
+                    .then( ( rows: any[] ) => rows[ 0 ] ?? null );
+
+                if( row ) {
+                    syncSelectedGame = row.selectedGame ?? null;
+                    syncGameMode = row.gameMode ?? null;
+                    syncHostPlayerId = row.hostPlayerId ?? null;
+                    syncLockedAt = row.lockedAt ? ( row.lockedAt as Date ).toISOString() : null;
+                    syncSessionMode = row.sessionMode ?? 'board';
+                }
+
+            } catch( dbError ) {
+
+                console.warn( '[ws/table] DB query failed on open, keeping connection with defaults:', dbError );
+
             }
 
         }
