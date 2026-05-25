@@ -1,13 +1,9 @@
-import type { ClientMessage, ServerMessage } from '../../../shared/types/ws';
-import type { PlayerColor } from '../../../shared/utils/colors';
-
 import { and, eq, gt } from 'drizzle-orm';
-import { useTimeoutFn } from '@vueuse/core';
 
-import { tableSessions } from '../../db/schema';
-import { DEMO_TABLE_SESSION_ID, getDemoPersistedState, setDemoSessionMode } from '../../utils/demo-session';
-import { createDatingInboxMessage, getRoomStatus, isTableAvailable, mapDatingRoom, removeTableFromDatingRoom, setTableAvailability, validateDatingMessage } from '../../utils/dating-room';
-import { getPeersForTable, registerTablePeer, unregisterTablePeer } from '../../utils/table-ws-broker';
+import { tableSessions } from '#server/db/schema';
+import { DEMO_TABLE_SESSION_ID, getDemoPersistedState, setDemoSessionMode } from '#server/utils/demo-session';
+import { createDatingInboxMessage, getRoomStatus, isTableAvailable, mapDatingRoom, removeTableFromDatingRoom, setTableAvailability, validateDatingMessage } from '#server/utils/dating-room';
+import { getPeersForTable, registerTablePeer, unregisterTablePeer } from '#server/utils/table-ws-broker';
 import {
     addPlayer,
     cleanupSession,
@@ -19,7 +15,7 @@ import {
     removePlayer,
     revealRound,
     startGame,
-} from '../../utils/game-state';
+} from '#server/utils/game-state';
 
 /**
  *
@@ -584,7 +580,7 @@ export default defineWebSocketHandler( {
 
         if( player ) {
 
-            useTimeoutFn( () => {
+            setTimeout( () => {
 
                 // Only broadcast player:left if the player hasn't reconnected during the grace period
                 const currentSession = findSession( tableSessionId );

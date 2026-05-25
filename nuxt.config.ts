@@ -162,7 +162,6 @@ export default defineNuxtConfig(
                 dialect: 'postgresql',
                 driver: 'neon-http',
             },
-            kv: true,
         },
 
 
@@ -269,7 +268,9 @@ export default defineNuxtConfig(
 
         robots: { disallow: [ '/' ] },
 
-        routeRules: {},
+        routeRules: {
+            '/ws/**': { security: { enabled: false } },
+        },
 
         runtimeConfig: {
 
@@ -313,8 +314,6 @@ export default defineNuxtConfig(
         },
 
         sitemap: { zeroRuntime: true },
-
-        ssr: true,
 
         ui: {
             theme: {

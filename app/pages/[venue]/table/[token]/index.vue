@@ -103,7 +103,7 @@
                         <p class="mt-1 text-muted text-sm">{{ $t('table.join_description') }}</p>
                     </div>
 
-                    <u-form-group :label="$t('table.nickname_label')">
+                    <u-form-field :label="$t('table.nickname_label')">
                         <u-input
                             ref="nicknameInput"
                             v-model="nickname"
@@ -115,9 +115,9 @@
                             spellcheck="false"
                             @keyup.enter="handleJoin"
                         />
-                    </u-form-group>
+                    </u-form-field>
 
-                    <u-form-group v-if="selectedSessionId === null" :hint="$t('table.group_hint')" :label="$t('table.group_label')">
+                    <u-form-field v-if="selectedSessionId === null" :hint="$t('table.group_hint')" :label="$t('table.group_label')">
                         <u-input
                             v-model="groupName"
                             autocomplete="off"
@@ -128,7 +128,7 @@
                             spellcheck="false"
                             @keyup.enter="handleJoin"
                         />
-                    </u-form-group>
+                    </u-form-field>
 
                     <u-button
                         block
