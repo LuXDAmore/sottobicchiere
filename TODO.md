@@ -1,6 +1,6 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-05-24
+Aggiornato: 2026-05-25
 
 ## Bootstrap (fase 0) — Documentazione e Design System
 
@@ -53,6 +53,7 @@ Aggiornato: 2026-05-24
 - [x] Fix `resolveTableRow`: controllo demo prima della query DB (demo resiliente a DB irraggiungibile)
 - [x] Fix `select.post.ts`: path demo via WS broker in-memory (no 404 su selezione gioco)
 - [x] Fix `ws/table.ts`: guard demo per `session:mode:set`, messaggi di errore italiani
+- [x] Fix `ws/table.ts`: handler heartbeat `ping` (echo) per evitare loop disconnect/reconnect
 - [x] Miglioramento messaggi di errore backend (statusMessage + testi user-friendly)
 - [x] Miglioramento messaggi di errore frontend (fallback i18n più specifici)
 

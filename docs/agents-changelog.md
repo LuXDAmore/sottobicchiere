@@ -6,6 +6,13 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 ---
 
 
+## 2026-05-25 — Fix loop disconnect/reconnect WebSocket (heartbeat ping/pong)
+
+### Root cause fix
+- `server/routes/ws/table.ts` — il client (`useWebSocket` di VueUse) invia un heartbeat `{ type: 'ping' }` ogni 15s e chiude la connessione se non riceve risposta entro `pongTimeout` (~1s). Il server non gestiva il messaggio `ping`, quindi la socket veniva chiusa e `autoReconnect` la riapriva in loop, rendendo inutilizzabili lobby, giochi e dating. Aggiunto handler che rimanda indietro il `ping`.
+- `shared/types/ws.ts` — aggiunto `{ type: 'ping' }` a `ClientMessage` e `ServerMessage`.
+
+
 ## 2026-05-24 — Fix creazione gruppo demo + miglioramento messaggi di errore
 
 ### Root cause fix

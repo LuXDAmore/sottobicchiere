@@ -21,6 +21,7 @@ export interface DatingInboxMessage {
 // ── Client → Server ─────────────────────────────────────────────────────────
 
 export type ClientMessage =
+    { type: 'ping' } |
     { type: 'dating:enable' } |
     { type: 'dating:disable' } |
     { type: 'dating:message:send'; body: string; toTableSessionId: string } |
@@ -32,6 +33,7 @@ export type ClientMessage =
 // ── Server → Client ─────────────────────────────────────────────────────────
 
 export type ServerMessage =
+    { type: 'ping' } |
     { type: 'dating:message:new'; message: DatingInboxMessage } |
     { type: 'dating:room:status'; availableTableSessionIds: string[]; unavailableTableSessionIds: string[] } |
     { type: 'dating:status'; enabled: boolean } |
