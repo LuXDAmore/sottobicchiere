@@ -157,7 +157,7 @@
         "@typescript-eslint/eslint-plugin": "^8.59.4",
         "@typescript-eslint/parser": "^8.59.4",
         "@vitest/coverage-v8": "^4.1.7",
-        "@vitest/eslint-plugin": "^1.6.17",
+        "@vitest/eslint-plugin": "^1.6.18",
         "@vue/test-utils": "^2.4.10",
         "commit-and-tag-version": "^12.7.3",
         "consola": "^3.4.2",
@@ -201,12 +201,12 @@
         "stylelint-scss": "^7.1.1",
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.59.4",
-        "vercel": "^54.3.0",
+        "vercel": "^54.4.1",
         "vite-plugin-eslint": "^1.8.1",
         "vitest": "^4.1.7",
         "vue-eslint-parser": "^10.4.0",
         "vue-tsc": "^3.3.1",
-        "wrangler": "^4.93.1",
+        "wrangler": "^4.94.0",
         "zip-a-folder": "^6.1.1"
     }
 }
