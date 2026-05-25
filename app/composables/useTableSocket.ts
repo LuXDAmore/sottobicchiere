@@ -49,10 +49,8 @@ const _useTableSocket = createGlobalState( () => {
 
         } )
 
-        , _openCount = ref( 0 )
-
         , {
-            send: wsSend, status, open: wsOpen, close: wsClose,
+            send: wsSend, status, open, close,
         } = useWebSocket(
             wsUrl,
             {
@@ -302,21 +300,6 @@ const _useTableSocket = createGlobalState( () => {
 
         send( { type: 'game:next' } );
 
-    }
-
-    // Reference-counted open/close so navigating between pages (lobby → game)
-    // doesn't race: the new page's open() increments before the old page's
-    // close() decrements, keeping the socket alive through transitions.
-    function open() {
-        _openCount.value++;
-        wsOpen();
-    }
-
-    function close() {
-        if( _openCount.value > 0 ) {
-            _openCount.value--;
-            if( _openCount.value === 0 ) wsClose();
-        }
     }
 
     const isHost = computed( () => gameState.value?.hostPlayerId === playerStore.playerId );
