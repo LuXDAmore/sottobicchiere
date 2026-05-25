@@ -6,6 +6,14 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 ---
 
 
+## 2026-05-25 — Fix WebSocket su Vercel: bypass nuxt-security + maxDuration
+
+### Root cause fix
+- `nuxt.config.ts` — aggiunto `routeRules: { '/ws/**': { security: false } }`. Il modulo `nuxt-security` applicava il proprio middleware HTTP a tutte le route comprese quelle WebSocket, potenzialmente interferendo con l'HTTP 101 upgrade handshake. Il bypass disabilita la catena di sicurezza per le route `/ws/**` senza compromettere la sicurezza del resto dell'app.
+- `vercel.json` (nuovo file) — aggiunto `functions: { "**": { maxDuration: 300 } }`. I Vercel Serverless Functions terminano dopo il timeout di default (10s), interrompendo immediatamente qualsiasi connessione WebSocket persistente. Impostare `maxDuration: 300` abilita Fluid Compute su Vercel e permette alle funzioni di mantenere connessioni long-lived.
+
+---
+
 ## 2026-05-25 — Fix loop disconnect/reconnect WebSocket (heartbeat ping/pong)
 
 ### Root cause fix

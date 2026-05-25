@@ -269,7 +269,11 @@ export default defineNuxtConfig(
 
         robots: { disallow: [ '/' ] },
 
-        routeRules: {},
+        routeRules: {
+            // WebSocket upgrade requests must bypass nuxt-security middleware:
+            // the security layer would interfere with the HTTP 101 handshake.
+            '/ws/**': { security: false },
+        },
 
         runtimeConfig: {
 
