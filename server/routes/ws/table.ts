@@ -290,6 +290,15 @@ export default defineWebSocketHandler( {
 
         }
 
+        // Heartbeat: the client (VueUse useWebSocket) sends a ping on an interval and
+        // closes the socket if no matching response arrives within pongTimeout. Echo it
+        // back so the connection stays alive instead of looping disconnect/reconnect.
+        if( data.type === 'ping' ) {
+
+            emit( peer, { type: 'ping' } );
+            return;
+
+        }
 
         if( data.type === 'session:mode:set' ) {
 
