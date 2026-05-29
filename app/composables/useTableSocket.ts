@@ -1,253 +1,353 @@
-export interface LobbyGameSelection {
-    selectedGame: string | null;
-    gameMode: string | null;
-    lockedAt: string | null;
-    hostPlayerId: string | null;
-}
+import type { Database } from '../../shared/types/database';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
-export interface ThumbsClientState {
-    phase: 'finished' | 'reveal' | 'voting';
-    roundIndex: number;
-    totalRounds: number;
-    question: { it: string; en: string };
-    votedCount: number;
-    totalCount: number;
-    myVote: 'down' | 'up' | null;
-    votes: Record<string, 'down' | 'up'> | null;
-    scores: Record<string, number>;
-    hostPlayerId: string;
-}
+interface PresenceMeta { id: string; nickname: string; color: PlayerColor }
+type ConnectionStatus = 'CLOSED' | 'CONNECTING' | 'OPEN';
 
+// Mantiene la stessa API pubblica del vecchio composable WebSocket: le pagine
+// (lobby, thumbs, word-blitz) non cambiano. Il trasporto è ora Supabase Realtime:
+//  • presence       → elenco giocatori online sul channel "table:<id>"
+//  • broadcast da DB → stato partita/sessione (trigger su games/table_sessions)
+//  • azioni          → POST alle API server (autorità sullo stato di gioco)
 const _useTableSocket = createGlobalState( () => {
 
     const playerStore = usePlayerStore()
-        , { protocol, host } = useRequestURL()
+        , supabase = useSupabaseClient<Database>()
 
         , players = ref<WsPlayer[]>( [] )
         , gameState = ref<ThumbsClientState | null>( null )
         , wsError = ref<string | null>( null )
-        , gameSelection = ref<LobbyGameSelection>( { selectedGame: null, gameMode: null, lockedAt: null, hostPlayerId: null } )
+        , gameSelection = ref<LobbyGameSelection>( {
+            selectedGame: null,
+            gameMode: null,
+            lockedAt: null,
+            hostPlayerId: null,
+        } )
         , sessionMode = ref<SessionMode>( 'board' )
         , datingEnabled = ref<boolean>( false )
         , datingUnreadCount = ref<number>( 0 )
         , datingInbox = ref<DatingInboxMessage[]>( [] )
-        , datingRoomStatus = ref<{ availableTableSessionIds: string[]; unavailableTableSessionIds: string[] }>( { availableTableSessionIds: [], unavailableTableSessionIds: [] } )
-
-        , wsUrl = computed<string | undefined>( () => {
-
-            if( ! playerStore.tableSessionId || ! playerStore.playerId ) return;
-
-            const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
-                , parameters = new URLSearchParams( {
-                    color: playerStore.playerColor ?? '',
-                    nickname: playerStore.playerNickname ?? '',
-                    playerId: playerStore.playerId,
-                    tableSessionId: playerStore.tableSessionId,
-                } );
-
-            return `${ wsProtocol }//${ host }/ws/table?${ parameters.toString() }`;
-
+        , datingRoomStatus = ref<DatingRoomStatus>( {
+            availableTableSessionIds: [],
+            unavailableTableSessionIds: [],
         } )
+        , status = ref<ConnectionStatus>( 'CLOSED' );
 
-        , {
-            send: wsSend, status, open, close,
-        } = useWebSocket(
-            wsUrl,
-            {
-                autoReconnect: {
-                    delay: 1500,
-                    retries: 10,
-                },
-                heartbeat: {
-                    interval: 15_000,
-                    message: JSON.stringify( { type: 'ping' } ),
-                },
-                immediate: false,
-                onConnected() {
-                    // Re-register dating after auto-reconnect: server creates a new peer, so the
-                    // per-peer flag resets. We restore the client-visible state transparently.
-                    if( datingEnabled.value ) wsSend( JSON.stringify( { type: 'dating:enable' } ) );
-                },
-                async onMessage( _ws, event ) {
+    let tableChannel: RealtimeChannel | null = null
+        , lobbyChannel: RealtimeChannel | null = null
+        , lastRoundIndex = - 1;
 
-                    const text = typeof event.data === 'string'
-                        ? event.data
-                        : await ( event.data as Blob ).text();
+    const apiBase = () => `/api/${ playerStore.venueSlug }/table/${ playerStore.qrToken }`;
 
-                    let message: ServerMessage;
+    /**
+     *
+     * @param path
+     * @param body
+     */
+    async function post<T = unknown>( path: string, body: Record<string, unknown> ): Promise<T | null> {
 
-                    try {
+        try {
 
-                        message = JSON.parse( text ) as ServerMessage;
+            wsError.value = null;
+            return await $fetch( `${ apiBase() }${ path }`, {
+                method: 'POST',
+                body,
+            } ) as T;
 
-                    } catch{
+        } catch( exception ) {
 
-                        return;
+            const e = exception as { data?: { message?: string }; statusMessage?: string };
 
-                    }
+            wsError.value = e?.data?.message ?? e?.statusMessage ?? 'Si è verificato un errore. Riprova.';
+            return null;
 
-                    handleMessage( message );
-
-                },
-            }
-        );
-
-    function handleMessage( message: ServerMessage ) {
-
-        switch( message.type ) {
-            case 'players:sync': {
-
-                players.value = message.players;
-                break;
-
-            }
-            case 'player:joined': {
-
-                if( ! players.value.some( p => p.id === message.player.id ) )
-                    players.value = [ ... players.value, message.player ];
-
-                break;
-
-            }
-            case 'player:left': {
-
-                players.value = players.value.filter( p => p.id !== message.playerId );
-                break;
-
-            }
-            case 'game:question': {
-
-                gameState.value = {
-                    hostPlayerId: message.hostPlayerId,
-                    myVote: null,
-                    phase: 'voting',
-                    question: message.question,
-                    roundIndex: message.roundIndex,
-                    scores: gameState.value?.scores ?? {},
-                    totalCount: players.value.length,
-                    totalRounds: message.totalRounds,
-                    votedCount: 0,
-                    votes: null,
-                };
-                break;
-
-            }
-            case 'game:vote-ack': {
-
-                if( gameState.value ) {
-
-                    gameState.value = {
-                        ... gameState.value,
-                        totalCount: message.totalCount,
-                        votedCount: message.votedCount,
-                    };
-
-                }
-
-                break;
-
-            }
-            case 'game:reveal': {
-
-                if( gameState.value ) {
-
-                    gameState.value = {
-                        ... gameState.value,
-                        phase: 'reveal',
-                        scores: message.scores,
-                        votes: message.votes,
-                    };
-
-                }
-
-                break;
-
-            }
-            case 'game:finished': {
-
-                if( gameState.value ) {
-
-                    gameState.value = {
-                        ... gameState.value,
-                        phase: 'finished',
-                        scores: message.scores,
-                        votes: null,
-                    };
-
-                }
-                break;
-
-            }
-            case 'game:selected': {
-
-                gameSelection.value = { ...gameSelection.value, selectedGame: message.selectedGame, gameMode: message.gameMode, hostPlayerId: message.hostPlayerId };
-                break;
-
-            }
-            case 'game:locked': {
-
-                gameSelection.value = { ...gameSelection.value, lockedAt: message.lockedAt };
-                break;
-
-            }
-            case 'dating:status': {
-
-                datingEnabled.value = message.enabled;
-                break;
-
-            }
-            case 'dating:message:new': {
-
-                datingInbox.value = [ message.message, ...datingInbox.value ].slice(0, 100);
-                datingUnreadCount.value += 1;
-                break;
-
-            }
-            case 'dating:room:status': {
-
-                datingRoomStatus.value = {
-                    availableTableSessionIds: message.availableTableSessionIds,
-                    unavailableTableSessionIds: message.unavailableTableSessionIds,
-                };
-                break;
-
-            }
-            case 'session:mode:sync': {
-
-                sessionMode.value = message.mode;
-                break;
-
-            }
-            case 'error': {
-
-                wsError.value = message.message;
-                break;
-
-            }
-            default: {
-
-                break;
-
-            }
         }
 
     }
 
-    function send( message: ClientMessage ) {
+    // ── Mapping righe DB → stato client ──────────────────────────────────────
 
-        wsSend( JSON.stringify( message ) );
+    /**
+     *
+     * @param record
+     */
+    function mapGame( record: Database['public']['Tables']['games']['Row'] ) {
+
+        const isNewRound = record.phase === 'voting' && record.round_index !== lastRoundIndex;
+
+        if( isNewRound ) lastRoundIndex = record.round_index;
+
+        gameState.value = {
+            hostPlayerId: record.host_player_id,
+            myVote: isNewRound ? null : ( gameState.value?.myVote ?? null ),
+            phase: record.phase as ThumbsClientState['phase'],
+            question: ( record.current_question as { it: string; en: string } | null ) ?? {
+                it: '',
+                en: '',
+            },
+            roundIndex: record.round_index,
+            scores: ( record.scores as Record<string, number> ) ?? {},
+            totalCount: record.total_count,
+            totalRounds: record.total_rounds,
+            votedCount: record.voted_count,
+            votes: record.phase === 'reveal' ? ( record.revealed_votes as Record<string, 'down' | 'up'> | null ) : null,
+        };
 
     }
 
+    /**
+     *
+     * @param record
+     */
+    function mapSession( record: Database['public']['Tables']['table_sessions']['Row'] ) {
+
+        gameSelection.value = {
+            gameMode: record.game_mode,
+            hostPlayerId: record.host_player_id,
+            lockedAt: record.locked_at,
+            selectedGame: record.selected_game,
+        };
+        sessionMode.value = record.session_mode as SessionMode;
+        datingEnabled.value = record.dating_enabled;
+
+    }
+
+    // ── Handler broadcast (eventi generati dai trigger DB) ───────────────────
+
+    /**
+     *
+     * @param message
+     * @param message.payload
+     */
+    function handleDatabaseBroadcast( message: { payload?: Record<string, unknown> } ) {
+
+        const body = message.payload ?? {}
+            , table = body.table as string | undefined
+            , record = body.record as Record<string, unknown> | undefined;
+
+        if( ! record ) return;
+
+        if( table === 'games' ) mapGame( record as Database['public']['Tables']['games']['Row'] );
+        else if( table === 'table_sessions' ) mapSession( record as Database['public']['Tables']['table_sessions']['Row'] );
+
+    }
+
+    /**
+     *
+     * @param message
+     * @param message.payload
+     */
+    function handleDatingMessage( message: { payload?: Record<string, unknown> } ) {
+
+        const body = message.payload ?? {}
+            , record = body.record as Database['public']['Tables']['dating_messages']['Row'] | undefined;
+
+        if( ! record ) return;
+
+        const inboxMessage: DatingInboxMessage = {
+            body: record.body,
+            createdAt: record.created_at,
+            fromTableSessionId: record.from_table_session_id,
+            id: record.id,
+            toTableSessionId: record.to_table_session_id,
+        };
+
+        datingInbox.value = [ inboxMessage, ... datingInbox.value ].slice( 0, 100 );
+
+        // Conta come non letto solo i messaggi in arrivo, non i propri.
+        if( record.to_table_session_id === playerStore.tableSessionId ) datingUnreadCount.value += 1;
+
+    }
+
+    /**
+     *
+     */
+    function syncPresence() {
+
+        if( ! tableChannel ) return;
+
+        const state = tableChannel.presenceState<PresenceMeta>()
+            , seen = new Map<string, WsPlayer>();
+
+        for( const key of Object.keys( state ) ) {
+
+            const meta = state[ key ]?.[ 0 ];
+
+            if( meta?.id ) {
+
+                seen.set( meta.id, {
+                    color: meta.color,
+                    id: meta.id,
+                    nickname: meta.nickname,
+                } );
+
+            }
+
+        }
+
+        players.value = [ ... seen.values() ];
+
+    }
+
+    // ── Stato iniziale (REST) ────────────────────────────────────────────────
+
+    /**
+     *
+     */
+    async function loadInitialState() {
+
+        try {
+
+            const [ selection, datingRooms ] = await Promise.all( [ $fetch<LobbyGameSelection>( `${ apiBase() }/game/current` ), $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } ) ] );
+
+            if( selection ) gameSelection.value = selection;
+            if( datingRooms ) datingRoomStatus.value = datingRooms;
+
+        } catch{ /* non bloccante: il realtime allineerà lo stato */ }
+
+    }
+
+    /**
+     *
+     */
+    async function refreshDatingRooms() {
+
+        try {
+
+            datingRoomStatus.value = await $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } );
+
+        } catch{ /* ignore */ }
+
+    }
+
+    // ── Ciclo di vita connessione ────────────────────────────────────────────
+
+    /**
+     *
+     */
+    async function open() {
+
+        if( ! playerStore.tableSessionId || ! playerStore.playerId ) return;
+        if( tableChannel ) return;
+
+        status.value = 'CONNECTING';
+
+        // Assicura che il token corrente sia noto al realtime (channel privati).
+        await supabase.auth.getSession();
+        await supabase.realtime.setAuth();
+
+        const meta: PresenceMeta = {
+            color: ( playerStore.playerColor ?? '#6366F1' ) as PlayerColor,
+            id: playerStore.playerId,
+            nickname: playerStore.playerNickname ?? '',
+        };
+
+        tableChannel = supabase
+            .channel( `table:${ playerStore.tableSessionId }`, {
+                config: {
+                    private: true,
+                    presence: { key: playerStore.playerId },
+                },
+            } )
+            .on( 'broadcast', { event: 'INSERT' }, handleDatabaseBroadcast )
+            .on( 'broadcast', { event: 'UPDATE' }, handleDatabaseBroadcast )
+            .on( 'broadcast', { event: 'DELETE' }, handleDatabaseBroadcast )
+            .on( 'broadcast', { event: 'dating:message' }, handleDatingMessage )
+            .on( 'presence', { event: 'sync' }, syncPresence )
+            .subscribe( async statusValue => {
+
+                switch( statusValue ) {
+                    case 'SUBSCRIBED': {
+
+                        status.value = 'OPEN';
+                        await tableChannel?.track( meta );
+                        await loadInitialState();
+
+                        break;
+
+                    }
+                    case 'CLOSED': {
+
+                        status.value = 'CLOSED';
+                        break;
+
+                    }
+                    case 'CHANNEL_ERROR':
+                    case 'TIMED_OUT': {
+
+                        status.value = 'CONNECTING';
+                        wsError.value = 'Connessione interrotta, riprovo…';
+
+                        break;
+
+                    }
+                // No default
+                }
+
+            } );
+
+        // Lobby dating condivisa: aggiorna l'elenco tavoli disponibili in tempo reale.
+        lobbyChannel = supabase
+            .channel( 'dating:lobby', { config: { private: true } } )
+            .on( 'broadcast', { event: 'dating:availability' }, () => {
+
+                refreshDatingRooms();
+
+            } )
+            .subscribe();
+
+    }
+
+    /**
+     *
+     */
+    async function close() {
+
+        // Uscita esplicita: rimuove il record persistente così non blocca il quorum.
+        if( playerStore.playerId ) await post( '/session/leave', { playerId: playerStore.playerId } );
+
+        if( tableChannel ) {
+
+            await tableChannel.unsubscribe();
+            await supabase.removeChannel( tableChannel );
+            tableChannel = null;
+
+        }
+
+        if( lobbyChannel ) {
+
+            await lobbyChannel.unsubscribe();
+            await supabase.removeChannel( lobbyChannel );
+            lobbyChannel = null;
+
+        }
+
+        players.value = [];
+        gameState.value = null;
+        lastRoundIndex = - 1;
+        status.value = 'CLOSED';
+
+    }
+
+    // ── Azioni di gioco / sessione ───────────────────────────────────────────
+
+    /**
+     *
+     * @param totalRounds
+     */
     function startGame( totalRounds = 10 ) {
 
-        send( {
+        return post( '/game/start', {
+            playerId: playerStore.playerId,
             totalRounds,
-            type: 'game:start',
         } );
 
     }
 
+    /**
+     *
+     * @param choice
+     */
     function vote( choice: 'down' | 'up' ) {
 
         if( gameState.value ) {
@@ -259,50 +359,84 @@ const _useTableSocket = createGlobalState( () => {
 
         }
 
-        send( {
-            type: 'game:vote',
+        return post( '/game/vote', {
+            playerId: playerStore.playerId,
             vote: choice,
         } );
 
     }
 
+    /**
+     *
+     */
+    function nextRound() {
+
+        return post( '/game/next', { playerId: playerStore.playerId } );
+
+    }
+
+    /**
+     *
+     * @param mode
+     */
     function setSessionMode( mode: SessionMode ) {
 
-        send( { type: 'session:mode:set', mode } );
+        return post( '/session/mode', {
+            playerId: playerStore.playerId,
+            mode,
+        } );
 
     }
 
+    /**
+     *
+     */
     function enableDating() {
 
-        send( { type: 'dating:enable' } );
+        return post( '/dating/enable', { playerId: playerStore.playerId } );
 
     }
 
+    /**
+     *
+     */
     function disableDating() {
 
-        send( { type: 'dating:disable' } );
+        return post( '/dating/disable', { playerId: playerStore.playerId } );
 
     }
 
+    /**
+     *
+     * @param toTableSessionId
+     * @param body
+     */
     function sendDatingMessage( toTableSessionId: string, body: string ) {
 
-        send( { type: 'dating:message:send', toTableSessionId, body } );
+        return post( '/dating/message', {
+            playerId: playerStore.playerId,
+            toTableSessionId,
+            body,
+        } );
 
     }
 
+    /**
+     *
+     */
     function clearDatingUnread() {
 
         datingUnreadCount.value = 0;
 
     }
 
-    function nextRound() {
+    const isHost = computed( () => {
 
-        send( { type: 'game:next' } );
+        const host = gameSelection.value.hostPlayerId ?? gameState.value?.hostPlayerId ?? null;
 
-    }
+        return host ? host === playerStore.playerId : playerStore.isHost;
 
-    const isHost = computed( () => gameState.value?.hostPlayerId === playerStore.playerId );
+    } );
 
     return {
         clearDatingUnread,
@@ -330,6 +464,9 @@ const _useTableSocket = createGlobalState( () => {
 
 } );
 
+/**
+ *
+ */
 export function useTableSocket() {
 
     return _useTableSocket();
