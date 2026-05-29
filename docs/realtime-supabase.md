@@ -22,6 +22,13 @@ Server API (service role, autorità sullo stato)
 
 Punti chiave:
 
+- **Quorum dei voti = giocatori online**: il client host comunica i presenti
+  (dalla presence) a `game/presence`, che imposta `games.total_count`. Così
+  l'auto-reveal scatta quando tutti i presenti hanno votato e l'uscita di un
+  giocatore non blocca il round (riproduce il comportamento del vecchio WS).
+- **I record giocatore persistono**: chiudere/navigare non cancella la propria
+  iscrizione (lo stato si recupera al rientro); la pulizia avviene a scadenza
+  della sessione (`pg_cron`). La presence governa solo chi è *online*.
 - **Niente stato in memoria**: partita, voti e presenza vivono su Postgres, quindi
   un cold start non perde nulla.
 - **Voti segreti fino al reveal**: i client ascoltano solo il broadcast della riga

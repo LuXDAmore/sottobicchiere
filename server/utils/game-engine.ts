@@ -5,25 +5,6 @@ import type { VoteChoice } from '../../shared/types/realtime';
 import { computeReveal } from './game-thumbs';
 
 /**
- * Numero di giocatori attualmente iscritti alla sessione (denominatore dei voti).
- * @param client - client Supabase service role.
- * @param tableSessionId - id della sessione.
- */
-export async function countSessionPlayers( client: ServiceClient, tableSessionId: string ): Promise<number> {
-
-    const { count } = await client
-        .from( 'player_sessions' )
-        .select( 'id', {
-            count: 'exact',
-            head: true,
-        } )
-        .eq( 'table_session_id', tableSessionId );
-
-    return count ?? 0;
-
-}
-
-/**
  * Partita corrente di una sessione, se esiste.
  * @param client - client Supabase service role.
  * @param tableSessionId - id della sessione.
@@ -44,13 +25,17 @@ type GameRow = NonNullable<Awaited<ReturnType<typeof getActiveGame>>>;
 
 /**
  * Ricalcola i conteggi del round e, se tutti hanno votato, svela i risultati.
+ * Il quorum (`total_count`) è il numero di giocatori online: viene mantenuto dal
+ * client host tramite la presence (vedi route game/presence). Qui di default si
+ * usa il valore già memorizzato sulla partita, sovrascrivibile con `totalCount`.
  * L'UPDATE su `games` viene propagato ai client dal trigger di broadcast.
  * @param client - client Supabase service role.
  * @param game - riga della partita corrente.
+ * @param totalCount - quorum esplicito (es. conteggio online dalla presence).
  */
-export async function recomputeAndMaybeReveal( client: ServiceClient, game: GameRow ): Promise<void> {
+export async function recomputeAndMaybeReveal( client: ServiceClient, game: GameRow, totalCount?: number ): Promise<void> {
 
-    const totalCount = await countSessionPlayers( client, game.table_session_id )
+    const quorum = totalCount ?? game.total_count
 
         , { data: voteRows } = await client
             .from( 'votes' )
@@ -63,10 +48,10 @@ export async function recomputeAndMaybeReveal( client: ServiceClient, game: Game
 
         , update: Database['public']['Tables']['games']['Update'] = {
             voted_count: votedCount,
-            total_count: totalCount,
+            total_count: quorum,
         };
 
-    if( game.phase === 'voting' && totalCount > 0 && votedCount >= totalCount ) {
+    if( game.phase === 'voting' && quorum > 0 && votedCount >= quorum ) {
 
         const voteMap = Object.fromEntries( votes.map( v => [ v.player_id, v.vote as VoteChoice ] ) )
             , { scores } = computeReveal( voteMap, ( game.scores ?? {} ) as Record<string, number> );

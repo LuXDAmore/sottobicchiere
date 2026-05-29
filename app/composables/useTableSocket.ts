@@ -35,6 +35,7 @@ const _useTableSocket = createGlobalState( () => {
 
     let tableChannel: RealtimeChannel | null = null
         , lobbyChannel: RealtimeChannel | null = null
+        , presenceSyncTimer: ReturnType<typeof setTimeout> | null = null
         , lastRoundIndex = - 1;
 
     const apiBase = () => `/api/${ playerStore.venueSlug }/table/${ playerStore.qrToken }`;
@@ -187,6 +188,26 @@ const _useTableSocket = createGlobalState( () => {
 
         players.value = [ ... seen.values() ];
 
+        // L'host comunica al server i presenti: è il quorum dei voti, così
+        // l'auto-reveal scatta e l'uscita di qualcuno non blocca il round.
+        if( isHost.value && gameState.value?.phase === 'voting' ) {
+
+            if( presenceSyncTimer ) clearTimeout( presenceSyncTimer );
+
+            presenceSyncTimer = setTimeout( () => {
+
+                $fetch( `${ apiBase() }/game/presence`, {
+                    method: 'POST',
+                    body: {
+                        playerId: playerStore.playerId,
+                        online: players.value.map( p => p.id ),
+                    },
+                } ).catch( () => { /* best-effort */ } );
+
+            }, 400 );
+
+        }
+
     }
 
     // ── Stato iniziale (REST) ────────────────────────────────────────────────
@@ -198,10 +219,17 @@ const _useTableSocket = createGlobalState( () => {
 
         try {
 
-            const [ selection, datingRooms ] = await Promise.all( [ $fetch<LobbyGameSelection>( `${ apiBase() }/game/current` ), $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } ) ] );
+            const [ selection, datingRooms, game ] = await Promise.all( [
+                $fetch<LobbyGameSelection>( `${ apiBase() }/game/current`, { query: { session: playerStore.tableSessionId } } ),
+                $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } ),
+                $fetch<Database['public']['Tables']['games']['Row'] | null>( `${ apiBase() }/game/state`, { query: { session: playerStore.tableSessionId } } ),
+            ] );
 
             if( selection ) gameSelection.value = selection;
             if( datingRooms ) datingRoomStatus.value = datingRooms;
+
+            // Allinea chi entra/ricarica a partita in corso (il realtime invia solo i cambi).
+            if( game ) mapGame( game );
 
         } catch{ /* non bloccante: il realtime allineerà lo stato */ }
 
@@ -303,9 +331,9 @@ const _useTableSocket = createGlobalState( () => {
      */
     async function close() {
 
-        // Uscita esplicita: rimuove il record persistente così non blocca il quorum.
-        if( playerStore.playerId ) await post( '/session/leave', { playerId: playerStore.playerId } );
-
+        // Solo disconnessione dal realtime: il record del giocatore resta nel DB
+        // (come con il vecchio WS), così navigare tra lobby e gioco o ricaricare
+        // la pagina non distrugge la sessione. La pulizia avviene a scadenza.
         if( tableChannel ) {
 
             await tableChannel.unsubscribe();
@@ -322,9 +350,6 @@ const _useTableSocket = createGlobalState( () => {
 
         }
 
-        players.value = [];
-        gameState.value = null;
-        lastRoundIndex = - 1;
         status.value = 'CLOSED';
 
     }

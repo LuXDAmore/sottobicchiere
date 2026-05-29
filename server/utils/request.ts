@@ -119,6 +119,35 @@ export async function requireHostSession( client: ReturnType<typeof serviceClien
 }
 
 /**
+ * Risolve l'id di sessione da usare: quella richiesta (se valida e del tavolo),
+ * altrimenti la più recente attiva.
+ * @param client - client Supabase service role.
+ * @param tableId - id del tavolo.
+ * @param requestedSessionId - id sessione richiesto (opzionale).
+ */
+export async function resolveSessionId( client: ReturnType<typeof serviceClient>, tableId: string, requestedSessionId?: string ): Promise<string | null> {
+
+    if( requestedSessionId ) {
+
+        const { data } = await client
+            .from( 'table_sessions' )
+            .select( 'id' )
+            .eq( 'id', requestedSessionId )
+            .eq( 'table_id', tableId )
+            .gt( 'expires_at', new Date().toISOString() )
+            .maybeSingle();
+
+        if( data ) return data.id;
+
+    }
+
+    const latest = await findLatestActiveSession( client, tableId );
+
+    return latest?.id ?? null;
+
+}
+
+/**
  * Risolve la sessione attiva più recente per un tavolo, se esiste.
  * @param client - client Supabase service role.
  * @param tableId - id del tavolo.

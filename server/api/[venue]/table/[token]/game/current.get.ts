@@ -1,9 +1,29 @@
 import { findLatestActiveSession, requireTable } from '../../../../../utils/request';
 
+// Selezione gioco corrente. Query: ?session=<tableSessionId> per ancorarsi alla
+// sessione del giocatore (un tavolo può avere più sessioni attive).
 export default defineEventHandler( async event => {
 
     const { client, table } = await requireTable( event )
-        , session = await findLatestActiveSession( client, table.tableId );
+        , requested = getQuery( event ).session as string | undefined;
+
+    let session = null;
+
+    if( requested ) {
+
+        const { data } = await client
+            .from( 'table_sessions' )
+            .select( 'selected_game, game_mode, locked_at, host_player_id' )
+            .eq( 'id', requested )
+            .eq( 'table_id', table.tableId )
+            .gt( 'expires_at', new Date().toISOString() )
+            .maybeSingle();
+
+        session = data;
+
+    }
+
+    if( ! session ) session = await findLatestActiveSession( client, table.tableId );
 
     return {
         selectedGame: session?.selected_game ?? null,
