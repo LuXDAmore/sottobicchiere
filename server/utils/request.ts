@@ -1,5 +1,7 @@
 import type { H3Event } from 'h3';
 
+import { serverSupabaseUser } from '#supabase/server';
+
 import { serviceClient } from './supabase';
 import { resolveTableRow } from './table-resolver';
 
@@ -46,19 +48,35 @@ export async function requireTable( event: H3Event ) {
 }
 
 /**
- * Risolve la riga player_session da un playerId, o lancia 403.
+ * Risolve la riga player_session da un playerId verificando che l'utente Supabase
+ * corrente ne sia il proprietario. Usa il service role (bypassa RLS) ma confronta
+ * `player_sessions.user_id` con `auth.uid`, impedendo l'impersonificazione di altri
+ * giocatori (gli ID sono visibili agli altri tavoli via presence).
+ * @param event - evento H3 della request (per leggere l'utente autenticato).
  * @param client - client Supabase service role.
  * @param playerId - id del giocatore (player_sessions.id).
  */
-export async function requirePlayer( client: ReturnType<typeof serviceClient>, playerId: string ) {
+export async function requirePlayer( event: H3Event, client: ReturnType<typeof serviceClient>, playerId: string ) {
+
+    const user = await serverSupabaseUser( event ).catch( () => null );
+
+    if( ! user ) {
+
+        throw createError( {
+            statusCode: 401,
+            statusMessage: 'NOT_AUTHENTICATED',
+            message: 'Sessione non pronta. Aggiorna la pagina e riprova.',
+        } );
+
+    }
 
     const { data } = await client
         .from( 'player_sessions' )
-        .select( 'id, table_session_id, is_host' )
+        .select( 'id, table_session_id, is_host, user_id' )
         .eq( 'id', playerId )
         .maybeSingle();
 
-    if( ! data ) {
+    if( ! data || data.user_id !== user.id ) {
 
         throw createError( {
             statusCode: 403,
@@ -73,13 +91,15 @@ export async function requirePlayer( client: ReturnType<typeof serviceClient>, p
 }
 
 /**
- * Verifica che un giocatore sia l'host della propria sessione, o lancia 403/404.
+ * Verifica che un giocatore (di cui l'utente corrente è proprietario) sia l'host
+ * della propria sessione, o lancia 401/403/404.
+ * @param event - evento H3 della request.
  * @param client - client Supabase service role.
  * @param playerId - id del giocatore.
  */
-export async function requireHostSession( client: ReturnType<typeof serviceClient>, playerId: string ) {
+export async function requireHostSession( event: H3Event, client: ReturnType<typeof serviceClient>, playerId: string ) {
 
-    const player = await requirePlayer( client, playerId )
+    const player = await requirePlayer( event, client, playerId )
 
         , { data: session } = await client
             .from( 'table_sessions' )

@@ -19,7 +19,7 @@ export default defineEventHandler( async event => {
     }
 
     const { client } = await requireTable( event )
-        , player = await requirePlayer( client, parsed.data.playerId );
+        , player = await requirePlayer( event, client, parsed.data.playerId );
 
     // Cambio di dating_enabled → trigger annuncia la disponibilità sulla lobby dating.
     await client

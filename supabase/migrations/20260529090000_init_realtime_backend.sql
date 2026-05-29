@@ -171,12 +171,14 @@ using (
     )
 );
 
--- Invia presence/broadcast sul channel del proprio tavolo (serve per track()).
+-- Invia SOLO presence sul channel del proprio tavolo (serve a track()). I broadcast
+-- di stato provengono esclusivamente dai trigger DB: vietare l'insert di broadcast
+-- ai client impedisce lo spoofing di eventi (es. falsi UPDATE su games).
 drop policy if exists "table members can write channel" on realtime.messages;
 create policy "table members can write channel"
 on realtime.messages for insert to authenticated
 with check (
-    realtime.messages.extension in ( 'broadcast', 'presence' )
+    realtime.messages.extension = 'presence'
     and exists (
         select 1 from public.player_sessions ps
         where ps.user_id = (select auth.uid())
@@ -184,23 +186,18 @@ with check (
     )
 );
 
--- Lobby dating: qualsiasi utente autenticato può ascoltare e annunciarsi.
--- Trasporta solo id di tavoli disponibili, nessun dato sensibile.
+-- Lobby dating: qualsiasi utente autenticato può solo ASCOLTARE. Gli annunci di
+-- disponibilità provengono dal trigger DB; nessun insert lato client (niente spam
+-- né eventi falsi). Trasporta solo id di tavoli disponibili, nessun dato sensibile.
 drop policy if exists "dating lobby is readable" on realtime.messages;
 create policy "dating lobby is readable"
 on realtime.messages for select to authenticated
 using (
     (select realtime.topic()) = 'dating:lobby'
-    and realtime.messages.extension in ( 'broadcast', 'presence' )
+    and realtime.messages.extension = 'broadcast'
 );
 
 drop policy if exists "dating lobby is writable" on realtime.messages;
-create policy "dating lobby is writable"
-on realtime.messages for insert to authenticated
-with check (
-    (select realtime.topic()) = 'dating:lobby'
-    and realtime.messages.extension in ( 'broadcast', 'presence' )
-);
 
 -- ╔══════════════════════════════════════════════════════════════════════════╗
 -- ║ Broadcast da Database (trigger → client)                                   ║

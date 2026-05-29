@@ -24,7 +24,7 @@ export default defineEventHandler( async event => {
 
     const { client } = await requireTable( event )
         , { playerId, vote } = parsed.data
-        , player = await requirePlayer( client, playerId )
+        , player = await requirePlayer( event, client, playerId )
         , game = await getActiveGame( client, player.table_session_id );
 
     if( ! game || game.phase !== 'voting' ) {

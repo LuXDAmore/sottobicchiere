@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { requireTable } from '../../../../../utils/request';
 
 /**
@@ -10,7 +12,9 @@ import { requireTable } from '../../../../../utils/request';
 export default defineEventHandler( async event => {
 
     const { client } = await requireTable( event )
-        , self = getQuery( event ).self as string | undefined
+        // Valida `self` come UUID: viene interpolato in .or(...), quindi va sanificato.
+        , selfParsed = z.string().uuid().safeParse( getQuery( event ).self )
+        , self = selfParsed.success ? selfParsed.data : undefined
         , nowIso = new Date().toISOString()
 
         , { data: enabled } = await client

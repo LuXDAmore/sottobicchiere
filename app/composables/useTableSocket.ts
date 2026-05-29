@@ -1,5 +1,8 @@
-import type { Database } from '../../shared/types/database';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+
+import type { Database } from '../../shared/types/database';
+import type { DatingInboxMessage, DatingRoomStatus, LobbyGameSelection, SessionMode, ThumbsClientState, WsPlayer } from '../../shared/types/realtime';
+import type { PlayerColor } from '../../shared/utils/colors';
 
 interface PresenceMeta { id: string; nickname: string; color: PlayerColor }
 type ConnectionStatus = 'CLOSED' | 'CONNECTING' | 'OPEN';
@@ -220,12 +223,23 @@ const _useTableSocket = createGlobalState( () => {
         try {
 
             const [ selection, datingRooms, game ] = await Promise.all( [
-                $fetch<LobbyGameSelection>( `${ apiBase() }/game/current`, { query: { session: playerStore.tableSessionId } } ),
+                $fetch<LobbyGameSelection & { sessionMode: SessionMode; datingEnabled: boolean }>( `${ apiBase() }/game/current`, { query: { session: playerStore.tableSessionId } } ),
                 $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } ),
                 $fetch<Database['public']['Tables']['games']['Row'] | null>( `${ apiBase() }/game/state`, { query: { session: playerStore.tableSessionId } } ),
             ] );
 
-            if( selection ) gameSelection.value = selection;
+            if( selection ) {
+
+                gameSelection.value = {
+                    gameMode: selection.gameMode,
+                    hostPlayerId: selection.hostPlayerId,
+                    lockedAt: selection.lockedAt,
+                    selectedGame: selection.selectedGame,
+                };
+                sessionMode.value = selection.sessionMode;
+                datingEnabled.value = selection.datingEnabled;
+
+            }
             if( datingRooms ) datingRoomStatus.value = datingRooms;
 
             // Allinea chi entra/ricarica a partita in corso (il realtime invia solo i cambi).

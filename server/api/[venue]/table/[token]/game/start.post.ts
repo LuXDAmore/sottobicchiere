@@ -27,7 +27,7 @@ export default defineEventHandler( async event => {
 
     const { client } = await requireTable( event )
         , { playerId, totalRounds = 10 } = parsed.data
-        , { session } = await requireHostSession( client, playerId )
+        , { session } = await requireHostSession( event, client, playerId )
         , tableSessionId = session.id
 
         // Non ripartire se una partita è già in corso.

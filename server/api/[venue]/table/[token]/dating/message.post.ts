@@ -30,7 +30,7 @@ export default defineEventHandler( async event => {
 
     const { client } = await requireTable( event )
         , { playerId, toTableSessionId, body } = parsed.data
-        , player = await requirePlayer( client, playerId )
+        , player = await requirePlayer( event, client, playerId )
         , fromTableSessionId = player.table_session_id;
 
     if( toTableSessionId === fromTableSessionId ) {

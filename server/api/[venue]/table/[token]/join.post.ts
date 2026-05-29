@@ -120,23 +120,22 @@ export default defineEventHandler( async event => {
 
     if( groupName ) {
 
-        const { data: existingGroup } = await client
-            .from( 'groups' )
-            .select( 'id' )
-            .eq( 'table_session_id', session.id )
-            .ilike( 'name', groupName )
-            .limit( 1 )
-            .maybeSingle();
+        // Carica i gruppi della sessione e confronta il nome in modo case-insensitive
+        // lato applicazione: evita di passare input utente a un pattern ILIKE (i
+        // caratteri %/_ sarebbero wildcard e matcherebbero gruppi inattesi).
+        const { data: sessionGroups } = await client
+                .from( 'groups' )
+                .select( 'id, name, color' )
+                .eq( 'table_session_id', session.id )
+
+            , groups = sessionGroups ?? []
+            , wanted = groupName.toLowerCase()
+            , existingGroup = groups.find( g => g.name.toLowerCase() === wanted );
 
         if( existingGroup ) groupId = existingGroup.id;
         else {
 
-            const { data: groupColorRows } = await client
-                    .from( 'groups' )
-                    .select( 'color' )
-                    .eq( 'table_session_id', session.id )
-
-                , groupColor = pickAvailableColor( ( groupColorRows ?? [] ).map( r => r.color ) )
+            const groupColor = pickAvailableColor( groups.map( g => g.color ) )
 
                 , { data: newGroup } = await client
                     .from( 'groups' )

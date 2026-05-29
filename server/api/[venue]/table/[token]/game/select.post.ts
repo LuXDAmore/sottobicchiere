@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { requireTable } from '../../../../../utils/request';
+import { requirePlayer, requireTable } from '../../../../../utils/request';
 
 const payloadSchema = z.object( {
     gameMode: z.string().min( 1 ).max( 40 ).optional(),
@@ -25,22 +25,8 @@ export default defineEventHandler( async event => {
     const body = parsed.data
         , { client, table } = await requireTable( event )
 
-        // La sessione è quella a cui il giocatore appartiene davvero.
-        , { data: player } = await client
-            .from( 'player_sessions' )
-            .select( 'table_session_id' )
-            .eq( 'id', body.playerId )
-            .maybeSingle();
-
-    if( ! player ) {
-
-        throw createError( {
-            statusCode: 403,
-            statusMessage: 'PLAYER_NOT_FOUND',
-            message: 'Giocatore non riconosciuto. Torna alla lobby e riprova.',
-        } );
-
-    }
+        // Verifica proprietà del giocatore (anti-impersonificazione) e ne ricava la sessione.
+        , player = await requirePlayer( event, client, body.playerId );
 
     const { data: session } = await client
         .from( 'table_sessions' )
