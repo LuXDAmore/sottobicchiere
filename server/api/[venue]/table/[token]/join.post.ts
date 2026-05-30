@@ -161,6 +161,36 @@ export default defineEventHandler( async event => {
 
     }
 
+    // Rientro idempotente: se questo utente ha già una riga in questa sessione
+    // (refresh, multi-tab, rientro dopo navigazione) la restitiamo com'è senza
+    // creare un duplicato. Non usiamo upsert perché sovrascrirebbe is_host.
+    const { data: existing } = await client
+        .from( 'player_sessions' )
+        .select( 'id, color, is_host, group_id' )
+        .eq( 'table_session_id', session.id )
+        .eq( 'user_id', user.id )
+        .maybeSingle();
+
+    if( existing ) {
+
+        return {
+            expiresAt: session.expires_at,
+            groupId: existing.group_id,
+            hasActiveGame: !! session.locked_at,
+            isHost: existing.is_host,
+            playerId: existing.id,
+            playerColor: existing.color,
+            playerNickname: nickname,
+            qrToken,
+            selectedGame: session.selected_game ?? null,
+            tableNumber: table.tableNumber,
+            tableSessionId: session.id,
+            venueName: table.venueName,
+            venueSlug: table.venueSlug,
+        };
+
+    }
+
     // is_host è possibile solo creando una sessione nuova; entrare in una esistente non rende host.
     const isHost = ! requestedSessionId && createSession
 
