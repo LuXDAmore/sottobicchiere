@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 import { getActiveGame, recomputeAndMaybeReveal } from '../../../../../utils/game-engine';
-import { requirePlayer, requireTable } from '../../../../../utils/request';
+import { requirePlayerForTable, requireTable } from '../../../../../utils/request';
 
 const payloadSchema = z.object( {
     playerId: z.string().uuid(),
@@ -22,9 +22,9 @@ export default defineEventHandler( async event => {
 
     }
 
-    const { client } = await requireTable( event )
+    const { client, table } = await requireTable( event )
         , { playerId, vote } = parsed.data
-        , player = await requirePlayer( event, client, playerId )
+        , { player } = await requirePlayerForTable( event, client, playerId, table.tableId )
         , game = await getActiveGame( client, player.table_session_id );
 
     if( ! game || game.phase !== 'voting' ) {

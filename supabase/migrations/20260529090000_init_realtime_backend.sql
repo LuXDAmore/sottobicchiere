@@ -158,6 +158,11 @@ grant select on public.player_sessions to authenticated;
 -- ║ topic. realtime.topic() = nome del channel a cui ci si connette.           ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
+-- Abilita esplicitamente RLS su realtime.messages prima di definire le policy:
+-- senza questa istruzione, in ambienti dove RLS non fosse attiva di default,
+-- le policy non avrebbero effetto e i channel privati sarebbero accessibili a tutti.
+alter table realtime.messages enable row level security;
+
 -- Riceve broadcast + presence sul channel del proprio tavolo ("table:<id>").
 drop policy if exists "table members can read channel" on realtime.messages;
 create policy "table members can read channel"

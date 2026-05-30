@@ -145,6 +145,42 @@ export async function requireHostSession( event: H3Event, client: ReturnType<typ
 }
 
 /**
+ * Verifica che un giocatore (di cui l'utente corrente è proprietario) appartenga
+ * al tavolo specificato (parametri di route), o lancia 401/403/404.
+ * Senza questo controllo un client potrebbe usare un `playerId` di un'altra
+ * sessione verso qualunque route valida, rendendo `[venue]/[token]` solo decorativi.
+ * @param event - evento H3 della request.
+ * @param client - client Supabase service role.
+ * @param playerId - id del giocatore.
+ * @param tableId - id del tavolo risolto dai parametri di route.
+ */
+export async function requirePlayerForTable( event: H3Event, client: ReturnType<typeof serviceClient>, playerId: string, tableId: string ) {
+
+    const player = await requirePlayer( event, client, playerId )
+
+        , { data: session } = await client
+            .from( 'table_sessions' )
+            .select( 'id, table_id' )
+            .eq( 'id', player.table_session_id )
+            .eq( 'table_id', tableId )
+            .gt( 'expires_at', new Date().toISOString() )
+            .maybeSingle();
+
+    if( ! session ) {
+
+        throw createError( {
+            statusCode: 403,
+            statusMessage: 'PLAYER_TABLE_MISMATCH',
+            message: 'Questo giocatore non appartiene a questo tavolo o la sessione è scaduta.',
+        } );
+
+    }
+
+    return { player, session };
+
+}
+
+/**
  * Risolve l'id di sessione da usare: quella richiesta (se valida e del tavolo),
  * altrimenti la più recente attiva.
  * @param client - client Supabase service role.
