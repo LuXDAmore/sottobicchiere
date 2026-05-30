@@ -37,13 +37,26 @@ export async function recomputeAndMaybeReveal( client: ServiceClient, game: Game
 
     const quorum = totalCount ?? game.total_count
 
-        , { data: voteRows } = await client
+        , { data: voteRows, error: votesError } = await client
             .from( 'votes' )
             .select( 'player_id, vote' )
             .eq( 'game_id', game.id )
-            .eq( 'round_index', game.round_index )
+            .eq( 'round_index', game.round_index );
 
-        , votes = voteRows ?? []
+    // Se la SELECT fallisce, voteRows sarebbe null e tratteremmo i voti come []
+    // sovrascrivendo voted_count (e magari impedendo il reveal) con uno stato
+    // errato: meglio fallire esplicitamente che desincronizzare i client.
+    if( votesError ) {
+
+        throw createError( {
+            statusCode: 500,
+            statusMessage: 'VOTES_READ_FAILED',
+            message: 'Non sono riuscito a leggere i voti. Riprova.',
+        } );
+
+    }
+
+    const votes = voteRows ?? []
         , votedCount = votes.length
 
         , update: Database['public']['Tables']['games']['Update'] = {

@@ -188,13 +188,21 @@ export default defineEventHandler( async event => {
     }
 
     // Se è host, registra subito l'host della sessione (serve a vote/next/mode).
+    // Se l'UPDATE fallisce il client riceverebbe isHost:true ma la sessione
+    // resterebbe senza host, causando 403/NOT_HOST: meglio fallire la join.
     if( isHost ) {
 
-        await client
+        const { error: hostError } = await client
             .from( 'table_sessions' )
             .update( { host_player_id: player.id } )
             .eq( 'id', session.id )
             .is( 'host_player_id', null );
+
+        if( hostError ) throw createError( {
+            statusCode: 500,
+            statusMessage: 'HOST_REGISTER_FAILED',
+            message: 'Non sono riuscito a registrarti come host. Riprova.',
+        } );
 
     }
 

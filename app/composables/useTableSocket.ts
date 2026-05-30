@@ -214,11 +214,15 @@ const _useTableSocket = createGlobalState( () => {
 
             const meta = state[ key ]?.[ 0 ];
 
-            if( meta?.id ) {
+            // La presence key è l'id canonico (impostata su track con il proprio
+            // playerId). meta.id è payload controllato dal client: usare la key
+            // come source-of-truth e scartare i mismatch evita lo spoofing di id
+            // online (e quindi di quorum/elezione host).
+            if( meta && meta.id === key ) {
 
-                seen.set( meta.id, {
+                seen.set( key, {
                     color: meta.color,
-                    id: meta.id,
+                    id: key,
                     nickname: meta.nickname,
                 } );
 

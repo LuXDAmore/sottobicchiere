@@ -76,7 +76,7 @@ Giocatori effimeri in una sessione.
 | group_id | uuid | FK opzionale (set null) |
 | user_id | uuid | utente Supabase anonimo (autorizza il channel) |
 | is_host | boolean | host della sessione |
-| created_at | timestamptz | |
+| joined_at | timestamptz | istante di ingresso al tavolo |
 
 ### games
 

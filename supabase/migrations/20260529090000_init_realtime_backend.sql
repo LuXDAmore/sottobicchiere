@@ -320,6 +320,11 @@ begin
 end;
 $$;
 
+-- Idempotente: se la migration viene riapplicata (reset locale, restore, ecc.)
+-- rimuove l'eventuale job con lo stesso nome prima di rischedularlo.
+select cron.unschedule( 'cleanup-expired-sessions' )
+where exists ( select 1 from cron.job where jobname = 'cleanup-expired-sessions' );
+
 select cron.schedule(
     'cleanup-expired-sessions',
     '0 6 * * *',
