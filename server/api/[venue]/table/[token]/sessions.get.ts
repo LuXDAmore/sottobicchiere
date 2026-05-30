@@ -14,42 +14,48 @@ export default defineEventHandler( async event => {
 
     if( ! activeSessions || activeSessions.length === 0 ) return { sessions: [] };
 
-    const sessions = await Promise.all(
-        activeSessions.map( async s => {
+    const sessionIds = activeSessions.map( s => s.id )
+        , hostIds = activeSessions.map( s => s.host_player_id ).filter( Boolean ) as string[]
 
-            const { count } = await client
+        // Due query batch invece di 2N query (pattern N+1).
+        , [ { data: allPlayers }, { data: hostRows } ] = await Promise.all( [
+
+            // Tutti i player_sessions delle sessioni attive: conteggio in memoria.
+            client
                 .from( 'player_sessions' )
-                .select( 'id', {
-                    count: 'exact',
-                    head: true,
-                } )
-                .eq( 'table_session_id', s.id );
+                .select( 'table_session_id' )
+                .in( 'table_session_id', sessionIds ),
 
-            let hostNickname: string | null = null;
-
-            if( s.host_player_id ) {
-
-                const { data: host } = await client
+            // Nickname degli host in un unico round-trip.
+            hostIds.length > 0
+                ? client
                     .from( 'player_sessions' )
-                    .select( 'nickname' )
-                    .eq( 'id', s.host_player_id )
-                    .maybeSingle();
+                    .select( 'id, nickname' )
+                    .in( 'id', hostIds )
+                : Promise.resolve( { data: [] } ),
 
-                hostNickname = host?.nickname ?? null;
+        ] );
 
-            }
+    // Mappa id sessione → conteggio giocatori.
+    const countBySession = new Map<string, number>();
 
-            return {
-                hasActiveGame: !! s.locked_at,
-                hostNickname,
-                playerCount: count ?? 0,
-                selectedGame: s.selected_game,
-                sessionId: s.id,
-                startedAt: s.started_at,
-            };
+    for( const row of allPlayers ?? [] ) {
 
-        } )
-    );
+        countBySession.set( row.table_session_id, ( countBySession.get( row.table_session_id ) ?? 0 ) + 1 );
+
+    }
+
+    // Mappa player id → nickname.
+    const nicknameByPlayer = new Map( ( hostRows ?? [] ).map( r => [ r.id, r.nickname ] ) );
+
+    const sessions = activeSessions.map( s => ( {
+        hasActiveGame: !! s.locked_at,
+        hostNickname: s.host_player_id ? ( nicknameByPlayer.get( s.host_player_id ) ?? null ) : null,
+        playerCount: countBySession.get( s.id ) ?? 0,
+        selectedGame: s.selected_game,
+        sessionId: s.id,
+        startedAt: s.started_at,
+    } ) );
 
     return { sessions };
 

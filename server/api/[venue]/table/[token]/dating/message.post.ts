@@ -55,13 +55,39 @@ export default defineEventHandler( async event => {
 
     }
 
-    // Il tavolo destinatario deve essere disponibile (dating attivo, non scaduto).
-    const { data: target } = await client
-        .from( 'table_sessions' )
-        .select( 'id, dating_enabled' )
-        .eq( 'id', toTableSessionId )
-        .gt( 'expires_at', new Date().toISOString() )
-        .maybeSingle();
+    const nowIso = new Date().toISOString()
+
+        // Carica mittente e destinatario in parallelo.
+        , [ { data: source }, { data: target } ] = await Promise.all( [
+
+            // La sessione mittente deve avere dating attivo: evita che un tavolo
+            // bypassi il toggle (o spammi) semplicemente conoscendo un playerId.
+            client
+                .from( 'table_sessions' )
+                .select( 'id, dating_enabled' )
+                .eq( 'id', fromTableSessionId )
+                .gt( 'expires_at', nowIso )
+                .maybeSingle(),
+
+            // Il tavolo destinatario deve essere disponibile (dating attivo, non scaduto).
+            client
+                .from( 'table_sessions' )
+                .select( 'id, dating_enabled' )
+                .eq( 'id', toTableSessionId )
+                .gt( 'expires_at', nowIso )
+                .maybeSingle(),
+
+        ] );
+
+    if( ! source || ! source.dating_enabled ) {
+
+        throw createError( {
+            statusCode: 409,
+            statusMessage: 'DATING_NOT_ENABLED',
+            message: 'Il dating non è attivo per questo tavolo.',
+        } );
+
+    }
 
     if( ! target || ! target.dating_enabled ) {
 

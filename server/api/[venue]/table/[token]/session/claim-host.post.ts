@@ -6,7 +6,7 @@ import { requirePlayer, requireTable } from '../../../../../utils/request';
 
 const claimSchema = z.object( {
     playerId: z.string().uuid(),
-    online: z.array( z.string().uuid() ).default( [] ),
+    online: z.array( z.string().uuid() ).max( 64 ).default( [] ),
     session: z.string().uuid().optional(),
 } );
 
