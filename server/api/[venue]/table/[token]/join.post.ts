@@ -137,7 +137,7 @@ export default defineEventHandler( async event => {
 
             const groupColor = pickAvailableColor( groups.map( g => g.color ) )
 
-                , { data: newGroup } = await client
+                , { data: newGroup, error: groupError } = await client
                     .from( 'groups' )
                     .insert( {
                         table_session_id: session.id,
@@ -147,7 +147,15 @@ export default defineEventHandler( async event => {
                     .select( 'id' )
                     .single();
 
-            groupId = newGroup?.id ?? null;
+            // L'utente ha chiesto un gruppo: se l'INSERT fallisce non proseguire con
+            // groupId null (stato incoerente lato UI), ma fallire esplicitamente.
+            if( groupError || ! newGroup ) throw createError( {
+                statusCode: 500,
+                statusMessage: 'GROUP_CREATE_FAILED',
+                message: 'Non sono riuscito a creare il gruppo. Riprova.',
+            } );
+
+            groupId = newGroup.id;
 
         }
 

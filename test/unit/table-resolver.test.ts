@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { ServiceClient } from '../../server/utils/supabase';
 import { resolveTableRow } from '../../server/utils/table-resolver';
 
-// Stub del client Supabase: ogni metodo della catch è concatenabile e `maybeSingle`
+// Stub del client Supabase: ogni metodo della chain è concatenabile e `maybeSingle`
 // risolve il risultato configurato ({ data, error }).
 function stubClient( result: { data: unknown; error: unknown } ): ServiceClient {
 

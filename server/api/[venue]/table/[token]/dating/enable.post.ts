@@ -22,10 +22,16 @@ export default defineEventHandler( async event => {
         , player = await requirePlayer( event, client, parsed.data.playerId );
 
     // Cambio di dating_enabled → trigger annuncia la disponibilità sulla lobby dating.
-    await client
+    const { error } = await client
         .from( 'table_sessions' )
         .update( { dating_enabled: true } )
         .eq( 'id', player.table_session_id );
+
+    if( error ) throw createError( {
+        statusCode: 500,
+        statusMessage: 'DATING_UPDATE_FAILED',
+        message: 'Non sono riuscito ad attivare il dating. Riprova.',
+    } );
 
     return {
         ok: true,

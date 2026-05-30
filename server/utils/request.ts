@@ -118,9 +118,15 @@ export async function requireHostSession( event: H3Event, client: ReturnType<typ
 
     }
 
-    const hostPlayerId = session.host_player_id ?? playerId;
+    // Se host_player_id non è ancora valorizzato (subito dopo la creazione della
+    // sessione o in una race di riassegnazione), NON usare playerId come fallback:
+    // renderebbe host chiunque. Consenti solo a chi ha creato la sessione
+    // (player.is_host), altrimenti nega.
+    const isAuthorized = session.host_player_id === null
+        ? player.is_host
+        : session.host_player_id === playerId;
 
-    if( hostPlayerId !== playerId ) {
+    if( ! isAuthorized ) {
 
         throw createError( {
             statusCode: 403,
@@ -131,7 +137,7 @@ export async function requireHostSession( event: H3Event, client: ReturnType<typ
     }
 
     return {
-        hostPlayerId,
+        hostPlayerId: session.host_player_id ?? playerId,
         player,
         session,
     };

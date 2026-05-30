@@ -39,6 +39,7 @@ const _useTableSocket = createGlobalState( () => {
     let tableChannel: RealtimeChannel | null = null
         , lobbyChannel: RealtimeChannel | null = null
         , presenceSyncTimer: ReturnType<typeof setTimeout> | null = null
+        , hostClaimTimer: ReturnType<typeof setTimeout> | null = null
         , lastRoundIndex = - 1;
 
     const apiBase = () => `/api/${ playerStore.venueSlug }/table/${ playerStore.qrToken }`;
@@ -164,6 +165,42 @@ const _useTableSocket = createGlobalState( () => {
     }
 
     /**
+     * Riassegnazione host lato client. Su Supabase non c'è una connessione
+     * persistente: quando l'host esce sparisce solo dalla presence. I client
+     * superstiti eleggono in modo deterministico (id più piccolo tra gli online)
+     * un successore; SOLO l'eletto chiama `/session/claim-host`. Il debounce evita
+     * chiamate ripetute a ogni `presence sync`. Il server resta l'autorità: valida
+     * l'elezione sui membri reali e applica un update ottimistico con guardia.
+     */
+    function maybeClaimHost() {
+
+        const onlineIds = players.value.map( p => p.id )
+            , currentHost = gameSelection.value.hostPlayerId ?? gameState.value?.hostPlayerId ?? null;
+
+        // Nessun online o host ancora presente: niente da rivendicare.
+        if( onlineIds.length === 0 ) return;
+        if( currentHost && onlineIds.includes( currentHost ) ) return;
+
+        // Elezione deterministica: l'id più piccolo tra gli online vince.
+        const winner = onlineIds.toSorted()[ 0 ];
+
+        // Rivendica solo se sono io l'eletto, altrimenti aspetto.
+        if( winner !== playerStore.playerId ) return;
+
+        if( hostClaimTimer ) clearTimeout( hostClaimTimer );
+
+        hostClaimTimer = setTimeout( () => {
+
+            post( '/session/claim-host', {
+                playerId: playerStore.playerId,
+                online: onlineIds,
+            } ).catch( () => { /* best-effort: la prossima presence sync riproverà */ } );
+
+        }, 600 );
+
+    }
+
+    /**
      *
      */
     function syncPresence() {
@@ -190,6 +227,9 @@ const _useTableSocket = createGlobalState( () => {
         }
 
         players.value = [ ... seen.values() ];
+
+        // Se l'host è uscito, i superstiti eleggono un successore (solo l'eletto chiama).
+        maybeClaimHost();
 
         // L'host comunica al server i presenti: è il quorum dei voti, così
         // l'auto-reveal scatta e l'uscita di qualcuno non blocca il round.
@@ -348,6 +388,20 @@ const _useTableSocket = createGlobalState( () => {
         // Solo disconnessione dal realtime: il record del giocatore resta nel DB
         // (come con il vecchio WS), così navigare tra lobby e gioco o ricaricare
         // la pagina non distrugge la sessione. La pulizia avviene a scadenza.
+        if( presenceSyncTimer ) {
+
+            clearTimeout( presenceSyncTimer );
+            presenceSyncTimer = null;
+
+        }
+
+        if( hostClaimTimer ) {
+
+            clearTimeout( hostClaimTimer );
+            hostClaimTimer = null;
+
+        }
+
         if( tableChannel ) {
 
             await tableChannel.unsubscribe();

@@ -50,10 +50,17 @@ export default defineEventHandler( async event => {
 
     if( nextIndex >= game.total_rounds ) {
 
-        await client.from( 'games' ).update( {
+        const { error: finishError } = await client.from( 'games' ).update( {
             phase: 'finished',
             revealed_votes: null,
         } ).eq( 'id', game.id );
+
+        if( finishError ) throw createError( {
+            statusCode: 500,
+            statusMessage: 'GAME_UPDATE_FAILED',
+            message: 'Non sono riuscito a chiudere la partita. Riprova.',
+        } );
+
         return {
             ok: true,
             phase: 'finished',
@@ -61,7 +68,7 @@ export default defineEventHandler( async event => {
 
     }
 
-    await client
+    const { error: nextError } = await client
         .from( 'games' )
         .update( {
             round_index: nextIndex,
@@ -71,6 +78,12 @@ export default defineEventHandler( async event => {
             revealed_votes: null,
         } )
         .eq( 'id', game.id );
+
+    if( nextError ) throw createError( {
+        statusCode: 500,
+        statusMessage: 'GAME_UPDATE_FAILED',
+        message: 'Non sono riuscito ad avanzare al round successivo. Riprova.',
+    } );
 
     return {
         ok: true,

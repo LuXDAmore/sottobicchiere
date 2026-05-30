@@ -62,6 +62,18 @@ export async function recomputeAndMaybeReveal( client: ServiceClient, game: Game
 
     }
 
-    await client.from( 'games' ).update( update ).eq( 'id', game.id );
+    const { error } = await client.from( 'games' ).update( update ).eq( 'id', game.id );
+
+    // Se l'UPDATE fallisce (permessi, rete, lock) i client resterebbero
+    // desincronizzati: meglio fallire esplicitamente che rispondere ok.
+    if( error ) {
+
+        throw createError( {
+            statusCode: 500,
+            statusMessage: 'GAME_UPDATE_FAILED',
+            message: 'Non sono riuscito ad aggiornare la partita. Riprova.',
+        } );
+
+    }
 
 }

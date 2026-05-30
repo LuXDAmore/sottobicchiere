@@ -43,7 +43,7 @@ Sessione di gioco effimera per un tavolo.
 | id | uuid | PK |
 | table_id | uuid | FK → tables.id (cascade) |
 | started_at | timestamptz | |
-| expires_at | timestamptz | TTL (default `now() + 6h`) |
+| expires_at | timestamptz | TTL (default `now() + interval '8 hours'`) |
 | selected_game | text | gioco scelto in lobby |
 | game_mode | text | modalità del gioco |
 | session_mode | text | `board` \| `dating` \| `preserata` (default `board`) |

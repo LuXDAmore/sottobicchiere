@@ -54,18 +54,23 @@ export default defineEventHandler( async event => {
 
     }
 
-    const { data: session } = await client
-        .from( 'table_sessions' )
-        .select( 'id, host_player_id, table_id' )
-        .eq( 'id', sessionId )
-        .maybeSingle();
+    // Non riassegnare host su sessioni scadute: il filtro su expires_at evita di
+    // propagare broadcast verso sessioni già terminate.
+    const now = new Date().toISOString()
+
+        , { data: session } = await client
+            .from( 'table_sessions' )
+            .select( 'id, host_player_id, table_id' )
+            .eq( 'id', sessionId )
+            .gt( 'expires_at', now )
+            .maybeSingle();
 
     if( ! session ) {
 
         throw createError( {
             statusCode: 404,
             statusMessage: 'SESSION_NOT_FOUND',
-            message: 'Sessione non trovata.',
+            message: 'Sessione non trovata o scaduta.',
         } );
 
     }
@@ -97,15 +102,18 @@ export default defineEventHandler( async event => {
     // Riassegna solo se chi rivendica è davvero l'eletto (host assente + id minore).
     if( ! winner || winner !== playerId ) return { ok: false, hostPlayerId: currentHost };
 
-    // Update ottimistico: la guardia su host_player_id fa vincere una sola richiesta.
+    // Update ottimistico: la guardia su host_player_id fa vincere una sola
+    // richiesta; il filtro su expires_at esclude le sessioni scadute tra la SELECT
+    // e l'UPDATE. `.select()` ci dice se la riga è stata davvero aggiornata.
     const base = client
             .from( 'table_sessions' )
             .update( { host_player_id: playerId } )
             .eq( 'id', sessionId )
+            .gt( 'expires_at', now )
 
-        , { error } = await ( currentHost === null
+        , { data: updated, error } = await ( currentHost === null
             ? base.is( 'host_player_id', null )
-            : base.eq( 'host_player_id', currentHost ) );
+            : base.eq( 'host_player_id', currentHost ) ).select( 'host_player_id' );
 
     if( error ) {
 
@@ -116,6 +124,10 @@ export default defineEventHandler( async event => {
         } );
 
     }
+
+    // Nessuna riga aggiornata: sessione scaduta o host già rivendicato da un altro
+    // client nella race tra SELECT e UPDATE. Risposta coerente, niente broadcast.
+    if( ! updated || updated.length === 0 ) return { ok: false, hostPlayerId: currentHost };
 
     // Allinea l'host anche sulla partita attiva: il quorum/auto-reveal segue chi
     // riporta la presence, e il fallback isHost lato client legge games.host_player_id.
