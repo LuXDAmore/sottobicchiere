@@ -5,6 +5,23 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-05-30 — Riassegnazione automatica dell'host + allineamento documentazione
+
+### Feature: riassegnazione automatica dell'host
+Ripristinato il comportamento del vecchio WebSocket (`reassignHost`), perso nella migrazione a Supabase: senza connessione persistente, se l'host chiudeva la pagina nessuno poteva più avanzare i round, cambiare modalità o riportare il quorum per l'auto-reveal.
+
+- `server/utils/host-election.ts` — `electHost(currentHost, online, members)`: elezione pura e deterministica (id minore tra i membri online), con test unitari (`test/unit/host-election.test.ts`).
+- `server/api/[venue]/table/[token]/session/claim-host.post.ts` — l'eletto rivendica l'host; il server valida proprietà/appartenenza/presenza, usa un update ottimistico con guardia su `host_player_id` (vince una sola richiesta) e allinea `games.host_player_id`.
+- `app/composables/useTableSocket.ts` — alla presence sync, se l'host non è più online il client eletto chiama l'endpoint (debounce); il trigger su `table_sessions` propaga il nuovo host.
+
+### Documentazione
+- `README.md`, `docs/realtime-supabase.md`, `docs/architecture.md`, `docs/database-schema.md`, `docs/api-contracts.md` allineati allo stack Supabase (niente più Drizzle/Neon/Redis/Blob/WebSocket Nitro); aggiunte sezioni su presence/quorum e riassegnazione host.
+
+### Verifiche
+- `pnpm typecheck`, `pnpm eslint .`, `pnpm test:unit` verdi (14 test).
+
+---
+
 
 ## 2026-05-25 — Fix loop disconnect/reconnect WebSocket (heartbeat ping/pong)
 
