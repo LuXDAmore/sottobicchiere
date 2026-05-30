@@ -1,250 +1,65 @@
-# API Contracts — Core MVP
+# API & Realtime Contracts — Sottobicchiere (MVP)
 
-Contratti request/response per gli endpoint core dell’MVP Sottobicchiere.
+> Allinea a implementazione (`server/api/[venue]/table/[token]/...`). Il realtime non usa più WebSocket: è gestito da **Supabase Realtime** (channel privati). Le mutazioni sono **REST**; lo stato è propagato ai client via **broadcast da DB** (trigger Postgres).
 
-> Nota: i payload sotto sono contratti applicativi; campi interni/metadata possono variare.
+## Autenticazione
 
-## Convenzioni generali
+Ogni visitatore ha una sessione **Supabase anonima** (JWT, plugin `supabase-anon.client`). Le API verificano l'utente (`serverSupabaseUser`) e che possieda il `playerId` indicato; le azioni host verificano anche `table_sessions.host_player_id`.
 
-- Content-Type: `application/json`
-- Error envelope standard:
+## REST (`server/api`)
 
-```json
-{
-  "ok": false,
-  "error": {
-    "code": "INVALID_TOKEN",
-    "message": "Questo tavolo non è disponibile. Riprova con un nuovo QR."
-  }
-}
-```
+Convenzioni: JSON, `camelCase`. Errori con `createError` → `{ statusCode, statusMessage, message }`. Base path: `/api/[venue]/table/[token]`.
 
-- Success envelope standard:
+### Join & sessione
 
-```json
-{
-  "ok": true,
-  "data": {}
-}
-```
+| Metodo | Path | Descrizione |
+|---|---|---|
+| POST | `/join` | Crea/recupera sessione ed entra. Body `{ nickname, groupName?, createSession?, sessionId? }`. Restituisce `playerId`, `tableSessionId`, `isHost`, colore, ecc. |
+| GET | `/session` | Dettagli della sessione attiva del tavolo. |
+| POST | `/session/create` | Crea una nuova sessione di tavolo. |
+| POST | `/session/mode` | (host) Cambia `session_mode` (`board`/`dating`/`preserata`). |
+| POST | `/session/claim-host` | Rivendica l'host quando quello corrente è offline. Body `{ playerId, online[], session? }` → `{ ok, hostPlayerId }`. |
 
----
+### Gioco
 
-## 1) Validate table token
+| Metodo | Path | Descrizione |
+|---|---|---|
+| GET | `/game/current` | Selezione gioco + `sessionMode` + `datingEnabled` (query `?session=`). |
+| GET | `/game/state` | Riga `games` completa per la sync iniziale (query `?session=`). |
+| POST | `/game/select` | Seleziona il gioco in lobby. |
+| POST | `/game/start` | (host) Avvia la partita. Body `{ playerId, totalRounds? }`. |
+| POST | `/game/vote` | Invia il voto del round. Body `{ playerId, vote: 'up'\|'down' }` (upsert idempotente). |
+| POST | `/game/next` | (host) Avanza al round successivo. |
+| POST | `/game/presence` | (host) Riporta i giocatori online → quorum per l'auto-reveal. Body `{ playerId, online[] }`. |
 
-### `POST /api/table/resolve`
+### Dating
 
-Valida token tavolo e restituisce sessione attiva o metadata per crearla.
+| Metodo | Path | Descrizione |
+|---|---|---|
+| GET | `/dating/rooms` | Tavoli disponibili/non disponibili (query `?self=`). |
+| POST | `/dating/enable` | Attiva il dating per la sessione. |
+| POST | `/dating/disable` | Disattiva il dating. |
+| POST | `/dating/message` | Invia un messaggio a un altro tavolo. Body `{ playerId, toTableSessionId, body }` (rate-limit su finestra DB). |
 
-**Request**
+## Realtime (Supabase channels)
 
-```json
-{
-  "venueSlug": "bar-roma-centro",
-  "tableToken": "TBL_8Q2X9A"
-}
-```
+Lo stato non viaggia su eventi client→server: i client **ascoltano** i channel, le mutazioni passano dalle API REST, e i **trigger DB** trasmettono i cambi.
 
-**Response 200**
+### Channel `table:<tableSessionId>` (privato)
 
-```json
-{
-  "ok": true,
-  "data": {
-    "venueId": "ven_123",
-    "tableId": "tbl_456",
-    "tableSessionId": "ts_789",
-    "status": "waiting",
-    "expiresAt": "2026-05-24T23:59:59.000Z"
-  }
-}
-```
+- **Presence** — ogni client traccia `{ id, nickname, color }`; l'evento `sync` ricostruisce l'elenco online. Base per il quorum e per l'elezione dell'host.
+- **Broadcast `INSERT`/`UPDATE`/`DELETE`** (dai trigger su `games`/`table_sessions`) — payload `{ table, record }`; il client mappa la riga in stato partita/sessione.
+- **Broadcast `dating:message`** — nuovo messaggio dating per i due tavoli coinvolti.
 
----
+### Channel `dating:lobby` (privato)
 
-## 2) Join table session
+- **Broadcast `dating:availability`** — un tavolo è entrato/uscito dalla lobby dating; il client ricarica `/dating/rooms`.
 
-### `POST /api/session/join`
+Autorizzazione via RLS su `realtime.messages`: i client possono inserire solo `presence` (non broadcast di stato) e non possono scrivere su `dating:lobby`.
 
-Crea/aggancia `player_session` alla sessione tavolo.
+## Sicurezza
 
-**Request**
-
-```json
-{
-  "tableSessionId": "ts_789",
-  "nickname": "LudoKing",
-  "groupName": "Team Spritz"
-}
-```
-
-**Response 200**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "playerSessionId": "ps_001",
-    "role": "player",
-    "displayName": "LudoKing",
-    "group": {
-      "id": "grp_77",
-      "name": "Team Spritz"
-    }
-  }
-}
-```
-
----
-
-## 3) Lobby snapshot
-
-### `GET /api/lobby/:tableSessionId`
-
-Recupera stato lobby corrente.
-
-**Response 200**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "tableSessionId": "ts_789",
-    "status": "waiting",
-    "hostPlayerSessionId": "ps_001",
-    "players": [
-      {
-        "playerSessionId": "ps_001",
-        "nickname": "LudoKing",
-        "groupName": "Team Spritz",
-        "isHost": true,
-        "isConnected": true
-      }
-    ],
-    "gameLock": false,
-    "maxPlayers": 12
-  }
-}
-```
-
----
-
-## 4) Start game (host only)
-
-### `POST /api/game/start`
-
-Avvia una partita dalla lobby.
-
-**Request**
-
-```json
-{
-  "tableSessionId": "ts_789",
-  "hostPlayerSessionId": "ps_001",
-  "gameMode": "preserata",
-  "gameKey": "thumbs",
-  "settings": {
-    "rounds": 5,
-    "roundTimerSec": 20
-  }
-}
-```
-
-**Response 200**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "gameSessionId": "gs_222",
-    "status": "in_game",
-    "lockJoin": true,
-    "startedAt": "2026-05-24T20:11:00.000Z"
-  }
-}
-```
-
----
-
-## 5) Submit round action
-
-### `POST /api/game/round-action`
-
-Invia voto/mossa del player per round corrente.
-
-**Request**
-
-```json
-{
-  "gameSessionId": "gs_222",
-  "playerSessionId": "ps_001",
-  "round": 2,
-  "action": {
-    "type": "vote",
-    "value": "thumbs_up"
-  }
-}
-```
-
-**Response 200**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "accepted": true,
-    "serverRoundState": "collecting_inputs",
-    "receivedAt": "2026-05-24T20:12:04.321Z"
-  }
-}
-```
-
----
-
-## 6) End game / back to lobby
-
-### `POST /api/game/end`
-
-Chiude partita attiva e ritorna in lobby.
-
-**Request**
-
-```json
-{
-  "gameSessionId": "gs_222",
-  "hostPlayerSessionId": "ps_001"
-}
-```
-
-**Response 200**
-
-```json
-{
-  "ok": true,
-  "data": {
-    "tableSessionId": "ts_789",
-    "status": "waiting",
-    "summary": {
-      "winner": "LudoKing",
-      "scores": [
-        { "playerSessionId": "ps_001", "points": 42 }
-      ]
-    }
-  }
-}
-```
-
----
-
-## Error codes MVP (proposti)
-
-- `INVALID_TOKEN`
-- `TABLE_SESSION_EXPIRED`
-- `NICKNAME_INVALID`
-- `LOBBY_FULL`
-- `HOST_REQUIRED`
-- `GAME_ALREADY_RUNNING`
-- `GAME_LOCKED`
-- `ROUND_TIMEOUT`
-- `INVALID_ACTION_PAYLOAD`
-- `REALTIME_DISCONNECTED`
+- Validazione payload server-side (Zod); rate-limit (es. messaggi dating) su finestra DB.
+- Verifica utente Supabase + proprietà del `playerId` (no impersonificazione: gli ID sono visibili via presence).
+- Token tavolo non indovinabile (QR); scope per sessione.
+- Nessun dato persistente del giocatore oltre la sessione (pulizia pg_cron).

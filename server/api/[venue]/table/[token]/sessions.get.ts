@@ -1,84 +1,56 @@
-import { and, count, desc, eq, gt } from 'drizzle-orm';
-
-import { playerSessions, tableSessions } from '../../../../db/schema';
-import { resolveTableRow } from '../../../../utils/table-resolver';
-
-interface SessionRow {
-    sessionId: string;
-    startedAt: Date;
-    selectedGame: string | null;
-    lockedAt: Date | null;
-    hostPlayerId: string | null;
-}
+import { requireTable } from '../../../../utils/request';
 
 export default defineEventHandler( async event => {
 
-    const venueSlug = getRouterParam( event, 'venue' )
-        , qrToken = getRouterParam( event, 'token' );
+    const { client, table } = await requireTable( event )
+        , nowIso = new Date().toISOString()
 
-    if( ! venueSlug || ! qrToken ) throw createError( { statusCode: 400, statusMessage: 'MISSING_ROUTE_PARAMS', message: 'Parametri mancanti nel link. Controlla il QR code.' } );
+        , { data: activeSessions } = await client
+            .from( 'table_sessions' )
+            .select( 'id, started_at, selected_game, locked_at, host_player_id' )
+            .eq( 'table_id', table.tableId )
+            .gt( 'expires_at', nowIso )
+            .order( 'started_at', { ascending: false } );
 
-    const row = await resolveTableRow( venueSlug, qrToken );
+    if( ! activeSessions || activeSessions.length === 0 ) return { sessions: [] };
 
-    if( ! row ) throw createError( { statusCode: 404, statusMessage: 'TABLE_NOT_FOUND', message: 'QR code non riconosciuto. Chiedi al personale del locale.' } );
+    const sessions = await Promise.all(
+        activeSessions.map( async s => {
 
-    // Demo table has no persisted sessions
-    if( row.tableId === 'demo-table-001' ) return { sessions: [] };
+            const { count } = await client
+                .from( 'player_sessions' )
+                .select( 'id', {
+                    count: 'exact',
+                    head: true,
+                } )
+                .eq( 'table_session_id', s.id );
 
-    const now = new Date();
+            let hostNickname: string | null = null;
 
-    const activeSessions: SessionRow[] = await db
-        .select( {
-            sessionId: tableSessions.id,
-            startedAt: tableSessions.startedAt,
-            selectedGame: tableSessions.selectedGame,
-            lockedAt: tableSessions.lockedAt,
-            hostPlayerId: tableSessions.hostPlayerId,
-        } )
-        .from( tableSessions )
-        .where( and( eq( tableSessions.tableId, row.tableId ), gt( tableSessions.expiresAt, now ) ) )
-        .orderBy( desc( tableSessions.startedAt ) ); // newest first
+            if( s.host_player_id ) {
 
-    if( activeSessions.length === 0 ) return { sessions: [] };
+                const { data: host } = await client
+                    .from( 'player_sessions' )
+                    .select( 'nickname' )
+                    .eq( 'id', s.host_player_id )
+                    .maybeSingle();
 
-    // Fetch player count and host nickname for all sessions in parallel
-    const countMap = new Map<string, number>();
-    const nicknameMap = new Map<string, string | null>();
+                hostNickname = host?.nickname ?? null;
 
-    await Promise.all(
-        activeSessions.map( async ( s: SessionRow ) => {
-            const [ playerCount, hostNickname ] = await Promise.all( [
-                db
-                    .select( { count: count() } )
-                    .from( playerSessions )
-                    .where( eq( playerSessions.tableSessionId, s.sessionId ) )
-                    .then( ( r: { count: number }[] ) => r[ 0 ]?.count ?? 0 )
-                    .catch( () => 0 ),
-                s.hostPlayerId
-                    ? db
-                        .select( { nickname: playerSessions.nickname } )
-                        .from( playerSessions )
-                        .where( eq( playerSessions.id, s.hostPlayerId ) )
-                        .limit( 1 )
-                        .then( ( r: { nickname: string }[] ) => r[ 0 ]?.nickname ?? null )
-                        .catch( () => null )
-                    : Promise.resolve( null ),
-            ] );
+            }
 
-            countMap.set( s.sessionId, playerCount );
-            nicknameMap.set( s.sessionId, hostNickname );
+            return {
+                hasActiveGame: !! s.locked_at,
+                hostNickname,
+                playerCount: count ?? 0,
+                selectedGame: s.selected_game,
+                sessionId: s.id,
+                startedAt: s.started_at,
+            };
+
         } )
     );
 
-    return {
-        sessions: activeSessions.map( ( s: SessionRow ) => ( {
-            hasActiveGame: !! s.lockedAt,
-            hostNickname: nicknameMap.get( s.sessionId ) ?? null,
-            playerCount: countMap.get( s.sessionId ) ?? 0,
-            selectedGame: s.selectedGame,
-            sessionId: s.sessionId,
-            startedAt: s.startedAt.toISOString(),
-        } ) ),
-    };
+    return { sessions };
 
 } );

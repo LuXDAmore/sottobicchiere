@@ -1,130 +1,145 @@
-# Schema Database — Sottobicchiere
+# Database Schema — Sottobicchiere (MVP)
 
-Stack: Neon PostgreSQL + Drizzle ORM (`server/db/schema.ts`)
+> DB: **Supabase Postgres**. Migration **SQL native** in `supabase/migrations/`. I tipi TypeScript sono generati in `shared/types/database.ts` (`pnpm db:types`).
 
-## Principi
+## Convenzioni
 
-- **Effimero per i giocatori**: `table_sessions`, `player_sessions`, `groups` hanno TTL (8h). Puliti ogni notte dal task `cleanup-expired-sessions`.
-- **Permanente per le venue**: `venues` e `tables` non vengono cancellate.
-- **Nessun PII**: i nickname sono scelti liberamente, nessun dato identificativo reale.
-- **Game state non in DB**: lo stato dei giochi vive in memoria Nitro (`server/utils/game-state.ts`), non persistente tra riavvii.
+- Chiavi primarie `uuid` (`gen_random_uuid()`); timestamp in UTC (`timestamptz`).
+- Sessioni e dati di gioco **effimeri** (TTL via `expires_at` + pulizia `pg_cron`).
+- Nomi tabella in `snake_case` plurale; colonne in `snake_case`.
+- **RLS** attiva su tutte le tabelle: l'accesso passa dalle API server (service role). I client leggono solo la propria riga in `player_sessions` (serve ad autorizzare il channel).
 
-## Tabelle
+## Entità principali
 
-### `venues`
+### venues
 
-```sql
-id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
-slug        text NOT NULL UNIQUE          -- es: "bar-centrale"
-name        text NOT NULL                 -- nome del locale
-config      jsonb NOT NULL DEFAULT '{}'   -- config personalizzata (colori brand, ecc.)
-created_at  timestamptz NOT NULL DEFAULT now()
-```
+Locali/bar che ospitano i tavoli.
 
-### `tables`
+| Campo | Tipo | Note |
+|---|---|---|
+| id | uuid | PK |
+| slug | text | univoco, per URL |
+| name | text | nome locale |
+| created_at | timestamptz | |
 
-```sql
-id           uuid PRIMARY KEY DEFAULT gen_random_uuid()
-venue_id     uuid NOT NULL REFERENCES venues(id) ON DELETE CASCADE
-table_number integer NOT NULL               -- numero tavolo (es: 5)
-qr_token     text NOT NULL UNIQUE           -- token per il QR code
-created_at   timestamptz NOT NULL DEFAULT now()
+### tables
 
-UNIQUE (venue_id, table_number)
-```
+Tavoli fisici con QR.
 
-### `table_sessions`
+| Campo | Tipo | Note |
+|---|---|---|
+| id | uuid | PK |
+| venue_id | uuid | FK → venues.id (cascade) |
+| qr_token | text | univoco, nel QR |
+| table_number | integer | numero tavolo; `unique(venue_id, table_number)` |
+| created_at | timestamptz | |
 
-Sessione effimera aperta per un tavolo.
+### table_sessions
 
-```sql
-id          uuid PRIMARY KEY DEFAULT gen_random_uuid()
-table_id    uuid NOT NULL REFERENCES tables(id) ON DELETE CASCADE
-started_at  timestamptz NOT NULL DEFAULT now()
-expires_at  timestamptz NOT NULL  -- default Drizzle: now() + 8h; sovrascritto lato API se necessario
-```
+Sessione di gioco effimera per un tavolo.
 
-Index: `expires_at` (per il cleanup task notturno)
+| Campo | Tipo | Note |
+|---|---|---|
+| id | uuid | PK |
+| table_id | uuid | FK → tables.id (cascade) |
+| started_at | timestamptz | |
+| expires_at | timestamptz | TTL (default `now() + interval '8 hours'`) |
+| selected_game | text | gioco scelto in lobby |
+| game_mode | text | modalità del gioco |
+| session_mode | text | `board` \| `dating` \| `preserata` (default `board`) |
+| dating_enabled | boolean | toggle dating della sessione |
+| locked_at | timestamptz | lock dopo l'avvio |
+| host_player_id | uuid | host corrente (riassegnabile) |
 
-### `player_sessions`
+### groups
 
-Giocatore anonimo in una sessione tavolo.
+Gruppi/squadre opzionali al tavolo.
 
-```sql
-id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
-table_session_id uuid NOT NULL REFERENCES table_sessions(id) ON DELETE CASCADE
-nickname         text NOT NULL                 -- scelto dal giocatore (max 20 car. validati da Zod, nessun CHECK DB)
-color            text NOT NULL                 -- hex colore identità (#6366F1, #8B5CF6, ecc.)
-group_id         uuid REFERENCES groups(id)    -- null = giocatore solitario
-joined_at        timestamptz NOT NULL DEFAULT now()
-```
+| Campo | Tipo | Note |
+|---|---|---|
+| id | uuid | PK |
+| table_session_id | uuid | FK (cascade) |
+| name | text | nome gruppo |
+| color | text | colore UI |
+| created_at | timestamptz | |
 
-### `groups`
+### player_sessions
 
-Squadre all'interno di una sessione tavolo.
+Giocatori effimeri in una sessione.
 
-```sql
-id               uuid PRIMARY KEY DEFAULT gen_random_uuid()
-table_session_id uuid NOT NULL REFERENCES table_sessions(id) ON DELETE CASCADE
-name             text NOT NULL                 -- nome squadra (scelto dai giocatori)
-color            text NOT NULL                 -- hex colore squadra
-created_at       timestamptz NOT NULL DEFAULT now()
-```
+| Campo | Tipo | Note |
+|---|---|---|
+| id | uuid | PK |
+| table_session_id | uuid | FK (cascade) |
+| nickname | text | visualizzato |
+| color | text | colore UI |
+| group_id | uuid | FK opzionale (set null) |
+| user_id | uuid | utente Supabase anonimo (autorizza il channel) |
+| is_host | boolean | host della sessione |
+| joined_at | timestamptz | istante di ingresso al tavolo |
 
-## Colori giocatore
+### games
 
-I colori sono assegnati automaticamente al join da una palette predefinita (8 colori massimo per sessione):
+Partita di un mini-gioco nella sessione (i round sono incorporati, non una tabella separata).
 
-```typescript
-const PLAYER_COLORS = [
-  '#6366F1', // Indigo
-  '#8B5CF6', // Violet
-  '#EC4899', // Pink
-  '#F59E0B', // Amber
-  '#10B981', // Emerald
-  '#06B6D4', // Cyan
-  '#F97316', // Orange
-  '#EF4444', // Red
-];
-```
+| Campo | Tipo | Note |
+|---|---|---|
+| id | uuid | PK |
+| table_session_id | uuid | FK **unique** (cascade) — una partita attiva per sessione |
+| kind | text | es. `thumbs` (default) |
+| phase | text | `voting` \| `reveal` \| `finished` |
+| round_index | integer | round corrente |
+| total_rounds | integer | round totali |
+| questions | jsonb | domande della partita |
+| current_question | jsonb | domanda del round |
+| scores | jsonb | punteggi cumulati |
+| voted_count | integer | voti del round |
+| total_count | integer | quorum (presenti online) |
+| revealed_votes | jsonb | valorizzato solo in fase `reveal` |
+| host_player_id | uuid | host della partita |
+| created_at / updated_at | timestamptz | |
 
-## Game State (fuori DB — in-memory Nitro)
+### votes
 
-Lo stato dei giochi vive in `server/utils/game-state.ts` come `Map<tableSessionId, TableSession>` process-local. Non è persistente tra riavvii del server.
+Voti per round (segreti: nessun accesso client, solo service role).
 
-```typescript
-// Struttura attuale
-TableSession {
-  players: Map<playerId, WsPlayer>
-  peerToPlayer: Map<peerId, playerId>
-  game: ThumbsGameState | null
-}
+| Campo | Tipo | Note |
+|---|---|---|
+| game_id | uuid | FK (cascade) |
+| round_index | integer | round |
+| player_id | uuid | giocatore |
+| vote | text | `up` \| `down` |
+| created_at | timestamptz | |
+| | | PK composta `(game_id, round_index, player_id)` → voto idempotente |
 
-ThumbsGameState {
-  phase: 'voting' | 'reveal' | 'finished'
-  roundIndex: number
-  totalRounds: number
-  currentQuestion: { it: string; en: string }
-  votes: Map<playerId, 'up' | 'down'>
-  scores: Map<playerId, number>
-  hostPlayerId: string
-}
-```
+### dating_messages
 
-## Cleanup Task
+Messaggi tra tavoli in dating mode.
 
-Nitro scheduled task `cleanup-expired-sessions` (ogni notte alle 03:00):
+| Campo | Tipo | Note |
+|---|---|---|
+| id | uuid | PK |
+| from_table_session_id | uuid | FK → table_sessions (cascade) |
+| to_table_session_id | uuid | FK → table_sessions (cascade) |
+| body | text | contenuto |
+| created_at | timestamptz | |
 
-```sql
-DELETE FROM table_sessions WHERE expires_at < now();
--- CASCADE: cancella automaticamente player_sessions e groups associati
-```
+## Relazioni (alto livello)
 
+- venue 1—N tables
+- table 1—N table_sessions
+- table_session 1—N groups, player_sessions; 1—1 games (attiva)
+- game 1—N votes (per round)
+- table_session N—N table_session via dating_messages
 
-## Procedura operativa: genera QR + seed tavoli
+## Realtime & sicurezza
 
-1. Inserisci/aggiorna la venue in `venues` (slug stabile).
-2. Genera i token QR per ogni tavolo (es. `roma-001`, `roma-002`) e popolali nella tabella `tables`.
-3. Mantieni una migrazione SQL di seed idempotente (con `ON CONFLICT`) in `server/db/migrations/postgresql/` (es. `0001_seed_venues_tables.postgresql.sql`).
-4. Esegui le migrazioni in ambiente target prima di stampare i QR: in produzione le API rispondono 404 solo per token realmente inesistenti.
-5. Usa il fallback `demo/demo-001` esclusivamente in demo/dev impostando `NUXT_ENABLE_DEMO_FALLBACK=true`.
+- I cambi su `games`, `table_sessions` e `dating_messages` sono propagati ai client da **trigger** che chiamano `realtime.broadcast_changes()`.
+- I **voti restano segreti**: i client non leggono `votes`; i risultati compaiono in `games.revealed_votes` solo in fase `reveal`.
+- Pulizia con **pg_cron**: rimozione delle sessioni scadute e dei dati correlati (cascade).
+
+## Note di implementazione
+
+- Indici su FK e su `table_sessions.expires_at` per il cleanup.
+- Vincoli univoci: `venues.slug`, `tables.qr_token`, `tables(venue_id, table_number)`, `games.table_session_id`.
+- Soft-delete non necessario (dati effimeri); hard-delete via pg_cron.

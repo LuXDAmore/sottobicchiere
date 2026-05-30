@@ -1,13 +1,6 @@
-import { and, eq, gt } from 'drizzle-orm';
 import { z } from 'zod';
 
-import {
-    playerSessions,
-    tableSessions,
-} from '../../../../../db/schema';
-import { DEMO_TABLE_SESSION_ID, setDemoGameSelected } from '../../../../../utils/demo-session';
-import { resolveTableRow } from '../../../../../utils/table-resolver';
-import { emitTableEvent } from '../../../../../utils/table-ws-broker';
+import { requirePlayer, requireTable } from '../../../../../utils/request';
 
 const payloadSchema = z.object( {
     gameMode: z.string().min( 1 ).max( 40 ).optional(),
@@ -16,19 +9,6 @@ const payloadSchema = z.object( {
 } );
 
 export default defineEventHandler( async event => {
-
-    const venueSlug = getRouterParam( event, 'venue' )
-        , qrToken = getRouterParam( event, 'token' );
-
-    if( ! venueSlug || ! qrToken ) {
-
-        throw createError( {
-            statusCode: 400,
-            statusMessage: 'MISSING_ROUTE_PARAMS',
-            message: 'Parametri mancanti nel link. Controlla il QR code.',
-        } );
-
-    }
 
     const parsed = payloadSchema.safeParse( await readBody( event ) );
 
@@ -43,81 +23,18 @@ export default defineEventHandler( async event => {
     }
 
     const body = parsed.data
-        , table = await resolveTableRow( venueSlug, qrToken );
+        , { client, table } = await requireTable( event )
 
-    if( ! table ) {
+        // Verifica proprietà del giocatore (anti-impersonificazione) e ne ricava la sessione.
+        , player = await requirePlayer( event, client, body.playerId );
 
-        throw createError( {
-            statusCode: 404,
-            statusMessage: 'TABLE_NOT_FOUND',
-            message: 'QR code non riconosciuto. Chiedi al personale del locale.',
-        } );
-
-    }
-
-    if( table.tableId === 'demo-table-001' ) {
-
-        const lockedAt = new Date()
-            , lockedAtIso = lockedAt.toISOString();
-
-        setDemoGameSelected( body.selectedGame, body.gameMode ?? null, body.playerId, lockedAtIso );
-
-        emitTableEvent( DEMO_TABLE_SESSION_ID, {
-            type: 'game:selected',
-            selectedGame: body.selectedGame,
-            gameMode: body.gameMode ?? null,
-            hostPlayerId: body.playerId,
-        } );
-
-        emitTableEvent( DEMO_TABLE_SESSION_ID, {
-            type: 'game:locked',
-            lockedAt: lockedAtIso,
-        } );
-
-        return {
-            ok: true,
-            selectedGame: body.selectedGame,
-            gameMode: body.gameMode ?? null,
-            lockedAt: lockedAtIso,
-            hostPlayerId: body.playerId,
-        };
-
-    }
-
-    const now = new Date();
-
-    // Resolve the session the player actually belongs to (not the newest one on the table)
-    const playerRow = await db
-        .select( { tableSessionId: playerSessions.tableSessionId } )
-        .from( playerSessions )
-        .where( eq( playerSessions.id, body.playerId ) )
-        .limit( 1 )
-        .then( ( rows: { tableSessionId: string }[] ) => rows[ 0 ] ?? null );
-
-    if( ! playerRow ) {
-
-        throw createError( {
-            statusCode: 403,
-            statusMessage: 'PLAYER_NOT_FOUND',
-            message: 'Giocatore non riconosciuto. Torna alla lobby e riprova.',
-        } );
-
-    }
-
-    const session = await db
-        .select( {
-            id: tableSessions.id,
-            hostPlayerId: tableSessions.hostPlayerId,
-            lockedAt: tableSessions.lockedAt,
-        } )
-        .from( tableSessions )
-        .where( and(
-            eq( tableSessions.id, playerRow.tableSessionId ),
-            eq( tableSessions.tableId, table.tableId ),
-            gt( tableSessions.expiresAt, now )
-        ) )
-        .limit( 1 )
-        .then( ( rows: { id: string; hostPlayerId: string | null; lockedAt: Date | null }[] ) => rows[ 0 ] ?? null );
+    const { data: session } = await client
+        .from( 'table_sessions' )
+        .select( 'id, host_player_id, locked_at' )
+        .eq( 'id', player.table_session_id )
+        .eq( 'table_id', table.tableId )
+        .gt( 'expires_at', new Date().toISOString() )
+        .maybeSingle();
 
     if( ! session ) {
 
@@ -128,8 +45,7 @@ export default defineEventHandler( async event => {
         } );
 
     }
-
-    if( session.lockedAt ) {
+    if( session.locked_at ) {
 
         throw createError( {
             statusCode: 409,
@@ -138,8 +54,7 @@ export default defineEventHandler( async event => {
         } );
 
     }
-
-    if( session.hostPlayerId && session.hostPlayerId !== body.playerId ) {
+    if( session.host_player_id && session.host_player_id !== body.playerId ) {
 
         throw createError( {
             statusCode: 403,
@@ -149,35 +64,35 @@ export default defineEventHandler( async event => {
 
     }
 
-    const hostPlayerId = session.hostPlayerId ?? body.playerId
-        , lockedAt = new Date();
+    const hostPlayerId = session.host_player_id ?? body.playerId
+        , lockedAt = new Date().toISOString()
 
-    await db
-        .update( tableSessions )
-        .set( {
-            gameMode: body.gameMode ?? null,
-            hostPlayerId,
-            lockedAt,
-            selectedGame: body.selectedGame,
-        } )
-        .where( eq( tableSessions.id, session.id ) );
+        // L'UPDATE viene propagato ai client dal trigger di broadcast su table_sessions.
+        , { error } = await client
+            .from( 'table_sessions' )
+            .update( {
+                selected_game: body.selectedGame,
+                game_mode: body.gameMode ?? null,
+                locked_at: lockedAt,
+                host_player_id: hostPlayerId,
+            } )
+            .eq( 'id', session.id );
 
-    emitTableEvent( session.id, {
-        type: 'game:selected',
-        selectedGame: body.selectedGame,
-        gameMode: body.gameMode ?? null,
-        hostPlayerId,
-    } );
-    emitTableEvent( session.id, {
-        type: 'game:locked',
-        lockedAt: lockedAt.toISOString(),
-    } );
+    if( error ) {
+
+        throw createError( {
+            statusCode: 500,
+            statusMessage: 'GAME_SELECT_FAILED',
+            message: 'Non è stato possibile selezionare il gioco. Riprova.',
+        } );
+
+    }
 
     return {
         ok: true,
         selectedGame: body.selectedGame,
         gameMode: body.gameMode ?? null,
-        lockedAt: lockedAt.toISOString(),
+        lockedAt,
         hostPlayerId,
     };
 
