@@ -1,82 +1,94 @@
 # Realtime su Supabase
 
-Il realtime non gira più su WebSocket Nitro (incompatibili con il serverless di
-Vercel: le funzioni sono effimere e senza stato, non possono mantenere connessioni
-persistenti né lo stato di gioco in memoria). È stato sostituito da **Supabase**.
+Questo documento descrive l'architettura realtime dopo la migrazione da WebSocket (Nitro) a Supabase.
+
+## Perché
+
+Vercel (serverless) non mantiene connessioni WebSocket persistenti né stato in-memory tra invocazioni. La soluzione sposta il realtime su **Supabase** (servizio gestito) mantenendo le API di mutazione su Vercel.
 
 ## Architettura
 
 ```
 Client (browser)
-  ├─ @nuxtjs/supabase → signInAnonymously()   ogni giocatore ha un JWT reale
+  │
+  ├─ @nuxtjs/supabase → signInAnonymously()        ogni visitatore ha un JWT
+  │
   ├─ Channel privato "table:<tableSessionId>"
-  │     • Presence       → giocatori online (sostituisce il registro peer in-memory)
-  │     • Broadcast (DB) → stato partita/sessione dai trigger Postgres
-  │     • Broadcast      → messaggi dating consegnati ai due tavoli
-  ├─ Channel "dating:lobby" → disponibilità tavoli in tempo reale
+  │     • Presence       → giocatori online (+ elezione host quando l'host esce)
+  │     • Broadcast (DB) → stato partita/sessione (trigger Postgres)
+  │     • Broadcast      → messaggi dating
+  │
+  ├─ Channel "dating:lobby"  → disponibilità tavoli (broadcast da DB)
+  │
   └─ Azioni → POST /api/[venue]/table/[token]/...   (Nitro su Vercel)
 
 Server API (service role, autorità sullo stato)
   └─ scrive su Postgres → trigger realtime.broadcast_changes() → client
 ```
 
-Punti chiave:
+## Componenti
 
-- **Quorum dei voti = giocatori online**: il client host comunica i presenti
-  (dalla presence) a `game/presence`, che imposta `games.total_count`. Così
-  l'auto-reveal scatta quando tutti i presenti hanno votato e l'uscita di un
-  giocatore non blocca il round (riproduce il comportamento del vecchio WS).
-- **I record giocatore persistono**: chiudere/navigare non cancella la propria
-  iscrizione (lo stato si recupera al rientro); la pulizia avviene a scadenza
-  della sessione (`pg_cron`). La presence governa solo chi è *online*.
-- **Niente stato in memoria**: partita, voti e presenza vivono su Postgres, quindi
-  un cold start non perde nulla.
-- **Voti segreti fino al reveal**: i client ascoltano solo il broadcast della riga
-  `games`. La tabella `votes` non è esposta; i voti compaiono in `revealed_votes`
-  solo quando il server passa la partita in fase `reveal`.
-- **Server-authoritative**: tutta la logica di gioco resta in TypeScript nelle API
-  server, che scrivono con il service role. I client non scrivono mai le tabelle.
+### Database (`supabase/migrations`)
 
-## Schema e sicurezza
+- **Schema**: `venues`, `tables`, `table_sessions`, `groups`, `player_sessions`, `games`, `votes`, `dating_messages`
+- **RLS**: i client non accedono direttamente alle tabelle (tranne la propria riga `player_sessions`); tutto passa dalle API con service role
+- **Trigger di broadcast**: `games`, `table_sessions`, `dating_messages` chiamano `realtime.broadcast_changes()`
+- **Autorizzazione Realtime**: policy su `realtime.messages` per i channel privati
+- **Pulizia**: `pg_cron` rimuove sessioni scadute
 
-Le migration sono in `supabase/migrations/`:
+### Client (`app/`)
 
-- `…_init_realtime_backend.sql` — schema, RLS, autorizzazione Realtime, trigger di
-  broadcast, pulizia sessioni con `pg_cron`.
-- `…_seed_demo.sql` — venue/tavolo demo (`/demo/table/demo-001`).
+- `plugins/supabase-anon.client.ts` → accesso anonimo automatico
+- `composables/useTableSocket.ts` → presence + broadcast, stessa API pubblica del vecchio composable
 
-RLS: tutte le tabelle hanno RLS attiva e **nessuna** policy d'accesso diretto per i
-client, tranne la propria riga in `player_sessions` (serve ad autorizzare il
-channel). I channel privati sono governati da policy su `realtime.messages`.
+### Server (`server/`)
+
+- `utils/supabase.ts` → client service role
+- `utils/request.ts` → risoluzione tavolo/sessione + verifica autenticazione (`requireTable`, `requirePlayer`, `requireHostSession`)
+- `utils/game-engine.ts` → stato di gioco server-authoritative
+- `utils/game-thumbs.ts` → logica pura del gioco (round/reveal/scoring)
+- `utils/host-election.ts` → logica pura di elezione del nuovo host (`electHost`)
+- `utils/dating.ts` → validazione contenuti dating
+- `api/.../game/*`, `session/*`, `dating/*` → endpoint REST
+
+## Flusso di gioco
+
+1. Il giocatore entra (`join`) → riceve `tableSessionId` e `playerId`
+2. Il client apre il channel `table:<tableSessionId>` (presence + broadcast)
+3. Le azioni (start/vote/next) sono POST alle API; il server scrive su Postgres
+4. I trigger propagano i cambi a tutti i client via broadcast
+5. Lo stato iniziale (a freddo/refresh) è caricato via REST (`game/current`, `game/state`, `dating/rooms`)
+
+## Presence e quorum
+
+La presence del channel `table:<tableSessionId>` sostituisce il vecchio registro peer in-memory:
+
+- ogni client traccia `{ id, nickname, color }`; l'evento `sync` ricostruisce l'elenco dei giocatori online
+- l'**host** comunica al server i presenti (`POST game/presence`), che li usa come **quorum** per l'auto-reveal: quando tutti gli online hanno votato il round si svela, e l'uscita di qualcuno non blocca la partita
+
+## Riassegnazione automatica dell'host
+
+L'host (chi crea la sessione, `table_sessions.host_player_id`) è l'unico che può avviare la partita, avanzare i round, cambiare modalità e **riportare il quorum** per l'auto-reveal. Con il vecchio WebSocket, quando l'host si disconnetteva veniva promosso «il primo giocatore rimasto» (`reassignHost`). Su Supabase non c'è una connessione persistente, quindi questa logica è ricostruita sulla presence:
+
+1. **Elezione (client, deterministica)** — a ogni `presence sync`, se l'host corrente non è più tra i presenti, tutti i client calcolano lo stesso successore: il giocatore online con `id` minore (`electHost`). Solo l'eletto invia la richiesta (con un piccolo debounce), evitando una corsa tra più client.
+2. **Rivendicazione (server)** — `POST /session/claim-host` con `{ playerId, online, session }`. Il server:
+   - verifica autenticazione e proprietà del `playerId` (`requirePlayer`)
+   - verifica appartenenza alla sessione del tavolo
+   - rivaluta l'elezione sui **soli membri reali** della sessione (no presence spoofing)
+   - **non toglie l'host a chi è ancora online**
+   - applica un **update ottimistico con guardia su `host_player_id`**: in caso di race vince una sola richiesta
+   - allinea anche `games.host_player_id` della partita attiva
+3. **Propagazione** — l'update su `table_sessions` fa scattare il trigger di broadcast: tutti i client ricevono il nuovo host, `isHost` si ricalcola e il nuovo host inizia a riportare il quorum.
+
+La funzione pura `electHost(currentHost, online, members)` è coperta da test unitari (`test/unit/host-election.test.ts`).
+
+## Sicurezza
+
+- Ogni azione verifica l'utente Supabase (`serverSupabaseUser`) e che possieda il `playerId` indicato (impedisce l'impersonificazione: gli ID sono visibili via presence)
+- I voti restano segreti: i client non leggono `votes`, solo `games.revealed_votes` in fase reveal
+- I channel privati richiedono autorizzazione via RLS su `realtime.messages`: i client possono solo inserire `presence` (i broadcast di stato arrivano dai trigger DB) e non possono scrivere su `dating:lobby`
+- La riassegnazione host è validata lato server (proprietà, appartenenza, elezione sui membri reali, update ottimistico)
 
 ## Setup
 
-### Locale (Supabase CLI)
-
-```bash
-supabase start            # avvia Postgres + Realtime + Auth locali
-supabase db reset         # applica migration + seed
-pnpm db:types             # rigenera shared/types/database.ts dallo schema
-```
-
-`supabase/config.toml` abilita già auth anonima e realtime in locale.
-
-Copia in `.env` (vedi `.env.example`):
-
-```
-NUXT_PUBLIC_SUPABASE_URL=...
-NUXT_PUBLIC_SUPABASE_KEY=...
-NUXT_SUPABASE_SECRET_KEY=...
-```
-
-### Progetto remoto (produzione / Vercel)
-
-1. Crea un progetto su Supabase (free tier sufficiente).
-2. `supabase link --project-ref <ref>` poi `supabase db push` per applicare le migration.
-3. Dashboard → **Authentication → Providers** → abilita *Anonymous sign-ins*.
-4. Dashboard → **Realtime → Settings** → disattiva *Allow public access*
-   (i channel diventano privati, governati dalle policy RLS).
-5. Imposta le tre env var Supabase nel progetto Vercel.
-
-Nessuna funzione WebSocket da deployare: Vercel serve solo SSR + API routes, il
-realtime è gestito interamente dall'infrastruttura Supabase.
+Vedi README e `.env.example`. Passi principali: creare progetto Supabase, `supabase db push`, abilitare anonymous sign-ins, configurare le variabili `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_KEY`, `NUXT_SUPABASE_SECRET_KEY`.
