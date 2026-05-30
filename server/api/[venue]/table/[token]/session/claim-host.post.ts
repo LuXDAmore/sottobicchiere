@@ -87,8 +87,31 @@ export default defineEventHandler( async event => {
 
     const currentHost = session.host_player_id;
 
-    // Già host: idempotente.
-    if( currentHost === playerId ) return { ok: true, hostPlayerId: playerId };
+    // Già host: riallinea comunque games.host_player_id in caso di mismatch
+    // (es. una precedente update fallita). Senza questo controllo i client
+    // potrebbero vedere host diversi tra sessione e game.
+    if( currentHost === playerId ) {
+
+        const sameGame = await getActiveGame( client, sessionId );
+
+        if( sameGame && sameGame.host_player_id !== playerId ) {
+
+            const { error: sameGameError } = await client
+                .from( 'games' )
+                .update( { host_player_id: playerId } )
+                .eq( 'id', sameGame.id );
+
+            if( sameGameError ) throw createError( {
+                statusCode: 500,
+                statusMessage: 'GAME_HOST_SYNC_FAILED',
+                message: 'Non sono riuscito a sincronizzare l\'host sulla partita. Riprova.',
+            } );
+
+        }
+
+        return { ok: true, hostPlayerId: playerId };
+
+    }
 
     // Valida l'elezione sui soli membri reali della sessione (no presence spoofing).
     const { data: members } = await client
@@ -135,10 +158,16 @@ export default defineEventHandler( async event => {
 
     if( activeGame && activeGame.host_player_id !== playerId ) {
 
-        await client
+        const { error: gameError } = await client
             .from( 'games' )
             .update( { host_player_id: playerId } )
             .eq( 'id', activeGame.id );
+
+        if( gameError ) throw createError( {
+            statusCode: 500,
+            statusMessage: 'GAME_HOST_SYNC_FAILED',
+            message: 'Non sono riuscito a sincronizzare l\'host sulla partita. Riprova.',
+        } );
 
     }
 

@@ -166,7 +166,7 @@ export default defineEventHandler( async event => {
     // creare un duplicato. Non usiamo upsert perché sovrascrirebbe is_host.
     const { data: existing } = await client
         .from( 'player_sessions' )
-        .select( 'id, color, is_host, group_id' )
+        .select( 'id, color, is_host, group_id, nickname' )
         .eq( 'table_session_id', session.id )
         .eq( 'user_id', user.id )
         .maybeSingle();
@@ -180,7 +180,7 @@ export default defineEventHandler( async event => {
             isHost: existing.is_host,
             playerId: existing.id,
             playerColor: existing.color,
-            playerNickname: nickname,
+            playerNickname: existing.nickname,
             qrToken,
             selectedGame: session.selected_game ?? null,
             tableNumber: table.tableNumber,
