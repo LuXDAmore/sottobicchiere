@@ -19,11 +19,10 @@ export function electHost(
 ): string | null {
 
     const members = new Set( memberIds )
-        , onlineMembers = onlineIds.filter( id => members.has( id ) ).sort();
+        , onlineMembers = onlineIds.filter( id => members.has( id ) ).toSorted();
 
     if( currentHost && onlineMembers.includes( currentHost ) ) return null;
-    if( onlineMembers.length === 0 ) return null;
 
-    return onlineMembers[ 0 ];
+    return onlineMembers[ 0 ] ?? null;
 
 }
