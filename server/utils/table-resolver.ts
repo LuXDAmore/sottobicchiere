@@ -1,58 +1,44 @@
-import { and, eq } from 'drizzle-orm';
+import type { ServiceClient } from './supabase';
 
-import { tables, venues } from '../db/schema';
-
-export type ResolvedTableRow = {
+export interface ResolvedTableRow {
     tableId: string;
     tableNumber: number;
     venueName: string;
     venueSlug: string;
-};
+}
 
-const DEMO_TABLE: ResolvedTableRow = {
-    tableId: 'demo-table-001',
-    tableNumber: 1,
-    venueName: 'Demo Venue',
-    venueSlug: 'demo',
-};
+/**
+ * Risolve venue + tavolo a partire da slug e QR token.
+ *
+ * Il tavolo demo (`/demo/table/demo-001`) non è più un caso speciale in-memory:
+ * è seminato nel database (vedi supabase/migrations) e passa da questa query.
+ * @param client - client Supabase service role.
+ * @param venueSlug - slug del locale.
+ * @param qrToken - token del QR del tavolo.
+ */
+export const resolveTableRow = async(
+    client: ServiceClient,
+    venueSlug: string,
+    qrToken: string
+): Promise<ResolvedTableRow | null> => {
 
-export const isDemoFallbackEnabled = () => {
-
-    const runtime = useRuntimeConfig().public;
-    const appEnvironment = runtime.appEnvironment ?? 'development';
-
-    const demoFlag = runtime.enableDemoFallback;
-
-    // Explicit opt-out always wins
-    if( demoFlag === 'false' ) return false;
-
-    // Explicit opt-in enables demo fallback even in production
-    if( demoFlag === 'true' ) return true;
-
-    // Safe default for missing/unknown values
-    return appEnvironment !== 'production';
-
-};
-
-export const isDemoQr = ( venueSlug: string, qrToken: string ) => venueSlug === 'demo' && qrToken === 'demo-001';
-
-export const resolveTableRow = async ( venueSlug: string, qrToken: string ): Promise<ResolvedTableRow | null> => {
-
-    // Check demo first — avoids any DB query for the demo path and makes the demo
-    // resilient to database unavailability (cold starts, timeouts, etc.).
-    if( isDemoFallbackEnabled() && isDemoQr( venueSlug, qrToken ) ) return DEMO_TABLE;
-
-    return db
-        .select( {
-            tableId: tables.id,
-            tableNumber: tables.tableNumber,
-            venueName: venues.name,
-            venueSlug: venues.slug,
-        } )
-        .from( tables )
-        .innerJoin( venues, eq( tables.venueId, venues.id ) )
-        .where( and( eq( tables.qrToken, qrToken ), eq( venues.slug, venueSlug ) ) )
+    const { data, error } = await client
+        .from( 'tables' )
+        .select( 'id, table_number, venues!inner( name, slug )' )
+        .eq( 'qr_token', qrToken )
+        .eq( 'venues.slug', venueSlug )
         .limit( 1 )
-        .then( ( rows: ResolvedTableRow[] ) => rows[ 0 ] ?? null );
+        .maybeSingle();
+
+    if( error || ! data ) return null;
+
+    const venue = data.venues as unknown as { name: string; slug: string };
+
+    return {
+        tableId: data.id,
+        tableNumber: data.table_number,
+        venueName: venue.name,
+        venueSlug: venue.slug,
+    };
 
 };

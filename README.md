@@ -11,23 +11,23 @@ Stato reale del progetto (maggio 2026):
 
 - ✅ Base applicativa Nuxt 4 configurata (layout `default` + `game`, welcome page, i18n IT/EN).
 - ✅ Fondazioni documentali prodotto/architettura/design/database già presenti.
-- ✅ Schema dati iniziale Drizzle impostato a livello di codice (`server/db/schema.ts`).
-- ⚠️ Join tavolo via route dinamica QR, lobby completa e motore partita realtime sono **in implementazione**.
+- ✅ Backend realtime su Supabase: schema, RLS, presence, broadcast da DB (migration SQL native).
+- ✅ Join tavolo via route dinamica QR, lobby e motore partita realtime end-to-end.
 - ⚠️ Admin venue, premi e analytics sono **post-MVP**.
-- ⚠️ Nessuna autenticazione giocatore persistente nell’MVP (sessioni effimere).
+- ⚠️ Nessuna autenticazione giocatore persistente nell'MVP (sessioni effimere, accesso anonimo Supabase).
 
 ## Stack
 
-- **Framework**: Nuxt 4 SSR + Nitro (API e WebSocket real-time)
+- **Framework**: Nuxt 4 SSR + Nitro (API REST su Vercel)
+- **Realtime**: Supabase Realtime (presence + broadcast da DB via trigger Postgres)
+- **DB**: Supabase Postgres con migration SQL native (sessioni effimere)
+- **Auth**: Supabase anonymous sign-ins (JWT per autorizzare i channel privati)
 - **UI**: Nuxt UI 4 (Reka UI + Tailwind CSS 4), tema chiaro/scuro
 - **Motion**: `@vueuse/motion`, lenis (smooth scroll)
 - **State**: Pinia + `pinia-plugin-persistedstate`
 - **i18n**: `@nuxtjs/i18n` — italiano come lingua primaria
-- **DB**: NuxtHub con Neon PostgreSQL + Drizzle ORM (sessioni effimere)
-- **KV**: Vercel Redis (stato real-time dei giochi)
-- **Storage**: Vercel Blob (asset venue, future)
 - **PWA**: `@vite-pwa/nuxt`
-- **Deploy**: NuxtHub su Vercel
+- **Deploy**: Vercel (SSR + API) + Supabase (DB + Realtime)
 - **Testing**: Vitest + Playwright
 
 ## Prerequisiti
@@ -35,7 +35,8 @@ Stato reale del progetto (maggio 2026):
 - Node.js 24+
 - pnpm 11 (pinned da `packageManager`)
 - `mkcert` per HTTPS locale
-- File `.env` dalla CLI Vercel: `vercel env pull .env`
+- Supabase CLI (per lo stack locale: Postgres + Realtime + Auth)
+- File `.env` con le variabili Supabase (vedi `.env.example`)
 
 ## Setup locale
 
@@ -43,141 +44,128 @@ Stato reale del progetto (maggio 2026):
 pnpm install
 ```
 
-### Certificati HTTPS locali
+Genera i certificati TLS per l'HTTPS locale (necessari una volta sola):
 
 ```bash
-winget install mkcert          # o: brew install mkcert
-mkcert -install
+mkdir -p certificates
 mkcert -key-file certificates/server.key.pem -cert-file certificates/server.cert.pem localhost 127.0.0.1 ::1
 ```
 
-### Avvio dev
+> `mkcert` va installato a parte (vedi sito ufficiale). Le chiavi restano locali e non vanno committate.
+
+Avvia lo stack Supabase locale e il server di sviluppo:
 
 ```bash
-pnpm dev
+pnpm db:start      # avvia Postgres + Realtime + Auth locali (Supabase CLI)
+pnpm db:reset      # applica migration + seed demo
+pnpm dev           # server dev HTTPS su localhost:3000
 ```
 
 URL locale: `https://localhost:3000`
 
-## Database
+## Database (sessioni effimere)
 
-Le migrazioni partono sempre dai file di schema Drizzle, mai da SQL manuale.
-
-```bash
-pnpm db:generate     # genera migrazione da schema
-pnpm db:migrate      # applica migrazione
-pnpm db:sql          # REPL SQL interattivo
-```
-
-Schema Drizzle: `server/db/schema.ts`
-
-## Struttura directory
-
-```
-app/
-├── assets/styles/   CSS globali e design tokens
-├── components/      Componenti Vue riutilizzabili
-├── composables/     Composable Vue
-├── layouts/         Layout Nuxt (default, game)
-├── pages/           Route Nuxt
-├── stores/          Pinia stores
-└── app.vue          Entry point
-
-i18n/
-└── locales/         File i18n (it.json, en.json)
-
-server/
-├── api/             API Nuxt/Nitro
-├── db/              Schema Drizzle e migrazioni
-├── routes/ws/       WebSocket handlers Nitro
-├── tasks/           Scheduled tasks Nitro
-└── utils/           Utility server-side
-
-shared/              Tipi e utility cross-runtime
-public/              Asset statici
-docs/                Documentazione tecnica e di prodotto
-```
-
-
-## Cleanup sessioni scadute (cron Nitro)
-
-- Cron configurato in `nuxt.config.ts`: `0 6 * * *`
-- Timezone operativa Nitro Scheduled Tasks: **UTC**
-- Significato operativo: il cleanup gira ogni giorno alle **06:00 UTC**.
-
-### Conversione oraria locale (venue)
-
-L'orario locale cambia in base al fuso del locale (e all'eventuale ora legale). Esempi:
-
-- Venue su `Europe/Rome`: in inverno `06:00 UTC = 07:00` locali; in estate `06:00 UTC = 08:00` locali.
-- Venue su `America/New_York`: in inverno `06:00 UTC = 01:00` locali; in estate `06:00 UTC = 02:00` locali.
-
-Usare sempre UTC come riferimento canonico per evitare ambiguità tra venue in fusi diversi.
-
-Endpoint interno health cleanup: `GET /api/internal/cleanup-health` (header `x-cron-secret` o query `?secret=` se `CRON_SECRET` è configurato).
-
-## Shared Runtime
-
-Il codice in `shared/` è framework-neutral: nessun composable Vue, nessun helper Nitro, nessun client DB. Solo tipi TypeScript puri e utility funzionali.
-
-## i18n
-
-Ogni stringa visibile all'utente deve avere traduzione in italiano (primario) e inglese. Prima di un PR, verificare l'UI in entrambe le lingue.
-
-## Quality commands
+Le migration sono **SQL native Supabase** in `supabase/migrations/` (niente più Drizzle).
 
 ```bash
-pnpm prepare
-pnpm lint
-pnpm typecheck
-pnpm test:unit -- --run
-pnpm test:nuxt
-pnpm test:coverage
+pnpm db:start      # avvia lo stack Supabase locale
+pnpm db:reset      # applica migration + seed
+pnpm db:diff       # genera una migration dal diff dello schema
+pnpm db:types      # rigenera shared/types/database.ts dallo schema
+pnpm db:push       # applica le migration al progetto remoto
 ```
 
-`pnpm lint` deve terminare pulito prima del deploy.
+Tabelle principali (MVP): `venues`, `tables`, `table_sessions`, `groups`, `player_sessions`, `games`, `votes`, `dating_messages`.
 
-## Script principali
-
-```bash
-pnpm dev           # server dev HTTPS su localhost:3000
-pnpm build         # build produzione
-pnpm preview       # anteprima build produzione
-pnpm lint          # ESLint + Stylelint
-pnpm lint:fix      # fix automatico
-pnpm typecheck     # controllo TypeScript
-pnpm test          # test unit
-pnpm test:nuxt     # test Nuxt
-pnpm test:coverage # coverage report
-pnpm db:generate   # genera migrazione Drizzle
-pnpm db:migrate    # applica migrazione
-```
-
-## Commit
-
-Conventional Commits + commitlint:
+## Struttura del progetto
 
 ```
-type(scope?): subject
+app/                Frontend Nuxt (pagine, componenti, layout, stores)
+├── components/      UI riutilizzabile
+├── composables/     Hook riutilizzabili (es. useTableSocket)
+├── layouts/         Layout default + game
+├── pages/           Routing file-based (incluso [venue]/table/[token])
+├── plugins/         Accesso anonimo Supabase (supabase-anon.client)
+└── stores/          Pinia (giocatore, sessione)
+
+server/             Backend Nitro (API REST su Vercel)
+├── api/             Endpoint REST ([venue]/table/[token]/{game,session,dating})
+└── utils/           supabase, request, game-engine, game-thumbs, host-election, dating
+
+supabase/
+├── migrations/      Schema, RLS, trigger di broadcast, pg_cron, seed
+└── config.toml      Auth anonima + realtime in locale
+
+shared/             Codice condiviso client/server (framework-neutral)
+└── types/           realtime.ts (dominio) + database.ts (schema Supabase)
 ```
 
-Tipi comuni: `feat`, `fix`, `docs`, `chore`, `ci`, `test`, `refactor`, `perf`, `style`
+## Convenzioni
 
-## Release
+- **Italiano** come lingua principale dei contenuti (UI, copy, commenti pubblici)
+- **Conventional Commits** per i messaggi git
+- **Lint/format** prima di ogni commit (`pnpm lint`)
 
-```bash
-pnpm version:patch
-pnpm version:minor
-pnpm version:major
+## Realtime backend (Supabase)
+
+Il realtime non gira più su WebSocket Nitro (incompatibili con il serverless di Vercel). È gestito da Supabase:
+
+```
+Client (browser)
+├─ @nuxtjs/supabase → signInAnonymously()        # ogni visitatore ha un JWT
+├─ Channel privato "table:<tableSessionId>"
+│     • Presence       # giocatori online (+ elezione host quando l'host esce)
+│     • Broadcast (DB) # stato partita/sessione dai trigger Postgres
+│     • Broadcast      # messaggi dating
+├─ Channel "dating:lobby"  # disponibilità tavoli
+└─ Azioni → POST /api/[venue]/table/[token]/...   # Nitro su Vercel
+
+Server (service role, autorità sullo stato)
+└─ scrive su Postgres → trigger realtime.broadcast_changes() → client
 ```
 
-## Documentazione
+Dettagli su RLS, presence, quorum e **riassegnazione automatica dell'host** in [`docs/realtime-supabase.md`](docs/realtime-supabase.md).
 
-- `docs/architecture.md` — architettura sistema e flussi dati
-- `docs/database-schema.md` — schema DB e modello dati
-- `docs/design.md` — design system, palette, tipografia, motion
-- `docs/agents-changelog.md` — log delle sessioni di sviluppo AI
+## Cleanup sessioni scadute
 
-## Design
+- Gestito da **pg_cron** dentro Supabase (vedi migration), non più da task Nitro né Vercel Cron.
+- Rimuove periodicamente le sessioni scadute (`expires_at < now()`) e i dati correlati (cascade).
 
-Asset, guide visive e palette in `design/`.
+## Roadmap (estratto)
+
+- Admin venue per sfide e premi
+- Analytics aggregate, anonime e privacy-first
+- Nuove modalità di gioco
+
+## Approfondimenti
+
+Documentazione estesa in `docs/`:
+
+- [Fondazioni di prodotto](docs/product-foundations.md)
+- [Architettura](docs/architecture.md)
+- [Schema database](docs/database-schema.md)
+- [Contratti API](docs/api-contracts.md)
+- [Modalità di gioco](docs/game-modes.md)
+- [Design](docs/design.md)
+- [Realtime su Supabase](docs/realtime-supabase.md)
+
+## CI/CD
+
+GitHub Actions:
+
+- **CI** (`.github/workflows/ci.yml`): lint, typecheck, unit, build su ogni push/PR.
+- **E2E** (`.github/workflows/e2e.yml`): Playwright su push/PR verso `main`.
+- **Deploy** (`.github/workflows/deploy.yml`): deploy a Vercel su push verso `main` (richiede secrets `VERCEL_*`).
+
+## Setup Supabase (sintesi)
+
+1. Crea un progetto Supabase, poi `supabase link` e `pnpm db:push` per applicare le migration.
+2. Abilita **Anonymous sign-ins** (Authentication → Providers).
+3. Disattiva *Allow public access* su Realtime (channel privati via RLS).
+4. Configura `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_KEY`, `NUXT_SUPABASE_SECRET_KEY` (in locale e su Vercel).
+
+Dettagli in [`docs/realtime-supabase.md`](docs/realtime-supabase.md).
+
+---
+
+Made with ❤️ by [LuXDAmore](https://github.com/LuXDAmore)

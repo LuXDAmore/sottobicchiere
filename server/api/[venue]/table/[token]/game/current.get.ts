@@ -1,20 +1,38 @@
-import { and, desc, eq, gt } from 'drizzle-orm';
+import type { SessionMode } from '../../../../../../shared/types/realtime';
+import { findLatestActiveSession, requireTable } from '../../../../../utils/request';
 
-import { tableSessions } from '../../../../../db/schema';
-import { resolveTableRow } from '../../../../../utils/table-resolver';
+// Selezione gioco corrente. Query: ?session=<tableSessionId> per ancorarsi alla
+// sessione del giocatore (un tavolo può avere più sessioni attive).
+export default defineEventHandler( async event => {
 
-export default defineEventHandler(async event => {
-  const venueSlug = getRouterParam(event, 'venue');
-  const qrToken = getRouterParam(event, 'token');
-  if (!venueSlug || !qrToken) throw createError({ statusCode: 400, statusMessage: 'MISSING_ROUTE_PARAMS', message: 'Parametri mancanti nel link. Controlla il QR code.' });
+    const { client, table } = await requireTable( event )
+        , requested = getQuery( event ).session as string | undefined;
 
-  const table = await resolveTableRow(venueSlug, qrToken);
-  if (!table || table.tableId === 'demo-table-001') return { selectedGame: null, gameMode: null, lockedAt: null, hostPlayerId: null };
+    let session = null;
 
-  const now = new Date();
-  const session = await db.select({ selectedGame: tableSessions.selectedGame, gameMode: tableSessions.gameMode, lockedAt: tableSessions.lockedAt, hostPlayerId: tableSessions.hostPlayerId })
-    .from(tableSessions).where(and(eq(tableSessions.tableId, table.tableId), gt(tableSessions.expiresAt, now)))
-    .orderBy(desc(tableSessions.startedAt)).limit(1).then(( r: any[] ) => r[0] ?? null);
+    if( requested ) {
 
-  return { selectedGame: session?.selectedGame ?? null, gameMode: session?.gameMode ?? null, lockedAt: session?.lockedAt ? session.lockedAt.toISOString() : null, hostPlayerId: session?.hostPlayerId ?? null };
-});
+        const { data } = await client
+            .from( 'table_sessions' )
+            .select( 'selected_game, game_mode, locked_at, host_player_id, session_mode, dating_enabled' )
+            .eq( 'id', requested )
+            .eq( 'table_id', table.tableId )
+            .gt( 'expires_at', new Date().toISOString() )
+            .maybeSingle();
+
+        session = data;
+
+    }
+
+    if( ! session ) session = await findLatestActiveSession( client, table.tableId );
+
+    return {
+        selectedGame: session?.selected_game ?? null,
+        gameMode: session?.game_mode ?? null,
+        lockedAt: session?.locked_at ?? null,
+        hostPlayerId: session?.host_player_id ?? null,
+        sessionMode: ( session?.session_mode ?? 'board' ) as SessionMode,
+        datingEnabled: session?.dating_enabled ?? false,
+    };
+
+} );

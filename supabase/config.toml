@@ -1,0 +1,35 @@
+# Configurazione Supabase locale (supabase start).
+# In produzione le stesse impostazioni vanno replicate nella dashboard del progetto.
+project_id = "sottobicchiere"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "https://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+# Auth anonima: ogni giocatore ottiene un utente effimero con JWT reale,
+# necessario per RLS e per i channel realtime privati.
+enable_anonymous_sign_ins = true
+
+[auth.rate_limit]
+# Limita la creazione di utenti anonimi per IP (anti-abuso).
+anonymous_users = 30

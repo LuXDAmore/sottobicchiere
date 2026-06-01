@@ -1,107 +1,53 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { isDemoFallbackEnabled, isDemoQr, resolveTableRow } from '../../server/utils/table-resolver';
+import type { ServiceClient } from '../../server/utils/supabase';
+import { resolveTableRow } from '../../server/utils/table-resolver';
 
-const runtimeConfig = {
-    public: {
-        appEnvironment: 'development',
-        enableDemoFallback: 'false',
-    },
-};
+// Stub del client Supabase: ogni metodo della chain è concatenabile e `maybeSingle`
+// risolve il risultato configurato ({ data, error }).
+function stubClient( result: { data: unknown; error: unknown } ): ServiceClient {
 
-vi.stubGlobal( 'useRuntimeConfig', () => runtimeConfig );
+    const chain: Record<string, unknown> = {};
 
-const setDbRows = ( rows: unknown[] ) => {
+    for( const method of [ 'from', 'select', 'eq', 'limit' ] ) chain[ method ] = () => chain;
 
-    const chain = {
-        from: () => chain,
-        innerJoin: () => chain,
-        where: () => chain,
-        limit: () => chain,
-        then: ( cb: ( rows: unknown[] ) => unknown ) => Promise.resolve( cb( rows ) ),
-    };
+    chain.maybeSingle = () => Promise.resolve( result );
 
-    vi.stubGlobal( 'db', { select: () => chain } );
+    return chain as unknown as ServiceClient;
 
-};
+}
 
-describe( 'table API fallback guard', () => {
+describe( 'resolveTableRow', () => {
 
-    beforeEach( () => {
+    it( 'mappa il record trovato (join su venues)', async () => {
 
-        runtimeConfig.public.appEnvironment = 'development';
-        runtimeConfig.public.enableDemoFallback = 'false';
-        delete process.env.NUXT_ENABLE_DEMO_FALLBACK;
-        setDbRows( [] );
+        const client = stubClient( {
+            data: { id: 'table-1', table_number: 3, venues: { name: 'Bar Centrale', slug: 'bar-centrale' } },
+            error: null,
+        } );
 
-    } );
-
-    it( 'demo fallback attivo/disattivo con flag runtime in ambiente non production', () => {
-
-        runtimeConfig.public.enableDemoFallback = 'false';
-        expect( isDemoFallbackEnabled() ).toBe( false );
-
-        runtimeConfig.public.enableDemoFallback = 'true';
-        expect( isDemoFallbackEnabled() ).toBe( true );
-
-    } );
-
-    it( 'in production il fallback demo è sempre disattivato', () => {
-
-        runtimeConfig.public.appEnvironment = 'production';
-        runtimeConfig.public.enableDemoFallback = 'true';
-        process.env.NUXT_ENABLE_DEMO_FALLBACK = 'true';
-
-        expect( isDemoFallbackEnabled() ).toBe( false );
-
-    } );
-
-    it( 'fallback demo valido solo su demo/demo-001', () => {
-
-        expect( isDemoQr( 'demo', 'demo-001' ) ).toBe( true );
-        expect( isDemoQr( 'demo', 'wrong' ) ).toBe( false );
-        expect( isDemoQr( 'bar-roma-centro', 'demo-001' ) ).toBe( false );
-
-    } );
-
-    it( 'QR reale esistente: ritorna il record DB', async () => {
-
-        setDbRows( [ {
+        await expect( resolveTableRow( client, 'bar-centrale', 'qr-xyz' ) ).resolves.toEqual( {
             tableId: 'table-1',
             tableNumber: 3,
-            venueName: 'Bar Roma Centro',
-            venueSlug: 'bar-roma-centro',
-        } ] );
-
-        expect( await resolveTableRow( 'bar-roma-centro', 'roma-003' ) ).toEqual( {
-            tableId: 'table-1',
-            tableNumber: 3,
-            venueName: 'Bar Roma Centro',
-            venueSlug: 'bar-roma-centro',
+            venueName: 'Bar Centrale',
+            venueSlug: 'bar-centrale',
         } );
 
     } );
 
-    it( 'QR reale inesistente: con fallback demo off ritorna null', async () => {
+    it( 'ritorna null se il record non esiste', async () => {
 
-        runtimeConfig.public.enableDemoFallback = 'false';
-        setDbRows( [] );
+        const client = stubClient( { data: null, error: null } );
 
-        expect( await resolveTableRow( 'bar-roma-centro', 'roma-999' ) ).toBeNull();
+        await expect( resolveTableRow( client, 'bar-centrale', 'mancante' ) ).resolves.toBeNull();
 
     } );
 
-    it( 'QR demo inesistente: con fallback demo on ritorna il tavolo demo', async () => {
+    it( 'ritorna null in caso di errore Supabase', async () => {
 
-        runtimeConfig.public.enableDemoFallback = 'true';
-        setDbRows( [] );
+        const client = stubClient( { data: null, error: { message: 'boom' } } );
 
-        expect( await resolveTableRow( 'demo', 'demo-001' ) ).toEqual( {
-            tableId: 'demo-table-001',
-            tableNumber: 1,
-            venueName: 'Demo Venue',
-            venueSlug: 'demo',
-        } );
+        await expect( resolveTableRow( client, 'bar-centrale', 'qr-xyz' ) ).resolves.toBeNull();
 
     } );
 

@@ -154,17 +154,6 @@ export default defineNuxtConfig(
             usePrettier: true,
         },
 
-        hub: {
-            blob: { driver: 'vercel-blob' },
-            cache: true,
-            db: {
-                casing: 'snake_case',
-                dialect: 'postgresql',
-                driver: 'neon-http',
-            },
-        },
-
-
         i18n: {
             defaultLocale: 'it',
             langDir: 'locales/',
@@ -204,7 +193,7 @@ export default defineNuxtConfig(
             '@nuxtjs/seo',
             '@pinia/nuxt',
             'pinia-plugin-persistedstate/nuxt',
-            '@nuxthub/core',
+            '@nuxtjs/supabase',
             ... isVitest ? [] : [ '@vercel/speed-insights' ],
             ... isVitest ? [] : [ '@vite-pwa/nuxt' ],
         ],
@@ -233,12 +222,6 @@ export default defineNuxtConfig(
             },
             experimental: {
                 openAPI: true,
-                tasks: true,
-                websocket: true,
-            },
-            scheduledTasks: {
-                // Nitro Scheduled Tasks usano timezone UTC: 06:00 UTC ogni giorno
-                '0 6 * * *': [ 'cleanup-expired-sessions' ],
             },
         },
 
@@ -268,22 +251,12 @@ export default defineNuxtConfig(
 
         robots: { disallow: [ '/' ] },
 
-        routeRules: {
-            '/ws/**': { security: { enabled: false } },
-        },
-
         runtimeConfig: {
-
-            // Private (server-side only)
-            blobReadWriteToken: process.env.BLOB_READ_WRITE_TOKEN || '',
-            cronSecret: process.env.CRON_SECRET || '',
-            redisUrl: process.env.REDIS_URL || '',
 
             // Public (safe to expose)
             public: {
 
                 appEnvironment,
-                enableDemoFallback: process.env.NUXT_ENABLE_DEMO_FALLBACK ?? 'true',
 
                 portal: {
                     colors: process.env.NUXT_COLORS,
@@ -314,6 +287,11 @@ export default defineNuxtConfig(
         },
 
         sitemap: { zeroRuntime: true },
+
+        supabase: {
+            // Gestiamo l'autenticazione (anonima) da un plugin: niente redirect a /login.
+            redirect: false,
+        },
 
         ui: {
             theme: {

@@ -1,84 +1,62 @@
-import { and, count, desc, eq, gt } from 'drizzle-orm';
-
-import { playerSessions, tableSessions } from '../../../../db/schema';
-import { resolveTableRow } from '../../../../utils/table-resolver';
-
-interface SessionRow {
-    sessionId: string;
-    startedAt: Date;
-    selectedGame: string | null;
-    lockedAt: Date | null;
-    hostPlayerId: string | null;
-}
+import { requireTable } from '../../../../utils/request';
 
 export default defineEventHandler( async event => {
 
-    const venueSlug = getRouterParam( event, 'venue' )
-        , qrToken = getRouterParam( event, 'token' );
+    const { client, table } = await requireTable( event )
+        , nowIso = new Date().toISOString()
 
-    if( ! venueSlug || ! qrToken ) throw createError( { statusCode: 400, statusMessage: 'MISSING_ROUTE_PARAMS', message: 'Parametri mancanti nel link. Controlla il QR code.' } );
+        , { data: activeSessions } = await client
+            .from( 'table_sessions' )
+            .select( 'id, started_at, selected_game, locked_at, host_player_id' )
+            .eq( 'table_id', table.tableId )
+            .gt( 'expires_at', nowIso )
+            .order( 'started_at', { ascending: false } );
 
-    const row = await resolveTableRow( venueSlug, qrToken );
+    if( ! activeSessions || activeSessions.length === 0 ) return { sessions: [] };
 
-    if( ! row ) throw createError( { statusCode: 404, statusMessage: 'TABLE_NOT_FOUND', message: 'QR code non riconosciuto. Chiedi al personale del locale.' } );
+    const sessionIds = activeSessions.map( s => s.id )
+        , hostIds = activeSessions.map( s => s.host_player_id ).filter( Boolean ) as string[]
 
-    // Demo table has no persisted sessions
-    if( row.tableId === 'demo-table-001' ) return { sessions: [] };
+        // Due query batch invece di 2N query (pattern N+1).
+        , [ { data: allPlayers }, { data: hostRows } ] = await Promise.all( [
 
-    const now = new Date();
+            // Tutti i player_sessions delle sessioni attive: conteggio in memoria.
+            client
+                .from( 'player_sessions' )
+                .select( 'table_session_id' )
+                .in( 'table_session_id', sessionIds ),
 
-    const activeSessions: SessionRow[] = await db
-        .select( {
-            sessionId: tableSessions.id,
-            startedAt: tableSessions.startedAt,
-            selectedGame: tableSessions.selectedGame,
-            lockedAt: tableSessions.lockedAt,
-            hostPlayerId: tableSessions.hostPlayerId,
-        } )
-        .from( tableSessions )
-        .where( and( eq( tableSessions.tableId, row.tableId ), gt( tableSessions.expiresAt, now ) ) )
-        .orderBy( desc( tableSessions.startedAt ) ); // newest first
+            // Nickname degli host in un unico round-trip.
+            hostIds.length > 0
+                ? client
+                    .from( 'player_sessions' )
+                    .select( 'id, nickname' )
+                    .in( 'id', hostIds )
+                : Promise.resolve( { data: [] } ),
 
-    if( activeSessions.length === 0 ) return { sessions: [] };
+        ] );
 
-    // Fetch player count and host nickname for all sessions in parallel
-    const countMap = new Map<string, number>();
-    const nicknameMap = new Map<string, string | null>();
+    // Mappa id sessione → conteggio giocatori.
+    const countBySession = new Map<string, number>();
 
-    await Promise.all(
-        activeSessions.map( async ( s: SessionRow ) => {
-            const [ playerCount, hostNickname ] = await Promise.all( [
-                db
-                    .select( { count: count() } )
-                    .from( playerSessions )
-                    .where( eq( playerSessions.tableSessionId, s.sessionId ) )
-                    .then( ( r: { count: number }[] ) => r[ 0 ]?.count ?? 0 )
-                    .catch( () => 0 ),
-                s.hostPlayerId
-                    ? db
-                        .select( { nickname: playerSessions.nickname } )
-                        .from( playerSessions )
-                        .where( eq( playerSessions.id, s.hostPlayerId ) )
-                        .limit( 1 )
-                        .then( ( r: { nickname: string }[] ) => r[ 0 ]?.nickname ?? null )
-                        .catch( () => null )
-                    : Promise.resolve( null ),
-            ] );
+    for( const row of allPlayers ?? [] ) {
 
-            countMap.set( s.sessionId, playerCount );
-            nicknameMap.set( s.sessionId, hostNickname );
-        } )
-    );
+        countBySession.set( row.table_session_id, ( countBySession.get( row.table_session_id ) ?? 0 ) + 1 );
 
-    return {
-        sessions: activeSessions.map( ( s: SessionRow ) => ( {
-            hasActiveGame: !! s.lockedAt,
-            hostNickname: nicknameMap.get( s.sessionId ) ?? null,
-            playerCount: countMap.get( s.sessionId ) ?? 0,
-            selectedGame: s.selectedGame,
-            sessionId: s.sessionId,
-            startedAt: s.startedAt.toISOString(),
-        } ) ),
-    };
+    }
+
+    // Mappa player id → nickname.
+    const nicknameByPlayer = new Map( ( hostRows ?? [] ).map( r => [ r.id, r.nickname ] ) );
+
+    const sessions = activeSessions.map( s => ( {
+        hasActiveGame: !! s.locked_at,
+        hostNickname: s.host_player_id ? ( nicknameByPlayer.get( s.host_player_id ) ?? null ) : null,
+        playerCount: countBySession.get( s.id ) ?? 0,
+        selectedGame: s.selected_game,
+        sessionId: s.id,
+        startedAt: s.started_at,
+    } ) );
+
+    return { sessions };
 
 } );
