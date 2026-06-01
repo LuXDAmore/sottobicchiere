@@ -2,10 +2,12 @@ import { z } from 'zod';
 
 import { requirePlayer, requireTable } from '../../../../../utils/request';
 
+// Solo i giochi con una pagina reale: evita che venga persistito uno slug
+// arbitrario che porterebbe gli altri giocatori su /game/<inesistente> (404).
 const payloadSchema = z.object( {
     gameMode: z.string().min( 1 ).max( 40 ).optional(),
     playerId: z.string().uuid(),
-    selectedGame: z.string().min( 1 ).max( 40 ),
+    selectedGame: z.enum( [ 'thumbs', 'word-blitz' ] ),
 } );
 
 export default defineEventHandler( async event => {

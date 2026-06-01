@@ -1,6 +1,6 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-05-25
+Aggiornato: 2026-06-01
 
 ## Bootstrap (fase 0) — Documentazione e Design System
 
@@ -21,7 +21,17 @@ Aggiornato: 2026-05-25
 - [x] Creare docs/game-modes.md
 - [x] Creare docs/api-contracts.md
 - [x] Allineare README.md alle capability MVP effettive
-- [ ] Creare il logo SVG placeholder di Sottobicchiere
+- [x] Creare il logo SVG placeholder di Sottobicchiere (`public/logo-sottobicchiere-square.svg` + `favicon.svg`) e rimuovere gli asset WeGree residui
+
+## Audit MVP pre-preview (2026-06-01)
+
+- [x] Fix race realtime `close()`/`open()`: navigando lobby↔gioco la connessione restava morta (canale azzerato dopo l'await mentre `open()` faceva early-return)
+- [x] Anti-spam toggle dating in lobby (stato di loading + `disabled` finché la POST non si risolve)
+- [x] `game/select`: ristretto `selectedGame` ai giochi reali (`thumbs`/`word-blitz`) — niente più navigazioni verso `/game/<inesistente>`
+- [x] `nuxt.config` supabase `types` → `shared/types/database.ts` (basta `Database = unknown` lato client)
+- [x] Pulizia branding WeGree residuo: favicon + logo Sottobicchiere, `pwa-assets.config`, `.versionrc.json`, dizionario cspell
+- [ ] Rigenerare il set completo di icone PWA dal nuovo SVG (`/images/icons/*` sono ancora i raster ereditati)
+- [ ] Lock join durante partita attiva (attualmente chi entra viene portato direttamente nel gioco in corso)
 
 ## Database (fase 1)
 
@@ -91,7 +101,7 @@ Aggiornato: 2026-05-25
 
 - [x] Creare `i18n/locales/it.json` con chiavi MVP
 - [x] Creare `i18n/locales/en.json` con chiavi MVP
-- [ ] Verificare ogni stringa visibile in IT e EN prima del primo deploy
+- [x] Verificare ogni stringa visibile in IT e EN prima del primo deploy (parità chiavi 119/119, nessuna chiave usata nel codice mancante)
 
 ## Giochi (fase 2)
 

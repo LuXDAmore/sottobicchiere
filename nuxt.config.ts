@@ -291,6 +291,10 @@ export default defineNuxtConfig(
         supabase: {
             // Gestiamo l'autenticazione (anonima) da un plugin: niente redirect a /login.
             redirect: false,
+            // Tipi del database tenuti a mano in shared/types: senza questo path il
+            // modulo cerca il default `~/types/database.types.ts` (inesistente) e
+            // tipa `useSupabaseClient()` come `unknown`.
+            types: '~~/shared/types/database.ts',
         },
 
         ui: {

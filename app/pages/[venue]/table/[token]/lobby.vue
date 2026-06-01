@@ -13,14 +13,15 @@
 
                 <!-- Dating toggle -->
                 <button
-                    class="relative flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold transition-all"
+                    class="relative flex items-center gap-1.5 px-3 h-9 rounded-full text-sm font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     :class="datingEnabled
                         ? 'bg-secondary-500/15 text-secondary-500'
                         : 'bg-[var(--ui-bg-elevated)] text-muted border border-[var(--ui-border)] hover:border-secondary-500/40'"
+                    :disabled="isTogglingDating"
                     :title="$t('lobby.dating_toggle_hint')"
                     @click="toggleDating"
                 >
-                    <u-icon class="size-4" name="i-lucide-heart" />
+                    <u-icon class="size-4" :class="isTogglingDating ? 'animate-spin' : ''" :name="isTogglingDating ? 'i-lucide-loader-2' : 'i-lucide-heart'" />
                     <span class="hidden sm:inline">{{ $t('lobby.dating_toggle_label') }}</span>
                     <span
                         v-if="datingUnreadCount > 0"
@@ -310,6 +311,7 @@ const route = useRoute()
     , datingTarget = ref( '' )
     , datingBody = ref( '' )
     , isSendingDating = ref( false )
+    , isTogglingDating = ref( false )
     , pendingSelectedGame = ref<string | null>( null )
     , pendingDatingMessage = ref<{ body: string; toTableSessionId: string } | null>( null );
 
@@ -392,9 +394,19 @@ watch( datingEnabled, enabled => {
     if( enabled ) clearDatingUnread();
 } );
 
-function toggleDating() {
-    if( datingEnabled.value ) disableDating();
-    else enableDating();
+async function toggleDating() {
+    // Guardia anti-spam: l'utente potrebbe cliccare ripetutamente il toggle.
+    // Blocchiamo finché la POST non si risolve (lo stato reale arriva via realtime).
+    if( isTogglingDating.value ) return;
+
+    isTogglingDating.value = true;
+
+    try {
+        if( datingEnabled.value ) await disableDating();
+        else await enableDating();
+    } finally {
+        isTogglingDating.value = false;
+    }
 }
 
 function formatTime( isoString: string ): string {

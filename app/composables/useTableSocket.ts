@@ -406,23 +406,33 @@ const _useTableSocket = createGlobalState( () => {
 
         }
 
-        if( tableChannel ) {
+        // Azzera i riferimenti in modo SINCRONO prima di awaitare l'unsubscribe.
+        // Navigando tra pagine (lobby → gioco) l'onUnmounted chiama close() e
+        // l'onMounted della nuova pagina chiama open(): se i ref fossero ancora
+        // valorizzati durante l'await, open() farebbe early-return su `if(tableChannel)`
+        // e la connessione resterebbe morta (banner "disconnesso"). Catturando i
+        // channel in locali e azzerando subito i ref, un open() concorrente ricrea
+        // sempre un channel pulito mentre il vecchio viene smaltito qui sotto.
+        const closingTable = tableChannel
+            , closingLobby = lobbyChannel;
 
-            await tableChannel.unsubscribe();
-            await supabase.removeChannel( tableChannel );
-            tableChannel = null;
-
-        }
-
-        if( lobbyChannel ) {
-
-            await lobbyChannel.unsubscribe();
-            await supabase.removeChannel( lobbyChannel );
-            lobbyChannel = null;
-
-        }
-
+        tableChannel = null;
+        lobbyChannel = null;
         status.value = 'CLOSED';
+
+        if( closingTable ) {
+
+            await closingTable.unsubscribe();
+            await supabase.removeChannel( closingTable );
+
+        }
+
+        if( closingLobby ) {
+
+            await closingLobby.unsubscribe();
+            await supabase.removeChannel( closingLobby );
+
+        }
 
     }
 

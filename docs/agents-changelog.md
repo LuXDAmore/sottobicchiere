@@ -5,6 +5,48 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-01 — Audit MVP pre-preview: bugfix realtime, anti-spam, branding
+
+Controllo completo A→Z del repository in vista della preview pubblica. Backend
+(API Nitro, RLS, trigger, concorrenza voti/host) trovato solido; interventi
+mirati su un bug realtime reale, hardening anti-spam e pulizia del branding.
+
+### Bugfix
+- `app/composables/useTableSocket.ts` — **race `close()`/`open()`**: navigando
+  tra lobby e pagina di gioco, `close()` (async) cedeva il controllo prima di
+  azzerare `tableChannel`; l'`open()` della nuova pagina vedeva il canale ancora
+  valorizzato e faceva early-return, lasciando la connessione morta (banner
+  "disconnesso", presence/quorum/host KO). Ora i riferimenti ai channel vengono
+  azzerati in modo sincrono prima dell'`await unsubscribe`, così un `open()`
+  concorrente ricrea sempre un canale pulito.
+- `server/api/[venue]/table/[token]/game/select.post.ts` — `selectedGame`
+  ristretto a `z.enum(['thumbs','word-blitz'])`: uno slug arbitrario veniva
+  persistito e portava tutti i giocatori su `/game/<inesistente>` (404).
+
+### Hardening anti-spam / loading
+- `app/pages/[venue]/table/[token]/lobby.vue` — toggle dating con guardia
+  `isTogglingDating`: bottone `disabled` + spinner finché la POST non si risolve,
+  per impedire flip-flop e raffiche di richieste da click ripetuti.
+
+### Config / DX
+- `nuxt.config.ts` — `supabase.types` → `./shared/types/database.ts`: rimuove il
+  warning del modulo e il fallback `Database = unknown` sul client tipizzato.
+
+### Branding (rimozione residui WeGree)
+- Nuovo logo placeholder Sottobicchiere: `public/logo-sottobicchiere-square.svg`
+  (coaster + pattern dadi, palette "Notte Italiana") e `public/favicon.svg`.
+- `pwa-assets.config.ts` punta al nuovo SVG sorgente.
+- Rimossi gli asset orfani `public/logo-wegree-*.{svg,png}` e
+  `public/images/logo-wegree.png`.
+- `.versionrc.json` URL commit/compare/issue → repo `sottobicchiere`.
+- `.cspell/custom-dictionary.txt` → `sottobicchiere`.
+
+### Verifiche
+- `pnpm typecheck` pulito, `pnpm test:unit` 14/14 verdi, ESLint 0 errori sui file
+  toccati, parità chiavi i18n IT/EN 119/119 (nessuna chiave usata nel codice mancante).
+
+---
+
 ## 2026-05-30 — Riassegnazione automatica dell'host + allineamento documentazione
 
 ### Feature: riassegnazione automatica dell'host
