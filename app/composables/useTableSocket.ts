@@ -328,7 +328,7 @@ const _useTableSocket = createGlobalState( () => {
             nickname: playerStore.playerNickname ?? '',
         };
 
-        tableChannel = supabase
+        const channel = supabase
             .channel( `table:${ playerStore.tableSessionId }`, {
                 config: {
                     private: true,
@@ -339,14 +339,25 @@ const _useTableSocket = createGlobalState( () => {
             .on( 'broadcast', { event: 'UPDATE' }, handleDatabaseBroadcast )
             .on( 'broadcast', { event: 'DELETE' }, handleDatabaseBroadcast )
             .on( 'broadcast', { event: 'dating:message' }, handleDatingMessage )
-            .on( 'presence', { event: 'sync' }, syncPresence )
+            .on( 'presence', { event: 'sync' }, syncPresence );
+
+        tableChannel = channel;
+
+        channel
             .subscribe( async statusValue => {
+
+                // Ignora i callback di un channel non più corrente. Durante una
+                // navigazione lobby↔gioco il vecchio channel viene smaltito con
+                // unsubscribe() mentre il nuovo è già attivo: senza questa guardia
+                // il suo CLOSED (o CONNECTING) sovrascriverebbe lo status del nuovo
+                // channel, mostrando il banner "disconnesso" a connessione viva.
+                if( channel !== tableChannel ) return;
 
                 switch( statusValue ) {
                     case 'SUBSCRIBED': {
 
                         status.value = 'OPEN';
-                        await tableChannel?.track( meta );
+                        await channel.track( meta );
                         await loadInitialState();
 
                         break;
