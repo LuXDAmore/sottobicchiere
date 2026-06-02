@@ -4,6 +4,20 @@
 
 export default defineNuxtPlugin( async() => {
 
+    const config = useRuntimeConfig()
+        , supabaseUrl = config.public.supabase?.url as string | undefined;
+
+    // Se Supabase non è ancora configurato (placeholder di nuxt.config), non tentare
+    // l'accesso anonimo: eviti una request che fallirebbe e rumore in console. Le
+    // pagine statiche (homepage compresa) restano comunque navigabili.
+    if( ! supabaseUrl || supabaseUrl.includes( 'placeholder.supabase.co' ) ) {
+
+        console.warn( '[supabase-anon] Supabase non configurato: salto l\'accesso anonimo. Imposta NUXT_PUBLIC_SUPABASE_URL e NUXT_PUBLIC_SUPABASE_KEY.' );
+
+        return;
+
+    }
+
     const supabase = useSupabaseClient()
         , user = useSupabaseUser();
 

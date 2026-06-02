@@ -5,6 +5,45 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-02 — Fix Server error homepage + pianificazione Tavoli/Aree dinamici
+
+Sessione in due parti: (1) fix di resilienza della homepage quando Supabase non è
+ancora configurato; (2) pianificazione SpecDD della feature "tavoli e aree di gioco
+dinamici". Nessun codice della feature scritto (in attesa di conferma della spec).
+
+### Fix resilienza homepage (no Supabase configurato)
+- **Causa accertata** (lettura sorgente del modulo + verifica runtime con
+  `@supabase/ssr`): il plugin server di `@nuxtjs/supabase` esegue `createServerClient`
+  ad ogni richiesta SSR senza guardie; con `url`/`key` vuoti lancia
+  *"Your project's URL and Key are required"* → **500 su ogni pagina**, homepage compresa.
+  La homepage in sé è statica e non tocca il DB.
+- `nuxt.config.ts` — aggiunti fallback placeholder alle **opzioni native** `url`/`key`
+  del blocco `supabase` (`process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'`,
+  idem key). Con env valide (build o runtime) i placeholder vengono sovrascritti dal modulo.
+- `app/plugins/supabase-anon.client.ts` — guardia che salta `signInAnonymously()` quando
+  l'URL è il placeholder, con warning chiaro. Usa solo composable/config nativi
+  (`useRuntimeConfig().public.supabase`, `useSupabaseClient`, `useSupabaseUser`).
+- **Nessuna dipendenza aggiunta** (`package.json`/lockfile invariati).
+- **Verificato**: `pnpm build` senza env Supabase → avvio server → `GET /` restituisce
+  **HTTP 200** e renderizza "Sottobicchiere" (prima: 500).
+
+### Pianificazione feature (SpecDD)
+- `docs/specs/dynamic-game-areas.feature.sdd` — contratto SpecDD: stanze dinamiche come
+  venue `kind='adhoc'` + tavolo generato (riusa join/lobby/gioco/cleanup); aree come nuovo
+  livello, squadre = `groups` esistenti; accesso via QR + link + short_code; tutto
+  anonimo/effimero. Include Scenari, Tasks e decisioni aperte `[?]`.
+- `docs/dynamic-game-areas-workflow.md` — workflow a fasi (F0–F5), modello dati proposto,
+  decisioni da confermare e **ruoli degli agenti** (DB, Types, API, Realtime, Frontend,
+  i18n, QA/Test, Docs) con scope e *done when*.
+
+### Allineamento documentazione
+- `app.sdd` e `.specdd/bootstrap.project.md` — corretti i riferimenti di stack rimasti
+  indietro (Neon/NuxtHub/Drizzle/WebSocket Nitro) allineandoli allo stack reale
+  **Supabase** (DB + realtime + auth anonima), come da README e migrazioni esistenti.
+- `TODO.md` — nuova sezione 2026-06-02.
+
+---
+
 ## 2026-06-01 — Audit MVP pre-preview: bugfix realtime, anti-spam, branding
 
 Controllo completo A→Z del repository in vista della preview pubblica. Backend

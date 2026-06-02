@@ -1,6 +1,25 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-01
+Aggiornato: 2026-06-02
+
+## Resilienza & Tavoli dinamici (2026-06-02)
+
+- [x] Fix "Server error" in homepage senza Supabase configurato: il plugin server di
+  `@nuxtjs/supabase` chiamava `createServerClient('','')` ad ogni richiesta SSR e
+  lanciava → 500 su ogni pagina. Aggiunti fallback placeholder alle opzioni native
+  `url`/`key` del modulo in `nuxt.config.ts` (sovrascritte dalle env reali) e guardia
+  in `app/plugins/supabase-anon.client.ts` che salta l'accesso anonimo se non
+  configurato. Verificato: build senza env → homepage HTTP 200.
+- [x] Spec SpecDD feature "Dynamic Game Areas" (`docs/specs/dynamic-game-areas.feature.sdd`)
+- [x] Documento workflow/agenti (`docs/dynamic-game-areas-workflow.md`)
+- [?] Decidere: squadre per-area o per-tavolo (Decisione #1)
+- [?] Decidere: scope del gioco (tavolo/area/squadra) (Decisione #2)
+- [?] Decidere: TTL e rinnovo stanza ad-hoc (Decisione #3)
+- [ ] F1 — Migration: venue ad-hoc, `short_code`, tabella `areas`, `player_sessions.area_id`, RLS, cron
+- [ ] F2 — API: `POST /api/rooms`, `GET /api/rooms/resolve`, API aree
+- [ ] F3 — UI: pagina `/new`, share sheet (QR+link+code), pagina `/join`, CTA homepage
+- [ ] F4 — Lobby: aree & squadre + selezione al join + broadcast
+- [ ] F5 — Scope gioco, i18n, test e2e, allineamento docs
 
 ## Bootstrap (fase 0) — Documentazione e Design System
 
