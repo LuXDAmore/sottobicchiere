@@ -86,23 +86,31 @@ Handles:
   Stanza scaduta durante il join (messaggio chiaro, no 500)
   Host che abbandona (riusa l'elezione host esistente)
 
+Decisioni (confermate dall'Operator, 2026-06-02):
+  #1  Squadre (groups) PER-TAVOLO (non per-area). Niente groups.area_id per ora.
+  #2  Scope del gioco: per-tavolo + punteggio per squadra. "Per-area" rinviato.
+  #3  TTL stanza ad-hoc: 8h come table_session, nessun rinnovo manuale per ora.
+
 Tasks:
   [x] #0  Pianificazione: questa spec + documento workflow/agenti + fix resilienza homepage.
-  [?] #1  Decidere se le SQUADRE (groups) sono per-area o per-tavolo (vedi workflow §Decisioni).
-  [?] #2  Decidere lo scope del gioco: per-tavolo, per-area o squadra-vs-squadra in MVP feature.
-  [?] #3  Decidere il TTL di una stanza ad-hoc (proposta: 8h come table_session) e politica di rinnovo.
-  [ ] #4  Migration: venues.kind + venues.created_by_user_id + venues.expires_at;
-            tables.short_code (unique) + tables.created_by_user_id; tabella areas;
-            player_sessions.area_id; RLS + indici + estensione pg_cron per venue ad-hoc.
-  [ ] #5  Rigenerare shared/types/database.ts (pnpm db:types) e tipi dominio Room/Area.
-  [ ] #6  API POST /api/rooms e GET /api/rooms/resolve (zod, service role, anti-collisione code).
-  [ ] #7  API aree + estensione join/session per assegnazione area.
-  [ ] #8  UI: pagina /new (crea), share sheet (QR+link+code), pagina /join (codice), CTA in homepage.
-  [ ] #9  UI lobby: gestione aree + squadre; selezione area al join.
-  [ ] #10 Scoping del gioco secondo #2; broadcast aree.
-  [ ] #11 i18n IT/EN per tutte le nuove stringhe.
-  [ ] #12 Test: unit (resolver code, anti-collisione, area assign) + e2e (crea→condividi→join→gioca).
-  [ ] #13 Docs: aggiornare architecture.md, database-schema.md, api-contracts.md, README, TODO, changelog.
+  [x] #4  Migration: venues.kind + created_by_user_id + expires_at; tables.short_code (unique)
+            + created_by_user_id; tabella areas; player_sessions.area_id; RLS + indici +
+            estensione pg_cron per le venue ad-hoc. (20260602120000_dynamic_game_areas.sql)
+  [x] #5  shared/types/database.ts aggiornato a mano allo schema (è mantenuto a mano).
+            Nota: rieseguire `pnpm db:types` contro un Supabase reale per la verifica finale.
+  [x] #6  API POST /api/rooms e GET /api/rooms/resolve (zod, service role, anti-collisione code).
+  [ ] #7  API aree + estensione join/session per assegnazione area. (F4)
+  [x] #8  UI: pagina /new (crea), share (QR+link+code), pagina /join (codice), CTA in homepage.
+  [ ] #9  UI lobby: gestione aree + squadre; selezione area al join. (F4)
+  [ ] #10 Scoping del gioco secondo #2; broadcast aree. (F5)
+  [~] #11 i18n IT/EN: aggiunte tutte le stringhe della sezione `room` + CTA homepage (parità 155/155).
+            Restano le stringhe di aree/lobby quando si farà F4.
+  [~] #12 Test: unit room-code verdi (7). Restano unit area-assign + e2e crea→join→gioca. (F4/F5)
+  [x] #13 Docs aggiornati: database-schema.md, api-contracts.md, README, TODO, changelog, questa spec.
+
+  Verifica end-to-end ancora da fare contro un Supabase reale: `pnpm db:reset` (applica la
+  migration) + creazione stanza + join via QR/link/codice. In questo ambiente non è disponibile
+  la Supabase CLI; verificati typecheck, eslint, unit e build (SSR delle pagine = HTTP 200).
 
 Scenario: crea una stanza a casa
   Given un visitatore anonimo sulla homepage

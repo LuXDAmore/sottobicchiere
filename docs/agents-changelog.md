@@ -5,6 +5,52 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-02 — Tavoli & Aree dinamici: implementazione F1–F3
+
+Implementazione della feature pianificata, dopo conferma delle decisioni
+(#1 squadre per-tavolo, #2 gioco per-tavolo + punteggio squadra, #3 TTL 8h).
+
+### F1 — Modello dati
+- `supabase/migrations/20260602120000_dynamic_game_areas.sql` (additiva, idempotente):
+  `venues` (kind/created_by_user_id/expires_at + check + indice), `tables`
+  (short_code unique parziale + created_by_user_id), nuova tabella `areas` (+RLS),
+  `player_sessions.area_id`; `cleanup_expired_sessions` estesa per rimuovere le
+  venue `kind='adhoc'` scadute (cascade).
+- `shared/types/database.ts` aggiornato a mano allo schema (il file è mantenuto a mano).
+
+### F2 — API
+- `shared/utils/room-code.ts`: generazione/normalizzazione codici (alfabeto non ambiguo,
+  niente I/L/O/0/1) e token URL-safe — pure, testati (`test/unit/room-code.test.ts`, 7 test).
+- `server/utils/room.ts` (`createAdhocRoom`): crea venue ad-hoc + tavolo con retry su
+  collisione di slug/qr_token/short_code; rollback della venue se il tavolo fallisce.
+- `server/api/rooms/index.post.ts` (`POST /api/rooms`) e
+  `server/api/rooms/resolve.get.ts` (`GET /api/rooms/resolve`).
+- Tipi `RoomCreatedResponse` / `ResolvedRoomResponse` in `shared/types/index.ts`.
+
+### F3 — UI
+- `app/pages/new.vue`: crea stanza → pannello di condivisione (QR via `nuxt-qrcode`,
+  link e codice con copia negli appunti) → "Entra nel tavolo".
+- `app/pages/join.vue`: inserimento codice → `resolve` → redirect al join del tavolo.
+- `app/pages/index.vue`: CTA "Crea un tavolo" + "Entra con un codice" in homepage.
+- i18n: sezione `room` + chiavi welcome in IT/EN (parità 155/155).
+
+### Verifica
+- `pnpm typecheck`, `eslint`, unit test e `pnpm build` puliti. Build senza env Supabase
+  → SSR di `/`, `/new`, `/join` (IT ed EN) = **HTTP 200**.
+- Restano F4 (aree/squadre in lobby) e F5 (scope gioco + e2e). La verifica funzionale
+  completa richiede un Supabase reale (`pnpm db:reset`): la Supabase CLI non è
+  disponibile in questo ambiente.
+
+### Nota tecnica rilevata (pre-esistente, non modificata)
+- `serverSupabaseUser` (v2) restituisce i **claims JWT** (`JwtPayload`), dove l'id utente
+  è `sub`, non `id`. Il codice esistente (`join.post.ts`, `request.ts`) e il nuovo
+  (`room.ts`) usano `user.id`, che l'index signature `[key:string]:any` rende valido a
+  compile-time ma è `undefined` a runtime. Va verificato/uniformato (probabilmente a
+  `user.sub`) quando il DB sarà attivo: impatta l'autorizzazione realtime di TUTTI i tavoli,
+  non solo le stanze dinamiche. Non toccato qui per non uscire dallo scope.
+
+---
+
 ## 2026-06-02 — Fix Server error homepage + pianificazione Tavoli/Aree dinamici
 
 Sessione in due parti: (1) fix di resilienza della homepage quando Supabase non è

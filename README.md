@@ -13,6 +13,7 @@ Stato reale del progetto (maggio 2026):
 - ✅ Fondazioni documentali prodotto/architettura/design/database già presenti.
 - ✅ Backend realtime su Supabase: schema, RLS, presence, broadcast da DB (migration SQL native).
 - ✅ Join tavolo via route dinamica QR, lobby e motore partita realtime end-to-end.
+- ✅ **Tavoli dinamici**: crea uno spazio di gioco al volo (anche fuori dal bar) e fai entrare gli altri via QR, link o codice breve (pagine `/new` e `/join`, API `/api/rooms`). Anonimo ed effimero. Aree di gioco e gestione squadre in lobby: in arrivo (vedi `docs/dynamic-game-areas-workflow.md`).
 - ⚠️ Admin venue, premi e analytics sono **post-MVP**.
 - ⚠️ Nessuna autenticazione giocatore persistente nell'MVP (sessioni effimere, accesso anonimo Supabase).
 
@@ -75,7 +76,7 @@ pnpm db:types      # rigenera shared/types/database.ts dallo schema
 pnpm db:push       # applica le migration al progetto remoto
 ```
 
-Tabelle principali (MVP): `venues`, `tables`, `table_sessions`, `groups`, `player_sessions`, `games`, `votes`, `dating_messages`.
+Tabelle principali (MVP): `venues` (bar o stanze `adhoc`), `tables` (con `short_code`), `table_sessions`, `groups`, `areas`, `player_sessions`, `games`, `votes`, `dating_messages`.
 
 ## Struttura del progetto
 

@@ -12,14 +12,15 @@ Aggiornato: 2026-06-02
   configurato. Verificato: build senza env → homepage HTTP 200.
 - [x] Spec SpecDD feature "Dynamic Game Areas" (`docs/specs/dynamic-game-areas.feature.sdd`)
 - [x] Documento workflow/agenti (`docs/dynamic-game-areas-workflow.md`)
-- [?] Decidere: squadre per-area o per-tavolo (Decisione #1)
-- [?] Decidere: scope del gioco (tavolo/area/squadra) (Decisione #2)
-- [?] Decidere: TTL e rinnovo stanza ad-hoc (Decisione #3)
-- [ ] F1 — Migration: venue ad-hoc, `short_code`, tabella `areas`, `player_sessions.area_id`, RLS, cron
-- [ ] F2 — API: `POST /api/rooms`, `GET /api/rooms/resolve`, API aree
-- [ ] F3 — UI: pagina `/new`, share sheet (QR+link+code), pagina `/join`, CTA homepage
-- [ ] F4 — Lobby: aree & squadre + selezione al join + broadcast
-- [ ] F5 — Scope gioco, i18n, test e2e, allineamento docs
+- [x] Decisioni confermate: #1 squadre per-tavolo · #2 gioco per-tavolo + punteggio squadra · #3 TTL 8h
+- [x] F1 — Migration: venue ad-hoc, `short_code`, tabella `areas`, `player_sessions.area_id`, RLS, cron esteso
+- [x] F1 — Tipi `shared/types/database.ts` allineati a mano (rieseguire `db:types` su DB reale per conferma)
+- [x] F2 — API: `POST /api/rooms`, `GET /api/rooms/resolve` + `shared/utils/room-code` + unit test (7)
+- [x] F3 — UI: pagina `/new`, share (QR+link+code), pagina `/join`, CTA homepage + i18n IT/EN (155/155)
+- [ ] F4 — API aree + lobby: gestione aree & squadre + selezione area al join + broadcast aree
+- [ ] F5 — Scope gioco (per-tavolo + punteggio squadra), test e2e crea→condividi→join→gioca
+- [ ] Verifica end-to-end su Supabase reale: `pnpm db:reset` + crea stanza + join via QR/link/codice
+      (Supabase CLI non disponibile in questo ambiente; verificati typecheck, eslint, unit, build)
 
 ## Bootstrap (fase 0) — Documentazione e Design System
 
