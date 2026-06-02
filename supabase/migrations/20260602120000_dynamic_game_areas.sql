@@ -20,7 +20,11 @@ alter table public.venues
 -- Vincolo sul tipo (idempotente: aggiunto solo se non già presente).
 do $$
 begin
-    if not exists ( select 1 from pg_constraint where conname = 'venues_kind_check' ) then
+    if not exists (
+        select 1 from pg_constraint
+        where conname = 'venues_kind_check'
+          and conrelid = 'public.venues'::regclass
+    ) then
         alter table public.venues
             add constraint venues_kind_check check ( kind in ( 'venue', 'adhoc' ) );
     end if;

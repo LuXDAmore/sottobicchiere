@@ -28,7 +28,8 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - `user.id`→`sub` (2 commenti): risolto come sopra.
 - `resolve.get`: messaggio "sei cifre" → "sei caratteri" (il codice è alfanumerico).
 - `createAdhocRoom`: aggiunti unit test (retry su 23505, stop su errori non-unique, rollback
-  venue) — `test/unit/room.test.ts`; `createError` ora importato esplicitamente da `h3`.
+  venue) — `test/unit/room.test.ts`. `createError` resta auto-import Nitro; nel test è
+  stubbato come globale (`vi.stubGlobal`, ripristinato in `afterAll`).
 - Spec `.sdd` e `workflow.md`: stato aggiornato (da "planning" a "parz. implementata"),
   contratto API/Scenario allineati all'implementazione reale, "decisioni aperte" → confermate.
 

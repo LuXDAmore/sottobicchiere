@@ -558,7 +558,9 @@
             unassignedMembers.value = data.unassigned;
 
         } catch{
-        // Le aree sono accessorie: in caso di errore la lobby resta usabile.
+
+            // Le aree sono accessorie: in caso di errore la lobby resta usabile.
+
         }
 
     }

@@ -38,7 +38,7 @@
                         block
                         :disabled="creating"
                         icon="i-lucide-plus-circle"
-                        :label="creating ? $t('room.creating') : $t('room.create_button')"
+                        :label="$t('room.create_button')"
                         :loading="creating"
                         size="xl"
                         @click="handleCreate"

@@ -27,7 +27,6 @@
         "name_label": "Table name (optional)",
         "name_placeholder": "e.g. Game night at Luca's",
         "create_button": "Create table",
-        "creating": "Creating…",
         "create_error": "Could not create the table. Please try again.",
         "create_pending_toast": "Creating your table…",
         "create_success_toast": "Table created! Share it with others.",
@@ -48,7 +47,6 @@
         "code_label": "Table code",
         "code_placeholder": "e.g. ABC234",
         "go_button": "Join",
-        "resolving": "Searching…",
         "invalid_code": "Invalid code: it must be 6 characters.",
         "not_found": "Table not found: the code may be wrong or expired.",
         "create_instead": "Or create a new table"

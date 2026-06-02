@@ -38,7 +38,7 @@
                     block
                     :disabled="resolving || normalized.length !== 6"
                     icon="i-lucide-arrow-right"
-                    :label="resolving ? $t('room.resolving') : $t('room.go_button')"
+                    :label="$t('room.go_button')"
                     :loading="resolving"
                     size="xl"
                     @click="handleResolve"

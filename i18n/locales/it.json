@@ -27,7 +27,6 @@
         "name_label": "Nome del tavolo (opzionale)",
         "name_placeholder": "Es: Serata giochi da Luca",
         "create_button": "Crea tavolo",
-        "creating": "Creazione in corso…",
         "create_error": "Non sono riuscito a creare il tavolo. Riprova.",
         "create_pending_toast": "Sto creando il tavolo…",
         "create_success_toast": "Tavolo creato! Condividilo con gli altri.",
@@ -48,7 +47,6 @@
         "code_label": "Codice tavolo",
         "code_placeholder": "ES: ABC234",
         "go_button": "Entra",
-        "resolving": "Ricerca in corso…",
         "invalid_code": "Codice non valido: servono 6 caratteri.",
         "not_found": "Stanza non trovata: il codice potrebbe essere errato o scaduto.",
         "create_instead": "Oppure crea un nuovo tavolo"
