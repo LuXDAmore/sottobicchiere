@@ -328,7 +328,7 @@ const _useTableSocket = createGlobalState( () => {
             nickname: playerStore.playerNickname ?? '',
         };
 
-        tableChannel = supabase
+        const channel = supabase
             .channel( `table:${ playerStore.tableSessionId }`, {
                 config: {
                     private: true,
@@ -339,14 +339,25 @@ const _useTableSocket = createGlobalState( () => {
             .on( 'broadcast', { event: 'UPDATE' }, handleDatabaseBroadcast )
             .on( 'broadcast', { event: 'DELETE' }, handleDatabaseBroadcast )
             .on( 'broadcast', { event: 'dating:message' }, handleDatingMessage )
-            .on( 'presence', { event: 'sync' }, syncPresence )
+            .on( 'presence', { event: 'sync' }, syncPresence );
+
+        tableChannel = channel;
+
+        channel
             .subscribe( async statusValue => {
+
+                // Ignora i callback di un channel non più corrente. Durante una
+                // navigazione lobby↔gioco il vecchio channel viene smaltito con
+                // unsubscribe() mentre il nuovo è già attivo: senza questa guardia
+                // il suo CLOSED (o CONNECTING) sovrascriverebbe lo status del nuovo
+                // channel, mostrando il banner "disconnesso" a connessione viva.
+                if( channel !== tableChannel ) return;
 
                 switch( statusValue ) {
                     case 'SUBSCRIBED': {
 
                         status.value = 'OPEN';
-                        await tableChannel?.track( meta );
+                        await channel.track( meta );
                         await loadInitialState();
 
                         break;
@@ -406,23 +417,33 @@ const _useTableSocket = createGlobalState( () => {
 
         }
 
-        if( tableChannel ) {
+        // Azzera i riferimenti in modo SINCRONO prima di awaitare l'unsubscribe.
+        // Navigando tra pagine (lobby → gioco) l'onUnmounted chiama close() e
+        // l'onMounted della nuova pagina chiama open(): se i ref fossero ancora
+        // valorizzati durante l'await, open() farebbe early-return su `if(tableChannel)`
+        // e la connessione resterebbe morta (banner "disconnesso"). Catturando i
+        // channel in locali e azzerando subito i ref, un open() concorrente ricrea
+        // sempre un channel pulito mentre il vecchio viene smaltito qui sotto.
+        const closingTable = tableChannel
+            , closingLobby = lobbyChannel;
 
-            await tableChannel.unsubscribe();
-            await supabase.removeChannel( tableChannel );
-            tableChannel = null;
-
-        }
-
-        if( lobbyChannel ) {
-
-            await lobbyChannel.unsubscribe();
-            await supabase.removeChannel( lobbyChannel );
-            lobbyChannel = null;
-
-        }
-
+        tableChannel = null;
+        lobbyChannel = null;
         status.value = 'CLOSED';
+
+        if( closingTable ) {
+
+            await closingTable.unsubscribe();
+            await supabase.removeChannel( closingTable );
+
+        }
+
+        if( closingLobby ) {
+
+            await closingLobby.unsubscribe();
+            await supabase.removeChannel( closingLobby );
+
+        }
 
     }
 

@@ -6,7 +6,7 @@ import {
 export default defineConfig(
     {
         headLinkOptions: { preset: '2023' },
-        images: [ 'public/logo-wegree-square.svg' ],
+        images: [ 'public/logo-sottobicchiere-square.svg' ],
         preset,
     }
 );

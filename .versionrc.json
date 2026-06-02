@@ -46,7 +46,7 @@
             "section": "✅ Testing"
         }
     ],
-    "commitUrlFormat": "https://github.com/luxdamore/wegree/commit/{{hash}}",
-    "compareUrlFormat": "https://github.com/octocat/linguist/compare/{{previousTag}}...{{currentTag}}",
-    "issueUrlFormat": "https://github.com/LuXDAmore/wegree/issues/{{id}}"
+    "commitUrlFormat": "https://github.com/luxdamore/sottobicchiere/commit/{{hash}}",
+    "compareUrlFormat": "https://github.com/luxdamore/sottobicchiere/compare/{{previousTag}}...{{currentTag}}",
+    "issueUrlFormat": "https://github.com/luxdamore/sottobicchiere/issues/{{id}}"
 }
