@@ -48,3 +48,16 @@ export interface ActiveSessionSummary {
 export interface SessionsResponse {
     sessions: ActiveSessionSummary[];
 }
+
+// Stanza dinamica creata al volo (venue ad-hoc + tavolo generato).
+export interface RoomCreatedResponse {
+    venueSlug: string;
+    qrToken: string;
+    shortCode: string;
+    joinPath: string;
+}
+
+export interface ResolvedRoomResponse {
+    venueSlug: string;
+    qrToken: string;
+}
