@@ -94,7 +94,7 @@ function makeClient( venueInserts: QueryResult[], tableInserts: QueryResult[] ) 
 
 }
 
-const user = { sub: 'user-1' } as unknown as Parameters<typeof createAdhocRoom>[ 1 ];
+const user = 'user-1';
 
 describe( 'createAdhocRoom', () => {
 

@@ -1,8 +1,6 @@
 import type { ServiceClient } from './supabase';
-import type { JwtPayload } from '@supabase/supabase-js';
 
 import { generateRoomCode, generateToken } from '../../shared/utils/room-code';
-import { supabaseUserId } from '../../shared/utils/supabase-user';
 
 export interface CreatedRoom {
     venueSlug: string;
@@ -34,14 +32,14 @@ function isUniqueViolation( error: { code?: string } | null ): boolean {
  * entra subito dopo dal normale flusso di join `/{venueSlug}/table/{qrToken}`,
  * riusando tutta la logica esistente.
  * @param client - client Supabase service role.
- * @param user - utente anonimo che crea la stanza (ne diventa il creatore).
+ * @param createdByUserId - id dell'utente anonimo che crea la stanza (auth.uid / claim sub),
+ *   già validato dal chiamante.
  * @param name - nome opzionale della stanza.
  */
-export async function createAdhocRoom( client: ServiceClient, user: JwtPayload, name?: string ): Promise<CreatedRoom> {
+export async function createAdhocRoom( client: ServiceClient, createdByUserId: string, name?: string ): Promise<CreatedRoom> {
 
     const expiresAt = new Date( Date.now() + ROOM_TTL_MS ).toISOString()
-        , roomName = name?.trim() || 'Stanza Sottobicchiere'
-        , createdBy = supabaseUserId( user );
+        , roomName = name?.trim() || 'Stanza Sottobicchiere';
 
     let venue: { id: string; slug: string } | null = null;
 
@@ -53,7 +51,7 @@ export async function createAdhocRoom( client: ServiceClient, user: JwtPayload, 
                 slug: `r-${ generateToken( 8 ) }`,
                 name: roomName,
                 kind: 'adhoc',
-                created_by_user_id: createdBy,
+                created_by_user_id: createdByUserId,
                 expires_at: expiresAt,
             } )
             .select( 'id, slug' )
@@ -87,7 +85,7 @@ export async function createAdhocRoom( client: ServiceClient, user: JwtPayload, 
                 table_number: 1,
                 qr_token: generateToken( 12 ),
                 short_code: generateRoomCode(),
-                created_by_user_id: createdBy,
+                created_by_user_id: createdByUserId,
             } )
             .select( 'qr_token, short_code' )
             .single();

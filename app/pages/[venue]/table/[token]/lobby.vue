@@ -17,6 +17,7 @@
 
                 <!-- Dating toggle -->
                 <button
+                    :aria-label="$t('lobby.dating_toggle_label')"
                     class="disabled:cursor-not-allowed disabled:opacity-60 flex font-semibold gap-1.5 h-9 items-center px-3 relative rounded-full text-sm transition-all"
                     :class="datingEnabled
                         ? 'bg-secondary-500/15 text-secondary-500'
@@ -231,10 +232,11 @@
                     {{ $t('lobby.areas_description') }}
                 </p>
 
-                <!-- Create area (host only; usa l'host realtime, coerente col server) -->
-                <div v-if="isHostSelector" class="flex gap-2">
+                <!-- Create area: solo l'host reale (allineato al server, niente UI per i non-host) -->
+                <div v-if="isCurrentHost" class="flex gap-2">
                     <u-input
                         v-model="areaName"
+                        :aria-label="$t('lobby.area_create_placeholder')"
                         class="flex-1"
                         :disabled="isCreatingArea"
                         maxlength="30"
@@ -504,6 +506,12 @@
           , filteredGames = computed( () => getGamesByCategory( activeGameCategory.value ) )
 
           , isHostSelector = computed( () => ! gameSelection.value.hostPlayerId || gameSelection.value.hostPlayerId === playerStore.playerId )
+          // Host "reale", allineato al server (requireHostSession): l'host corrente, o —
+          // se non ancora assegnato — solo chi ha creato la sessione. Evita di mostrare
+          // ai non-host azioni che il server rifiuterebbe con 403.
+          , isCurrentHost = computed( () => ( gameSelection.value.hostPlayerId
+              ? gameSelection.value.hostPlayerId === playerStore.playerId
+              : playerStore.isHost ) )
           , isWsBootstrapping = computed( () => status.value === 'CONNECTING' && players.value.length === 0 )
 
           , tabs = computed( () => [

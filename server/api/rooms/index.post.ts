@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { supabaseUserId } from '../../../shared/utils/supabase-user';
 import { createAdhocRoom } from '../../utils/room';
 import { serviceClient } from '../../utils/supabase';
 
@@ -21,11 +22,13 @@ export default defineEventHandler( async event => {
 
     }
 
-    // Serve l'utente anonimo: ne registra la paternità della stanza ed è ciò che
-    // autorizzerà il channel realtime una volta che entrerà come host.
-    const user = await serverSupabaseUser( event ).catch( () => null );
+    // Serve l'utente anonimo: il suo id (claim `sub`, fallback `id`) registra la
+    // paternità della stanza ed è ciò che autorizzerà il channel realtime quando
+    // entrerà come host. Validiamo esplicitamente l'id come in join/requirePlayer.
+    const user = await serverSupabaseUser( event ).catch( () => null )
+        , userId = supabaseUserId( user );
 
-    if( ! user ) {
+    if( ! userId ) {
 
         throw createError( {
             statusCode: 401,
@@ -35,7 +38,7 @@ export default defineEventHandler( async event => {
 
     }
 
-    const room = await createAdhocRoom( serviceClient( event ), user, parsed.data.name );
+    const room = await createAdhocRoom( serviceClient( event ), userId, parsed.data.name );
 
     return {
         ... room,
