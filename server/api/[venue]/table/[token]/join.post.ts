@@ -149,11 +149,15 @@ export default defineEventHandler( async event => {
 
             // L'utente ha chiesto un gruppo: se l'INSERT fallisce non proseguire con
             // groupId null (stato incoerente lato UI), ma fallire esplicitamente.
-            if( groupError || ! newGroup ) throw createError( {
-                statusCode: 500,
-                statusMessage: 'GROUP_CREATE_FAILED',
-                message: 'Non sono riuscito a creare il gruppo. Riprova.',
-            } );
+            if( groupError || ! newGroup ) {
+
+                throw createError( {
+                    statusCode: 500,
+                    statusMessage: 'GROUP_CREATE_FAILED',
+                    message: 'Non sono riuscito a creare il gruppo. Riprova.',
+                } );
+
+            }
 
             groupId = newGroup.id;
 
@@ -168,7 +172,7 @@ export default defineEventHandler( async event => {
         .from( 'player_sessions' )
         .select( 'id, color, is_host, group_id, nickname' )
         .eq( 'table_session_id', session.id )
-        .eq( 'user_id', user.id )
+        .eq( 'user_id', user.sub )
         .maybeSingle();
 
     if( existing ) {
@@ -201,7 +205,7 @@ export default defineEventHandler( async event => {
                 nickname,
                 color: playerColor,
                 group_id: groupId,
-                user_id: user.id,
+                user_id: user.sub,
                 is_host: isHost,
             } )
             .select( 'id, color, is_host' )
@@ -228,11 +232,15 @@ export default defineEventHandler( async event => {
             .eq( 'id', session.id )
             .is( 'host_player_id', null );
 
-        if( hostError ) throw createError( {
-            statusCode: 500,
-            statusMessage: 'HOST_REGISTER_FAILED',
-            message: 'Non sono riuscito a registrarti come host. Riprova.',
-        } );
+        if( hostError ) {
+
+            throw createError( {
+                statusCode: 500,
+                statusMessage: 'HOST_REGISTER_FAILED',
+                message: 'Non sono riuscito a registrarti come host. Riprova.',
+            } );
+
+        }
 
     }
 

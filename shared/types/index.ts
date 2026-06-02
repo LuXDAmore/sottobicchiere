@@ -5,7 +5,37 @@ export interface PlayerInfo {
     nickname: string;
     color: PlayerColor;
     groupId: string | null;
+    areaId: string | null;
     joinedAt: string;
+}
+
+// Aree di gioco (zone) dentro una sessione.
+export interface AreaMember {
+    id: string;
+    nickname: string;
+    color: string;
+    groupId: string | null;
+    areaId: string | null;
+}
+
+export interface AreaWithMembers {
+    id: string;
+    name: string;
+    color: string;
+    ordinal: number;
+    members: AreaMember[];
+}
+
+export interface AreasResponse {
+    areas: AreaWithMembers[];
+    unassigned: AreaMember[];
+}
+
+export interface AreaCreatedResponse {
+    id: string;
+    name: string;
+    color: string;
+    ordinal: number;
 }
 
 export interface TableInfo {

@@ -1,8 +1,15 @@
-import type { RealtimeChannel } from '@supabase/supabase-js';
 
 import type { Database } from '../../shared/types/database';
-import type { DatingInboxMessage, DatingRoomStatus, LobbyGameSelection, SessionMode, ThumbsClientState, WsPlayer } from '../../shared/types/realtime';
+import type {
+    DatingInboxMessage,
+    DatingRoomStatus,
+    LobbyGameSelection,
+    SessionMode,
+    ThumbsClientState,
+    WsPlayer,
+} from '../../shared/types/realtime';
 import type { PlayerColor } from '../../shared/utils/colors';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface PresenceMeta { id: string; nickname: string; color: PlayerColor }
 type ConnectionStatus = 'CLOSED' | 'CONNECTING' | 'OPEN';
@@ -34,6 +41,9 @@ const _useTableSocket = createGlobalState( () => {
             availableTableSessionIds: [],
             unavailableTableSessionIds: [],
         } )
+        // Contatore bumpato quando aree o iscrizioni cambiano (trigger DB `lobby:changed`):
+        // la lobby lo osserva per rifare il fetch di aree/membri senza esporre righe.
+        , lobbyVersion = ref<number>( 0 )
         , status = ref<ConnectionStatus>( 'CLOSED' );
 
     let tableChannel: RealtimeChannel | null = null
@@ -266,7 +276,11 @@ const _useTableSocket = createGlobalState( () => {
 
         try {
 
-            const [ selection, datingRooms, game ] = await Promise.all( [
+            const [
+                selection,
+                datingRooms,
+                game,
+            ] = await Promise.all( [
                 $fetch<LobbyGameSelection & { sessionMode: SessionMode; datingEnabled: boolean }>( `${ apiBase() }/game/current`, { query: { session: playerStore.tableSessionId } } ),
                 $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } ),
                 $fetch<Database['public']['Tables']['games']['Row'] | null>( `${ apiBase() }/game/state`, { query: { session: playerStore.tableSessionId } } ),
@@ -326,20 +340,25 @@ const _useTableSocket = createGlobalState( () => {
             color: ( playerStore.playerColor ?? '#6366F1' ) as PlayerColor,
             id: playerStore.playerId,
             nickname: playerStore.playerNickname ?? '',
-        };
+        }
 
-        const channel = supabase
-            .channel( `table:${ playerStore.tableSessionId }`, {
-                config: {
-                    private: true,
-                    presence: { key: playerStore.playerId },
-                },
-            } )
-            .on( 'broadcast', { event: 'INSERT' }, handleDatabaseBroadcast )
-            .on( 'broadcast', { event: 'UPDATE' }, handleDatabaseBroadcast )
-            .on( 'broadcast', { event: 'DELETE' }, handleDatabaseBroadcast )
-            .on( 'broadcast', { event: 'dating:message' }, handleDatingMessage )
-            .on( 'presence', { event: 'sync' }, syncPresence );
+            , channel = supabase
+                .channel( `table:${ playerStore.tableSessionId }`, {
+                    config: {
+                        private: true,
+                        presence: { key: playerStore.playerId },
+                    },
+                } )
+                .on( 'broadcast', { event: 'INSERT' }, handleDatabaseBroadcast )
+                .on( 'broadcast', { event: 'UPDATE' }, handleDatabaseBroadcast )
+                .on( 'broadcast', { event: 'DELETE' }, handleDatabaseBroadcast )
+                .on( 'broadcast', { event: 'dating:message' }, handleDatingMessage )
+                .on( 'broadcast', { event: 'lobby:changed' }, () => {
+
+                    lobbyVersion.value += 1;
+
+                } )
+                .on( 'presence', { event: 'sync' }, syncPresence );
 
         tableChannel = channel;
 
@@ -568,6 +587,7 @@ const _useTableSocket = createGlobalState( () => {
         gameSelection,
         gameState,
         isHost,
+        lobbyVersion,
         nextRound,
         open,
         players,

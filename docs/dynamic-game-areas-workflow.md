@@ -1,9 +1,10 @@
 # Workflow & Agenti — Tavoli & Aree di gioco dinamici
 
-> Documento di pianificazione per la feature **Dynamic Game Areas**.
+> Documento di workflow per la feature **Dynamic Game Areas**.
 > Contratto SpecDD associato: [`docs/specs/dynamic-game-areas.feature.sdd`](specs/dynamic-game-areas.feature.sdd).
-> Stato: **planning** — nessun codice della feature finché l'Operator non conferma la spec
-> e risolve le decisioni aperte (§3).
+> Stato: **in corso** — decisioni confermate (§3); **F1–F3 implementate** (modello dati, API,
+> UI crea/entra) e **F4 in corso** (aree & squadre in lobby); resta **F5** (scope gioco + e2e).
+> La verifica funzionale end-to-end richiede un Supabase reale (`pnpm db:reset`).
 
 ## 1. Visione
 
@@ -62,21 +63,13 @@ Due livelli, entrambi **opzionali**:
 
 Il flusso **bar** resta identico: venue `kind='venue'`, tavoli e QR preimpostati.
 
-## 3. Decisioni aperte (da confermare prima di implementare)
+## 3. Decisioni (confermate dall'Operator, 2026-06-02)
 
-Sono i punti `[?]` della spec. Bloccano l'implementazione perché cambiano il modello.
-
-- **#1 — Squadre per-area o per-tavolo?** I `groups` (Team Blu/Rosso) valgono per
-  l'intera stanza, oppure ogni area ha le sue squadre?
-  *Proposta:* per-tavolo (più semplice, copre "Blu vs Rosso" dell'esempio). Aggiungere
-  `groups.area_id` solo se serve davvero.
-- **#2 — Scope del gioco in questa feature.** Una partita coinvolge tutta la stanza,
-  una singola area, oppure è squadra-vs-squadra?
-  *Proposta MVP-feature:* per-tavolo (come ora) + punteggio per squadra; "per-area" come
-  iterazione successiva.
-- **#3 — TTL e rinnovo della stanza ad-hoc.** Durata di default e se l'host può estenderla.
-  *Proposta:* 8h come `table_session`, con possibilità futura di "mantieni viva" finché
-  ci sono giocatori online.
+- **#1 — Squadre per-tavolo.** I `groups` (Team Blu/Rosso) valgono per l'intera stanza.
+  Niente `groups.area_id` per ora.
+- **#2 — Scope del gioco: per-tavolo + punteggio per squadra.** Il "per-area" è rinviato.
+- **#3 — TTL stanza ad-hoc: 8h** come `table_session`, senza rinnovo manuale per ora
+  (possibile "mantieni viva finché ci sono giocatori online" come iterazione futura).
 
 ## 4. Workflow a fasi
 

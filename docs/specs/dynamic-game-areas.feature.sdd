@@ -8,8 +8,9 @@ Purpose:
   venue → tavolo → sessione → gioco, aggiungendo due livelli organizzativi:
   AREE (zone di gioco) dentro un tavolo e SQUADRE (groups, già esistenti) dentro le aree.
 
-  Stato: SPEC DI PIANIFICAZIONE. Nessun codice della feature va scritto finché
-  l'Operator non conferma questo contratto. Le decisioni marcate [?] vanno risolte prima.
+  Stato: PARZIALMENTE IMPLEMENTATA. Decisioni confermate (vedi sotto). F1–F3 fatte
+  (modello dati, API stanze, UI crea/entra); F4 (aree & squadre in lobby) in corso;
+  resta F5 (scope gioco + e2e). Verifica funzionale end-to-end su un Supabase reale.
 
 References:
   ../../app.sdd
@@ -59,22 +60,25 @@ Depends on:
   supabase/migrations (SQL native + RLS + pg_cron)
   shared/utils/games.ts, shared/utils/colors.ts
 
-Exposes:
-  POST /api/rooms                         → crea stanza ad-hoc (venue+tavolo+sessione+host)
-  GET  /api/rooms/resolve?code=ABC123     → risolve short_code in { venue, token }
-  POST /api/[venue]/table/[token]/areas   → crea area
-  GET  /api/[venue]/table/[token]/areas   → lista aree
-  (POST area assign/leave gestito estendendo join/session esistenti)
+Exposes (allineato all'implementazione):
+  POST /api/rooms                                → crea stanza ad-hoc (venue + tavolo). NON crea
+                                                   sessione/host: l'host entra dal join esistente.
+  GET  /api/rooms/resolve?code=ABC234            → risolve short_code in { venueSlug, qrToken }
+  GET  /api/[venue]/table/[token]/areas          → lista aree con membri + non assegnati  (F4)
+  POST /api/[venue]/table/[token]/areas          → (host) crea area                       (F4)
+  POST /api/[venue]/table/[token]/areas/assign   → assegna sé stessi a un'area (o null)    (F4)
 
 Accepts:
-  CreateRoomInput { name?, hostNickname, hostColor?, areas?: string[] }
-  ResolveCodeInput { code }
-  CreateAreaInput { name, color? }
+  POST /api/rooms        { name? }
+  resolve (query)        { code }
+  areas POST             { playerId, name }
+  areas/assign POST      { playerId, areaId | null }
 
 Returns:
-  RoomCreated { venueSlug, qrToken, shortCode, joinUrl, tableSessionId }
-  ResolvedCode { venueSlug, qrToken }
-  Area { id, name, color, ordinal }
+  RoomCreated   { venueSlug, qrToken, shortCode, joinPath }
+  ResolvedCode  { venueSlug, qrToken }
+  Area          { id, name, color, ordinal }
+  AreasResponse { areas: AreaWithMembers[], unassigned: AreaMember[] }   (F4)
 
 Raises:
   InvalidCode (codice inesistente o stanza scaduta)
@@ -99,13 +103,13 @@ Tasks:
   [x] #5  shared/types/database.ts aggiornato a mano allo schema (è mantenuto a mano).
             Nota: rieseguire `pnpm db:types` contro un Supabase reale per la verifica finale.
   [x] #6  API POST /api/rooms e GET /api/rooms/resolve (zod, service role, anti-collisione code).
-  [ ] #7  API aree + estensione join/session per assegnazione area. (F4)
+  [x] #7  API aree: GET/POST areas + areas/assign; players.get include area_id. (F4)
   [x] #8  UI: pagina /new (crea), share (QR+link+code), pagina /join (codice), CTA in homepage.
-  [ ] #9  UI lobby: gestione aree + squadre; selezione area al join. (F4)
-  [ ] #10 Scoping del gioco secondo #2; broadcast aree. (F5)
-  [~] #11 i18n IT/EN: aggiunte tutte le stringhe della sezione `room` + CTA homepage (parità 155/155).
-            Restano le stringhe di aree/lobby quando si farà F4.
-  [~] #12 Test: unit room-code verdi (7). Restano unit area-assign + e2e crea→join→gioca. (F4/F5)
+  [x] #9  UI lobby: tab "Aree" (host crea, ognuno si auto-assegna) + broadcast `lobby:changed`. (F4)
+            Le squadre (groups) restano per-tavolo come da decisione #1.
+  [ ] #10 Scoping del gioco secondo #2 (punteggio per squadra) + risultati per team. (F5)
+  [x] #11 i18n IT/EN: stringhe `room`, CTA homepage e tab aree (parità chiavi IT/EN).
+  [~] #12 Test: unit room-code (7) + createAdhocRoom (retry/rollback). Resta e2e crea→join→gioca. (F5)
   [x] #13 Docs aggiornati: database-schema.md, api-contracts.md, README, TODO, changelog, questa spec.
 
   Verifica end-to-end ancora da fare contro un Supabase reale: `pnpm db:reset` (applica la
@@ -114,17 +118,17 @@ Tasks:
 
 Scenario: crea una stanza a casa
   Given un visitatore anonimo sulla homepage
-  When tocca "Crea tavolo", inserisce un nickname e conferma
-  Then viene creata una venue ad-hoc con un tavolo, uno short_code e una sessione
-  And il creatore diventa host della sessione
+  When tocca "Crea un tavolo" e (facoltativo) dà un nome, poi conferma
+  Then viene creata una venue ad-hoc con un tavolo e uno short_code
   And vede QR, link condivisibile e codice da mostrare agli altri
+  And "Entra nel tavolo" lo porta al join esistente, dove sceglie il nickname e diventa host
 
 Scenario: gli altri si aggregano
-  Given una stanza dinamica attiva con short_code "ABC123"
-  When un'altra persona scansiona il QR oppure apre il link oppure digita "ABC123"
+  Given una stanza dinamica attiva con short_code "ABC234"
+  When un'altra persona scansiona il QR oppure apre il link oppure digita "ABC234"
   Then atterra sulla pagina di join del tavolo
-  And può scegliere nickname, area (se presenti) e squadra
-  And entra nella stessa lobby del creatore
+  And sceglie nickname (ed eventualmente la squadra) ed entra nella stessa lobby del creatore
+  And in lobby, nel tab "Aree", può assegnarsi a una zona se l'host ne ha create
 
 Scenario: codice scaduto
   Given una stanza il cui tavolo/venue è scaduto

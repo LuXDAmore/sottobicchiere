@@ -10,7 +10,7 @@ export default defineEventHandler( async event => {
         throw createError( {
             statusCode: 400,
             statusMessage: 'INVALID_CODE',
-            message: 'Codice non valido. Controlla le sei cifre e riprova.',
+            message: 'Codice non valido. Controlla i sei caratteri e riprova.',
         } );
 
     }

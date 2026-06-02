@@ -1,9 +1,9 @@
 import type { H3Event } from 'h3';
 
-import { serverSupabaseUser } from '#supabase/server';
-
 import { serviceClient } from './supabase';
 import { resolveTableRow } from './table-resolver';
+
+import { serverSupabaseUser } from '#supabase/server';
 
 /**
  * Estrae venue/token dalla route, risolve il tavolo e crea il client service.
@@ -76,7 +76,7 @@ export async function requirePlayer( event: H3Event, client: ReturnType<typeof s
         .eq( 'id', playerId )
         .maybeSingle();
 
-    if( ! data || data.user_id !== user.id ) {
+    if( ! data || data.user_id !== user.sub ) {
 
         throw createError( {
             statusCode: 403,
@@ -176,7 +176,10 @@ export async function requirePlayerForTable( event: H3Event, client: ReturnType<
 
     }
 
-    return { player, session };
+    return {
+        player,
+        session,
+    };
 
 }
 

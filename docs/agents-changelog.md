@@ -5,6 +5,40 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-02 — F4 aree in lobby, fix user.id→sub, review Copilot
+
+### Fix realtime (user.id → user.sub)
+- `serverSupabaseUser` (v2) restituisce i claims JWT: l'id utente è **`sub`**, non `id`
+  (che era `undefined` a runtime). Corretto in `join.post.ts`, `request.ts`, `room.ts`.
+  Ora `player_sessions.user_id` = `auth.uid()` → l'autorizzazione dei channel realtime
+  combacia. (Era il blocco segnalato nella sessione precedente.)
+
+### F4 — Aree & squadre in lobby
+- Migration `20260602130000_dynamic_areas_realtime.sql`: trigger `notify_lobby_changes()`
+  su `areas` e `player_sessions` → segnale leggero `lobby:changed` sul channel del tavolo
+  (nessuna riga nel payload: privacy-safe).
+- API: `GET /areas` (aree + membri + non assegnati), `POST /areas` (host), `POST /areas/assign`
+  (ognuno sposta solo sé stesso). `players.get` ora include `area_id`.
+- `useTableSocket`: ascolta `lobby:changed` ed espone `lobbyVersion`.
+- `lobby.vue`: nuovo tab **Aree** (host crea zone, ognuno si auto-assegna, lista membri per
+  area + non assegnati), refetch su `lobbyVersion`. Squadre per-tavolo (decisione #1).
+- Tipi `AreaMember`/`AreaWithMembers`/`AreasResponse`; i18n IT/EN per il tab aree.
+
+### Review Copilot (PR #25) — risolti
+- `user.id`→`sub` (2 commenti): risolto come sopra.
+- `resolve.get`: messaggio "sei cifre" → "sei caratteri" (il codice è alfanumerico).
+- `createAdhocRoom`: aggiunti unit test (retry su 23505, stop su errori non-unique, rollback
+  venue) — `test/unit/room.test.ts`; `createError` ora importato esplicitamente da `h3`.
+- Spec `.sdd` e `workflow.md`: stato aggiornato (da "planning" a "parz. implementata"),
+  contratto API/Scenario allineati all'implementazione reale, "decisioni aperte" → confermate.
+
+### Resta (F5, richiede DB reale)
+- Scope del gioco con punteggio per squadra + risultati per team; e2e crea→join→gioca.
+- Verifica funzionale su Supabase reale (`pnpm db:reset`): la Supabase CLI non è disponibile
+  in questo ambiente, quindi F4 è verificata a typecheck/eslint/unit/build, non con DB attivo.
+
+---
+
 ## 2026-06-02 — Tavoli & Aree dinamici: implementazione F1–F3
 
 Implementazione della feature pianificata, dopo conferma delle decisioni

@@ -16,9 +16,11 @@ Aggiornato: 2026-06-02
 - [x] F1 — Migration: venue ad-hoc, `short_code`, tabella `areas`, `player_sessions.area_id`, RLS, cron esteso
 - [x] F1 — Tipi `shared/types/database.ts` allineati a mano (rieseguire `db:types` su DB reale per conferma)
 - [x] F2 — API: `POST /api/rooms`, `GET /api/rooms/resolve` + `shared/utils/room-code` + unit test (7)
-- [x] F3 — UI: pagina `/new`, share (QR+link+code), pagina `/join`, CTA homepage + i18n IT/EN (155/155)
-- [ ] F4 — API aree + lobby: gestione aree & squadre + selezione area al join + broadcast aree
-- [ ] F5 — Scope gioco (per-tavolo + punteggio squadra), test e2e crea→condividi→join→gioca
+- [x] F3 — UI: pagina `/new`, share (QR+link+code), pagina `/join`, CTA homepage + i18n IT/EN
+- [x] Fix realtime `user.id`→`user.sub` (claims JWT) in join/request/room — sblocca i channel privati
+- [x] F4 — API aree (`/areas`, `/areas/assign`) + tab "Aree" in lobby + broadcast `lobby:changed`
+- [x] Test `createAdhocRoom` (retry/rollback) + review Copilot PR #25 risolte
+- [ ] F5 — Scope gioco (punteggio per squadra) + risultati per team + test e2e crea→join→gioca
 - [ ] Verifica end-to-end su Supabase reale: `pnpm db:reset` + crea stanza + join via QR/link/codice
       (Supabase CLI non disponibile in questo ambiente; verificati typecheck, eslint, unit, build)
 
