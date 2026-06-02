@@ -231,8 +231,8 @@
                     {{ $t('lobby.areas_description') }}
                 </p>
 
-                <!-- Create area (host only) -->
-                <div v-if="playerStore.isHost" class="flex gap-2">
+                <!-- Create area (host only; usa l'host realtime, coerente col server) -->
+                <div v-if="isHostSelector" class="flex gap-2">
                     <u-input
                         v-model="areaName"
                         class="flex-1"
