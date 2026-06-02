@@ -1,6 +1,14 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+    afterAll,
+    beforeAll,
+    describe,
+    expect,
+    it,
+    vi,
+} from 'vitest';
 
 import type { ServiceClient } from '../../server/utils/supabase';
+
 import { createAdhocRoom } from '../../server/utils/room';
 
 // `createError` è auto-importato da Nitro a runtime; in unit test lo forniamo come
@@ -12,13 +20,29 @@ beforeAll( () => {
 
 } );
 
+// Ripristina i globali stubbati: il test resta isolato e non contamina gli altri.
+afterAll( () => {
+
+    vi.unstubAllGlobals();
+
+} );
+
 interface QueryResult { data: unknown; error: { code?: string } | null }
 
 // Stub minimale del client: serve `from().insert().select().single()` per venues/tables
 // e `from('venues').delete().eq()` per il rollback. Conta le chiamate per le asserzioni.
+/**
+ *
+ * @param venueInserts
+ * @param tableInserts
+ */
 function makeClient( venueInserts: QueryResult[], tableInserts: QueryResult[] ) {
 
-    const calls = { venue: 0, table: 0, venueDeletes: 0 }
+    const calls = {
+            venue: 0,
+            table: 0,
+            venueDeletes: 0,
+        }
 
         , client = {
             from( name: string ) {
@@ -33,8 +57,8 @@ function makeClient( venueInserts: QueryResult[], tableInserts: QueryResult[] ) 
                                     single() {
 
                                         return name === 'venues'
-                                            ? Promise.resolve( venueInserts[ calls.venue++ ] )
-                                            : Promise.resolve( tableInserts[ calls.table++ ] );
+                                            ? Promise.resolve( venueInserts[ calls.venue ++ ] )
+                                            : Promise.resolve( tableInserts[ calls.table ++ ] );
 
                                     },
                                 };
@@ -48,8 +72,11 @@ function makeClient( venueInserts: QueryResult[], tableInserts: QueryResult[] ) 
                         return {
                             eq() {
 
-                                if( name === 'venues' ) calls.venueDeletes++;
-                                return Promise.resolve( { data: null, error: null } );
+                                if( name === 'venues' ) calls.venueDeletes ++;
+                                return Promise.resolve( {
+                                    data: null,
+                                    error: null,
+                                } );
 
                             },
                         };
@@ -60,7 +87,10 @@ function makeClient( venueInserts: QueryResult[], tableInserts: QueryResult[] ) 
             },
         };
 
-    return { calls, client: client as unknown as ServiceClient };
+    return {
+        calls,
+        client: client as unknown as ServiceClient,
+    };
 
 }
 
@@ -68,11 +98,27 @@ const user = { sub: 'user-1' } as unknown as Parameters<typeof createAdhocRoom>[
 
 describe( 'createAdhocRoom', () => {
 
-    it( 'crea venue + tavolo e ritorna slug/qrToken/shortCode', async () => {
+    it( 'crea venue + tavolo e ritorna slug/qrToken/shortCode', async() => {
 
         const { client } = makeClient(
-            [ { data: { id: 'v1', slug: 'r-abc' }, error: null } ],
-            [ { data: { qr_token: 'qr-1', short_code: 'ABC234' }, error: null } ],
+            [
+                {
+                    data: {
+                        id: 'v1',
+                        slug: 'r-abc',
+                    },
+                    error: null,
+                },
+            ],
+            [
+                {
+                    data: {
+                        qr_token: 'qr-1',
+                        short_code: 'ABC234',
+                    },
+                    error: null,
+                },
+            ],
         );
 
         await expect( createAdhocRoom( client, user, 'Casa' ) ).resolves.toEqual( {
@@ -83,27 +129,49 @@ describe( 'createAdhocRoom', () => {
 
     } );
 
-    it( 'ritenta la venue su violazione di unicità (23505)', async () => {
+    it( 'ritenta la venue su violazione di unicità (23505)', async() => {
 
         const { calls, client } = makeClient(
-            [
-                { data: null, error: { code: '23505' } },
-                { data: { id: 'v1', slug: 'r-xyz' }, error: null },
-            ],
-            [ { data: { qr_token: 'qr-1', short_code: 'ABC234' }, error: null } ],
-        );
+                [
+                    {
+                        data: null,
+                        error: { code: '23505' },
+                    },
+                    {
+                        data: {
+                            id: 'v1',
+                            slug: 'r-xyz',
+                        },
+                        error: null,
+                    },
+                ],
+                [
+                    {
+                        data: {
+                            qr_token: 'qr-1',
+                            short_code: 'ABC234',
+                        },
+                        error: null,
+                    },
+                ],
+            )
 
-        const room = await createAdhocRoom( client, user );
+            , room = await createAdhocRoom( client, user );
 
         expect( room.venueSlug ).toBe( 'r-xyz' );
         expect( calls.venue ).toBe( 2 );
 
     } );
 
-    it( 'non ritenta su errori non di unicità e fallisce', async () => {
+    it( 'non ritenta su errori non di unicità e fallisce', async() => {
 
         const { calls, client } = makeClient(
-            [ { data: null, error: { code: 'XX000' } } ],
+            [
+                {
+                    data: null,
+                    error: { code: 'XX000' },
+                },
+            ],
             [],
         );
 
@@ -112,11 +180,22 @@ describe( 'createAdhocRoom', () => {
 
     } );
 
-    it( 'fa rollback della venue se la creazione del tavolo fallisce', async () => {
+    it( 'fa rollback della venue se la creazione del tavolo fallisce', async() => {
 
         const { calls, client } = makeClient(
-            [ { data: { id: 'v1', slug: 'r-abc' }, error: null } ],
-            Array.from( { length: 5 }, () => ( { data: null, error: { code: '23505' } } ) ),
+            [
+                {
+                    data: {
+                        id: 'v1',
+                        slug: 'r-abc',
+                    },
+                    error: null,
+                },
+            ],
+            Array.from( { length: 5 }, () => ( {
+                data: null,
+                error: { code: '23505' },
+            } ) ),
         );
 
         await expect( createAdhocRoom( client, user ) ).rejects.toMatchObject( { statusCode: 500 } );

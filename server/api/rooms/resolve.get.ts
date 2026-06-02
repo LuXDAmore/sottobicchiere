@@ -15,9 +15,15 @@ export default defineEventHandler( async event => {
 
     }
 
+    // Equivalente a QR/link: risolve finché la riga esiste. NON filtriamo su
+    // `venues.expires_at` perché il cleanup conserva le venue ad-hoc scadute che
+    // hanno ancora una sessione attiva (per non interrompere una partita in corso);
+    // controllare la scadenza qui renderebbe il codice non equivalente al QR (che
+    // passa da `resolveTableRow`, senza check di scadenza). Le venue davvero morte
+    // vengono rimosse dal pg_cron e qui diventano naturalmente 404.
     const { data } = await serviceClient( event )
         .from( 'tables' )
-        .select( 'qr_token, venues!inner( slug, expires_at )' )
+        .select( 'qr_token, venues!inner( slug )' )
         .eq( 'short_code', code )
         .limit( 1 )
         .maybeSingle();
@@ -32,17 +38,7 @@ export default defineEventHandler( async event => {
 
     }
 
-    const venue = data.venues as unknown as { slug: string; expires_at: string | null };
-
-    if( venue.expires_at && new Date( venue.expires_at ) < new Date() ) {
-
-        throw createError( {
-            statusCode: 404,
-            statusMessage: 'ROOM_EXPIRED',
-            message: 'Questa stanza non è più disponibile.',
-        } );
-
-    }
+    const venue = data.venues as unknown as { slug: string };
 
     return {
         venueSlug: venue.slug,

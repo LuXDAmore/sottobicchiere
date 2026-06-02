@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { pickAvailableColor } from '../../../../../shared/utils/colors';
+import { supabaseUserId } from '../../../../../shared/utils/supabase-user';
 import { requireTable } from '../../../../utils/request';
 
 import { serverSupabaseUser } from '#supabase/server';
@@ -33,9 +34,10 @@ export default defineEventHandler( async event => {
 
         // Il giocatore deve essere autenticato (anche solo anonimo): l'user_id collega
         // la sua iscrizione all'utente Supabase ed è ciò che autorizza il channel realtime.
-        , user = await serverSupabaseUser( event ).catch( () => null );
+        , user = await serverSupabaseUser( event ).catch( () => null )
+        , userId = supabaseUserId( user );
 
-    if( ! user ) {
+    if( ! userId ) {
 
         throw createError( {
             statusCode: 401,
@@ -172,7 +174,7 @@ export default defineEventHandler( async event => {
         .from( 'player_sessions' )
         .select( 'id, color, is_host, group_id, nickname' )
         .eq( 'table_session_id', session.id )
-        .eq( 'user_id', user.sub )
+        .eq( 'user_id', userId )
         .maybeSingle();
 
     if( existing ) {
@@ -205,7 +207,7 @@ export default defineEventHandler( async event => {
                 nickname,
                 color: playerColor,
                 group_id: groupId,
-                user_id: user.sub,
+                user_id: userId,
                 is_host: isHost,
             } )
             .select( 'id, color, is_host' )

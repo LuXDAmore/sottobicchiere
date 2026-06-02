@@ -2,6 +2,7 @@ import type { ServiceClient } from './supabase';
 import type { JwtPayload } from '@supabase/supabase-js';
 
 import { generateRoomCode, generateToken } from '../../shared/utils/room-code';
+import { supabaseUserId } from '../../shared/utils/supabase-user';
 
 export interface CreatedRoom {
     venueSlug: string;
@@ -39,7 +40,8 @@ function isUniqueViolation( error: { code?: string } | null ): boolean {
 export async function createAdhocRoom( client: ServiceClient, user: JwtPayload, name?: string ): Promise<CreatedRoom> {
 
     const expiresAt = new Date( Date.now() + ROOM_TTL_MS ).toISOString()
-        , roomName = name?.trim() || 'Stanza Sottobicchiere';
+        , roomName = name?.trim() || 'Stanza Sottobicchiere'
+        , createdBy = supabaseUserId( user );
 
     let venue: { id: string; slug: string } | null = null;
 
@@ -51,7 +53,7 @@ export async function createAdhocRoom( client: ServiceClient, user: JwtPayload, 
                 slug: `r-${ generateToken( 8 ) }`,
                 name: roomName,
                 kind: 'adhoc',
-                created_by_user_id: user.sub,
+                created_by_user_id: createdBy,
                 expires_at: expiresAt,
             } )
             .select( 'id, slug' )
@@ -85,7 +87,7 @@ export async function createAdhocRoom( client: ServiceClient, user: JwtPayload, 
                 table_number: 1,
                 qr_token: generateToken( 12 ),
                 short_code: generateRoomCode(),
-                created_by_user_id: user.sub,
+                created_by_user_id: createdBy,
             } )
             .select( 'qr_token, short_code' )
             .single();
