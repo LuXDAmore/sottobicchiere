@@ -8,9 +8,10 @@ Purpose:
   venue → tavolo → sessione → gioco, aggiungendo due livelli organizzativi:
   AREE (zone di gioco) dentro un tavolo e SQUADRE (groups, già esistenti) dentro le aree.
 
-  Stato: PARZIALMENTE IMPLEMENTATA. Decisioni confermate (vedi sotto). F1–F3 fatte
-  (modello dati, API stanze, UI crea/entra); F4 (aree & squadre in lobby) in corso;
-  resta F5 (scope gioco + e2e). Verifica funzionale end-to-end su un Supabase reale.
+  Stato: IMPLEMENTATA (F1–F5). Decisioni confermate (vedi sotto). Modello dati, API stanze,
+  UI crea/entra, aree & squadre in lobby, e punteggio per squadra nei giochi sono fatti e
+  verificati a typecheck/eslint/unit/build. Resta SOLO l'e2e e la verifica funzionale
+  end-to-end, che richiedono un Supabase reale attivo (`pnpm db:push`).
 
 References:
   ../../app.sdd
@@ -107,9 +108,11 @@ Tasks:
   [x] #8  UI: pagina /new (crea), share (QR+link+code), pagina /join (codice), CTA in homepage.
   [x] #9  UI lobby: tab "Aree" (host crea, ognuno si auto-assegna) + broadcast `lobby:changed`. (F4)
             Le squadre (groups) restano per-tavolo come da decisione #1.
-  [ ] #10 Scoping del gioco secondo #2 (punteggio per squadra) + risultati per team. (F5)
-  [x] #11 i18n IT/EN: stringhe `room`, CTA homepage e tab aree (parità chiavi IT/EN).
-  [~] #12 Test: unit room-code (7) + createAdhocRoom (retry/rollback). Resta e2e crea→join→gioca. (F5)
+  [x] #10 Punteggio per squadra (decisione #2): util puro `aggregateTeamScores` + endpoint
+            `GET /groups` + classifica per squadra nel gioco thumbs (round e finale). (F5)
+  [x] #11 i18n IT/EN: stringhe `room`, CTA homepage, tab aree, classifica squadre (parità).
+  [~] #12 Test: unit room-code, createAdhocRoom, supabaseUserId, aggregateTeamScores (34 tot).
+            Resta l'e2e crea→condividi→join→gioca (richiede un Supabase reale). (F5)
   [x] #13 Docs aggiornati: database-schema.md, api-contracts.md, README, TODO, changelog, questa spec.
 
   Verifica end-to-end ancora da fare contro un Supabase reale: `pnpm db:reset` (applica la

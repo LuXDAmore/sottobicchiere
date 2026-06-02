@@ -38,6 +38,13 @@ export interface AreaCreatedResponse {
     ordinal: number;
 }
 
+// Squadra (group) di una sessione — usata per la classifica per squadra nei giochi.
+export interface GroupInfo {
+    id: string;
+    name: string;
+    color: string;
+}
+
 export interface TableInfo {
     tableSessionId: string;
     tableNumber: number;

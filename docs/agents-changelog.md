@@ -5,6 +5,29 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-02 — F5 punteggio per squadra + review Copilot (round 5)
+
+### F5 — Punteggio per squadra (decisione #2)
+- `shared/utils/team-scores.ts`: `aggregateTeamScores` — funzione pura che somma i
+  punteggi per-giocatore raggruppandoli per squadra (group) e ordina; testata
+  (`test/unit/team-scores.test.ts`, 5 casi).
+- `server/api/[venue]/table/[token]/groups.get.ts`: `GET /groups` → squadre della
+  sessione (id, name, color). `shared/types/index.ts`: `GroupInfo`.
+- `game/thumbs.vue`: carica squadre + mappa giocatore→squadra (`/groups` + `/players`),
+  calcola `teamScores` e mostra la **classifica per squadra** nel tabellone di round e
+  nella schermata finale (solo se esistono squadre). i18n `game.thumbs.team_scores` IT/EN.
+- Il gioco resta per-tavolo; le squadre sono per-tavolo (decisione #1). Implementato e
+  verificato a typecheck/eslint/unit/build; l'e2e funzionale resta da fare su un DB reale.
+
+### Review Copilot (round 5)
+- `supabase-user.test`: `supabaseUserId( undefined )` esplicito (il parametro non è opzionale).
+- `rooms/index.post`: corretto il commento ("richiediamo che l'id esista" invece di
+  "validato esplicitamente": è un controllo di esistenza, come in join/requirePlayer).
+- `#shared/utils/*` mantenuto: è l'alias nativo Nuxt 4 (`.nuxt/tsconfig.json` → `../shared/*`),
+  il build passa; cambiarlo in relativo dalle pagine profonde sarebbe solo peggiorativo.
+
+---
+
 ## 2026-06-02 — F4 aree in lobby, fix user.id→sub, review Copilot
 
 ### Fix realtime (user.id → user.sub)

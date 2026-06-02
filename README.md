@@ -13,7 +13,7 @@ Stato reale del progetto (maggio 2026):
 - ✅ Fondazioni documentali prodotto/architettura/design/database già presenti.
 - ✅ Backend realtime su Supabase: schema, RLS, presence, broadcast da DB (migration SQL native).
 - ✅ Join tavolo via route dinamica QR, lobby e motore partita realtime end-to-end.
-- ✅ **Tavoli dinamici**: crea uno spazio di gioco al volo (anche fuori dal bar) e fai entrare gli altri via QR, link o codice breve (pagine `/new` e `/join`, API `/api/rooms`). Anonimo ed effimero. **Aree di gioco** gestibili in lobby (tab "Aree": l'host crea zone, ognuno si auto-assegna) e squadre per-tavolo (`groups`). Punteggio per squadra nei giochi: in arrivo (F5, vedi `docs/dynamic-game-areas-workflow.md`).
+- ✅ **Tavoli dinamici**: crea uno spazio di gioco al volo (anche fuori dal bar) e fai entrare gli altri via QR, link o codice breve (pagine `/new` e `/join`, API `/api/rooms`). Anonimo ed effimero. **Aree di gioco** gestibili in lobby (tab "Aree": l'host crea zone, ognuno si auto-assegna), squadre per-tavolo (`groups`) e **classifica per squadra** nei giochi. Verifica funzionale end-to-end da fare su un Supabase reale (vedi `docs/dynamic-game-areas-workflow.md`).
 - ⚠️ Admin venue, premi e analytics sono **post-MVP**.
 - ⚠️ Nessuna autenticazione giocatore persistente nell'MVP (sessioni effimere, accesso anonimo Supabase).
 

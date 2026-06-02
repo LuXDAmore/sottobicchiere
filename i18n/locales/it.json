@@ -153,6 +153,7 @@
             "waiting_others": "{voted}/{total} hanno votato",
             "waiting_host": "Aspetta che l'host avanzi al prossimo round…",
             "scores": "Punteggi",
+            "team_scores": "Classifica squadre",
             "next_round": "Prossimo round →",
             "show_results": "Vedi risultati finali →",
             "finished_title": "Fine del gioco!",

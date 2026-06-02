@@ -153,6 +153,7 @@
             "waiting_others": "{voted}/{total} have voted",
             "waiting_host": "Waiting for the host to advance to the next round…",
             "scores": "Scores",
+            "team_scores": "Team standings",
             "next_round": "Next round →",
             "show_results": "Show final results →",
             "finished_title": "Game over!",

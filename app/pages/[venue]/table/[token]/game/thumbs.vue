@@ -90,11 +90,11 @@
 
                     <u-button
                         v-if="players.length >= 2"
+                        :disabled="isStartingGame || status !== 'OPEN'"
                         icon="i-lucide-play"
                         :label="$t('game.thumbs.start_button')"
-                        size="xl"
-                        :disabled="isStartingGame || status !== 'OPEN'"
                         :loading="isStartingGame"
+                        size="xl"
                         @click="handleStartGame"
                     />
                     <p
@@ -229,14 +229,38 @@
                         </div>
                     </div>
 
+                    <!-- Classifica per squadra (solo se esistono squadre) -->
+                    <div v-if="teamScores.length > 0" class="w-full">
+                        <p class="font-semibold mb-2 text-muted text-sm tracking-wide uppercase">
+                            {{ $t('game.thumbs.team_scores') }}
+                        </p>
+                        <div class="flex flex-col gap-1.5">
+                            <div
+                                v-for="( team, index ) in teamScores"
+                                :key="team.groupId"
+                                class="flex gap-3 items-center px-4 py-2.5 rounded-2xl"
+                                :class="index === 0 ? 'ring-2 ring-amber-400' : ''"
+                                :style="{ backgroundColor: team.color + '22' }"
+                            >
+                                <span class="block rounded-full shrink-0 size-3" :style="{ backgroundColor: team.color }" />
+                                <span class="flex-1 font-semibold text-highlighted" :style="{ color: team.color }">
+                                    {{ team.name }}
+                                </span>
+                                <span class="font-bold font-display text-highlighted text-lg">
+                                    {{ team.score }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Next round button (host only) -->
                     <u-button
                         v-if="isHost"
                         block
-                        :label="gameState.roundIndex + 1 < gameState.totalRounds ? $t('game.thumbs.next_round') : $t('game.thumbs.show_results')"
-                        size="xl"
                         :disabled="isAdvancingRound || status !== 'OPEN'"
+                        :label="gameState.roundIndex + 1 < gameState.totalRounds ? $t('game.thumbs.next_round') : $t('game.thumbs.show_results')"
                         :loading="isAdvancingRound"
+                        size="xl"
                         @click="handleNextRound"
                     />
                     <p
@@ -285,26 +309,52 @@
                         </div>
                     </div>
 
+                    <!-- Classifica finale per squadra (solo se esistono squadre) -->
+                    <div v-if="teamScores.length > 0" class="w-full">
+                        <p class="font-semibold mb-2 text-muted text-sm tracking-wide uppercase">
+                            {{ $t('game.thumbs.team_scores') }}
+                        </p>
+                        <div class="flex flex-col gap-2">
+                            <div
+                                v-for="( team, index ) in teamScores"
+                                :key="team.groupId"
+                                class="flex gap-3 items-center px-4 py-3 rounded-2xl"
+                                :class="index === 0 ? 'ring-2 ring-amber-400' : ''"
+                                :style="{ backgroundColor: team.color + '22' }"
+                            >
+                                <span class="font-bold font-display text-2xl w-8">
+                                    {{ index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${ index + 1 }.` }}
+                                </span>
+                                <span class="flex-1 font-semibold text-highlighted" :style="{ color: team.color }">
+                                    {{ team.name }}
+                                </span>
+                                <span class="font-bold font-display text-highlighted text-xl">
+                                    {{ team.score }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex gap-3 w-full">
                         <u-button
                             v-if="isHost"
                             block
+                            :disabled="isStartingGame || status !== 'OPEN'"
                             icon="i-lucide-refresh-cw"
                             :label="$t('game.thumbs.play_again')"
-                            size="xl"
-                            :disabled="isStartingGame || status !== 'OPEN'"
                             :loading="isStartingGame"
+                            size="xl"
                             @click="handleStartGame"
                         />
                         <u-button
                             block
                             color="neutral"
+                            :disabled="isGoingBack"
                             icon="i-lucide-arrow-left"
                             :label="$t('game.thumbs.back_lobby')"
+                            :loading="isGoingBack"
                             size="xl"
                             variant="ghost"
-                            :disabled="isGoingBack"
-                            :loading="isGoingBack"
                             @click="goToLobby"
                         />
                     </div>
@@ -318,6 +368,8 @@
 </template>
 
 <script setup lang="ts">
+
+    import { aggregateTeamScores } from '#shared/utils/team-scores';
 
     definePageMeta( { layout: 'game' } );
 
@@ -337,7 +389,41 @@
           , isStartingGame = ref( false )
           , isSubmittingVote = ref( false )
           , isAdvancingRound = ref( false )
-          , isGoingBack = ref( false );
+          , isGoingBack = ref( false )
+
+          // Squadre della sessione + mappa giocatore→squadra, per la classifica per squadra.
+          , groups = ref<GroupInfo[]>( [] )
+          , playerGroups = ref<Record<string, string | null>>( {} )
+
+          , teamScores = computed( () => ( gameState.value
+              ? aggregateTeamScores( {
+                  groups: groups.value,
+                  playerGroups: playerGroups.value,
+                  scores: gameState.value.scores,
+              } )
+              : [] ) );
+
+    // Carica squadre e appartenenze una volta: durante la partita non cambiano
+    // (il join è bloccato). In caso di errore la classifica per giocatore resta intatta.
+    /**
+     *
+     */
+    async function loadTeams() {
+
+        try {
+
+            const [ groupsData, playersData ] = await Promise.all( [ $fetch<GroupInfo[]>( `/api/${ venueSlug }/table/${ qrToken }/groups`, { query: { session: playerStore.tableSessionId ?? undefined } } ), $fetch<PlayerInfo[]>( `/api/${ venueSlug }/table/${ qrToken }/players` ) ] );
+
+            groups.value = groupsData;
+            playerGroups.value = Object.fromEntries( playersData.map( p => [ p.id, p.groupId ] ) );
+
+        } catch{
+
+            // Le squadre sono accessorie: il gioco e i punteggi per giocatore restano validi.
+
+        }
+
+    }
 
     onMounted( () => {
 
@@ -348,6 +434,7 @@
 
         }
         open();
+        loadTeams();
 
     } );
 
@@ -376,7 +463,6 @@
 
     } );
 
-
     watch( status, value => {
 
         if( value !== 'OPEN' ) {
@@ -399,20 +485,36 @@
         }
 
         if( isSubmittingVote.value && state.myVote ) {
+
             isSubmittingVote.value = false;
             toast.remove( 'thumbs-vote-loading' );
-            toast.add( { color: 'success', description: t( 'game.thumbs.vote_success_toast' ), duration: 2200, icon: 'i-lucide-check-circle-2' } );
+            toast.add( {
+                color: 'success',
+                description: t( 'game.thumbs.vote_success_toast' ),
+                duration: 2200,
+                icon: 'i-lucide-check-circle-2',
+            } );
+
         }
 
         if( isAdvancingRound.value && state.phase === 'voting' && previousState?.phase === 'reveal' ) {
+
             isAdvancingRound.value = false;
             toast.remove( 'thumbs-next-round-loading' );
+
         }
 
         if( isStartingGame.value && state.phase === 'voting' && previousState?.phase !== 'voting' ) {
+
             isStartingGame.value = false;
             toast.remove( 'thumbs-start-loading' );
-            toast.add( { color: 'success', description: t( 'game.thumbs.start_success_toast' ), duration: 2200, icon: 'i-lucide-check-circle-2' } );
+            toast.add( {
+                color: 'success',
+                description: t( 'game.thumbs.start_success_toast' ),
+                duration: 2200,
+                icon: 'i-lucide-check-circle-2',
+            } );
+
         }
 
     }, { deep: true } );
@@ -435,7 +537,14 @@
 
         isGoingBack.value = true;
         const leavingGameToastId = 'thumbs-back-lobby-loading';
-        toast.add( { id: leavingGameToastId, color: 'primary', description: t( 'game.thumbs.back_lobby_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+
+        toast.add( {
+            id: leavingGameToastId,
+            color: 'primary',
+            description: t( 'game.thumbs.back_lobby_pending_toast' ),
+            duration: 0,
+            icon: 'i-lucide-loader-2',
+        } );
 
         try {
 
@@ -446,7 +555,13 @@
 
             toast.remove( leavingGameToastId );
             const fetchError = exception as { data?: { message?: string } };
-            toast.add( { color: 'error', description: fetchError.data?.message ?? t( 'game.thumbs.back_lobby_error_toast' ), duration: 4500, icon: 'i-lucide-circle-alert' } );
+
+            toast.add( {
+                color: 'error',
+                description: fetchError.data?.message ?? t( 'game.thumbs.back_lobby_error_toast' ),
+                duration: 4500,
+                icon: 'i-lucide-circle-alert',
+            } );
 
         } finally {
 
@@ -456,32 +571,60 @@
 
     }
 
+    /**
+     *
+     */
     function handleStartGame() {
 
         if( isStartingGame.value || status.value !== 'OPEN' ) return;
 
         isStartingGame.value = true;
-        toast.add( { id: 'thumbs-start-loading', color: 'primary', description: t( 'game.thumbs.start_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+        toast.add( {
+            id: 'thumbs-start-loading',
+            color: 'primary',
+            description: t( 'game.thumbs.start_pending_toast' ),
+            duration: 0,
+            icon: 'i-lucide-loader-2',
+        } );
         startGame();
 
     }
 
+    /**
+     *
+     * @param choice
+     */
     function handleVote( choice: 'down' | 'up' ) {
 
         if( isSubmittingVote.value || status.value !== 'OPEN' ) return;
 
         isSubmittingVote.value = true;
-        toast.add( { id: 'thumbs-vote-loading', color: 'primary', description: t( 'game.thumbs.vote_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+        toast.add( {
+            id: 'thumbs-vote-loading',
+            color: 'primary',
+            description: t( 'game.thumbs.vote_pending_toast' ),
+            duration: 0,
+            icon: 'i-lucide-loader-2',
+        } );
         vote( choice );
 
     }
 
+    /**
+     *
+     */
     function handleNextRound() {
 
         if( isAdvancingRound.value || status.value !== 'OPEN' ) return;
 
         isAdvancingRound.value = true;
-        toast.add( { id: 'thumbs-next-round-loading', color: 'primary', description: t( 'game.thumbs.next_round_pending_toast' ), duration: 0, icon: 'i-lucide-loader-2' } );
+        toast.add( {
+            id: 'thumbs-next-round-loading',
+            color: 'primary',
+            description: t( 'game.thumbs.next_round_pending_toast' ),
+            duration: 0,
+            icon: 'i-lucide-loader-2',
+        } );
         nextRound();
 
     }

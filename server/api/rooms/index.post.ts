@@ -24,7 +24,7 @@ export default defineEventHandler( async event => {
 
     // Serve l'utente anonimo: il suo id (claim `sub`, fallback `id`) registra la
     // paternità della stanza ed è ciò che autorizzerà il channel realtime quando
-    // entrerà come host. Validiamo esplicitamente l'id come in join/requirePlayer.
+    // entrerà come host. Richiediamo che l'id esista (come in join/requirePlayer).
     const user = await serverSupabaseUser( event ).catch( () => null )
         , userId = supabaseUserId( user );
 

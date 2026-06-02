@@ -28,7 +28,7 @@ describe( 'supabaseUserId', () => {
     it( 'ritorna undefined per null/undefined', () => {
 
         expect( supabaseUserId( null ) ).toBeUndefined();
-        expect( supabaseUserId( ) ).toBeUndefined();
+        expect( supabaseUserId( undefined ) ).toBeUndefined();
 
     } );
 
