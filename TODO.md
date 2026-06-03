@@ -21,10 +21,12 @@ Aggiornato: 2026-06-02
 - [x] F4 — API aree (`/areas`, `/areas/assign`) + tab "Aree" in lobby + broadcast `lobby:changed`
 - [x] Test `createAdhocRoom` (retry/rollback) + review Copilot PR #25 risolte
 - [x] F5 — Punteggio per squadra: `aggregateTeamScores` + `GET /groups` + classifica squadre in thumbs
-- [ ] F5 — Test e2e crea→condividi→join→gioca (richiede Supabase reale)
-- [ ] Verifica end-to-end su Supabase reale: `pnpm db:push` (o `bootstrap_all.sql`) + env Vercel +
-      redeploy, poi crea stanza + join via QR/link/codice + classifica squadre
-      (verificati a typecheck, eslint, 34 unit test, build; manca solo la prova funzionale)
+- [x] DB applicato al progetto Supabase reale (9 tabelle + RLS + seed + trigger + pg_cron) e
+      verificato a livello API (preview: `GET /api/demo/table/demo-001` → 200)
+- [x] Hardening da Supabase advisors: revoke EXECUTE sulle funzioni, search_path, indice FK groups
+- [ ] Prova interattiva (browser): crea stanza `/new` → join via QR/link/codice → tab Aree +
+      classifica per squadra in tempo reale. Richiede Anonymous sign-ins = ON in Supabase.
+- [ ] Test e2e automatico (Playwright) crea→condividi→join→gioca
 
 ## Bootstrap (fase 0) — Documentazione e Design System
 

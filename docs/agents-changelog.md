@@ -5,6 +5,35 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-03 — DB live su Supabase + hardening (advisors) + review Copilot (round 6)
+
+### Database attivato e verificato (progetto reale)
+- Schema applicato al progetto Supabase `sottobicchiere-supabase` (creato dall'integrazione
+  Vercel): 9 tabelle con RLS, seed demo, trigger realtime, pg_cron. Verificato via MCP
+  (`list_tables`) e a livello API: `GET /api/demo/table/demo-001` sulla preview Vercel
+  risponde **200** (`{venueName:"Demo Venue",...}`) → env reali + schema + app collegati.
+- `supabase/migrations/20260603090000_harden_function_grants.sql` (da Supabase advisors):
+  - `revoke execute` su tutte le funzioni trigger/utility (broadcast_*, notify_lobby_changes,
+    touch_updated_at, cleanup_expired_sessions) da `public/anon/authenticated`: non più
+    invocabili via PostgREST RPC (i trigger e pg_cron continuano a funzionare).
+  - `set search_path = ''` su `touch_updated_at`.
+  - indice di copertura su `groups.table_session_id`.
+  - Dopo l'hardening gli advisor di sicurezza non riportano più WARN; restano solo INFO
+    `rls_enabled_no_policy` (voluto: accesso solo server via service-role).
+
+### Review Copilot (round 6) + code-review interno
+- `players.get` ora onora `?session=` (resolveSessionId) come /groups e /areas → classifica
+  per squadra coerente anche con più sessioni attive sullo stesso tavolo.
+- `thumbs.loadTeams`: fetch /groups prima, salta /players se non ci sono squadre, passa la
+  sessione anche a /players.
+- `join.vue`: niente `6` hard-coded → `isValidRoomCode` / `ROOM_CODE_LENGTH`.
+- `room.ts`: default venue neutro; il client invia un default localizzato (`room.default_name`).
+- `resolve.get`: filtro `venues.kind='adhoc'`.
+- migration 130000: trigger player_sessions solo INSERT/UPDATE (no DELETE) → niente raffica
+  di broadcast durante il cleanup pg_cron.
+
+---
+
 ## 2026-06-02 — F5 punteggio per squadra + review Copilot (round 5)
 
 ### F5 — Punteggio per squadra (decisione #2)
