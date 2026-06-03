@@ -5,6 +5,21 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-03 — Adozione design system Nuxt UI (UTabs/USelect) in lobby
+
+Sostituiti i componenti "fatti a mano" con quelli del design system del progetto (Nuxt UI 4):
+- Tab principali lobby (Giocatori/Aree/Giochi): da `<button v-for>` hand-rolled a **`UTabs`**
+  (`variant="link"`, `:content="false"` → solo i trigger; il contenuto resta nelle section
+  `v-show`, layout/scroll invariati). ARIA tab corretto fornito da Reka UI (rimpiazza i
+  `role=tablist/tab` aggiunti a mano).
+- Filtro categoria giochi: da button-group hand-rolled a **`UTabs`** (`variant="pill"`).
+- Destinatario dating: da `<select>` nativo a **`USelect`** (+ computed `datingTargetItems`).
+Form (new/join/join-tavolo) già su `UFormField`+`UInput`+`UButton`; voto 👍/👎, toggle dating
+e card-lista sessioni restano bespoke (UX non standardizzabile in un componente).
+Verificato: typecheck, eslint, 34 unit test, build.
+
+---
+
 ## 2026-06-03 — DB live su Supabase + hardening (advisors) + review Copilot (round 6)
 
 ### Database attivato e verificato (progetto reale)

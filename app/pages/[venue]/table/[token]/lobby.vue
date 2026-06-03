@@ -107,21 +107,14 @@
                 <!-- Send message -->
                 <div v-if="datingRoomStatus.availableTableSessionIds.length > 0" class="flex gap-2 mb-3">
                     <div class="flex-1 min-w-0">
-                        <select
+                        <u-select
                             v-model="datingTarget"
-                            class="bg-[var(--ui-bg)] border border-[var(--ui-border)] focus:outline-none focus:ring-2 focus:ring-secondary-500/50 mb-2 px-3 py-2 rounded-lg text-highlighted text-sm w-full"
-                        >
-                            <option value="">
-                                {{ $t('lobby.dating_select_target') }}
-                            </option>
-                            <option
-                                v-for="tid in datingRoomStatus.availableTableSessionIds"
-                                :key="tid"
-                                :value="tid"
-                            >
-                                {{ $t('lobby.dating_table_label', { id: tid.slice(0, 8) }) }}
-                            </option>
-                        </select>
+                            class="mb-2 w-full"
+                            color="secondary"
+                            :items="datingTargetItems"
+                            :placeholder="$t('lobby.dating_select_target')"
+                            size="sm"
+                        />
                         <div class="flex gap-2">
                             <u-input
                                 v-model="datingBody"
@@ -164,23 +157,16 @@
             </div>
         </transition>
 
-        <!-- Tabs navigation -->
-        <div class="border-[var(--ui-border)] border-b flex px-4 shrink-0" role="tablist">
-            <button
-                v-for="tab in tabs"
-                :key="tab.id"
-                :aria-selected="activeTab === tab.id"
-                class="-mb-px border-b-2 flex font-semibold gap-2 items-center px-4 py-3 text-sm transition-colors"
-                :class="activeTab === tab.id
-                    ? 'border-primary-500 text-primary-500'
-                    : 'border-transparent text-muted hover:text-highlighted'"
-                role="tab"
-                @click="activeTab = tab.id"
-            >
-                <u-icon class="size-4" :name="tab.icon" />
-                {{ tab.label }}
-            </button>
-        </div>
+        <!-- Tabs navigation (design system: UTabs, solo i trigger; il contenuto resta sotto) -->
+        <u-tabs
+            class="px-4 shrink-0"
+            color="primary"
+            :content="false"
+            :items="tabs"
+            :model-value="activeTab"
+            variant="link"
+            @update:model-value="value => ( activeTab = value as typeof activeTab )"
+        />
 
         <!-- Main content area -->
         <main class="flex-1 overflow-y-auto">
@@ -358,20 +344,15 @@
 
                 <template v-else>
 
-                    <!-- Category filter tabs -->
-                    <div class="bg-[var(--ui-bg-elevated)] flex gap-1 p-1 rounded-lg">
-                        <button
-                            v-for="cat in gameCategories"
-                            :key="cat.id"
-                            class="flex-1 font-semibold px-2 py-1.5 rounded-md text-sm transition-colors"
-                            :class="activeGameCategory === cat.id
-                                ? 'bg-[var(--ui-bg)] text-highlighted shadow-sm'
-                                : 'text-muted hover:text-highlighted'"
-                            @click="activeGameCategory = cat.id"
-                        >
-                            {{ cat.label }}
-                        </button>
-                    </div>
+                    <!-- Category filter (design system: UTabs pill, solo trigger) -->
+                    <u-tabs
+                        :content="false"
+                        :items="gameCategories"
+                        :model-value="activeGameCategory"
+                        size="sm"
+                        variant="pill"
+                        @update:model-value="value => ( activeGameCategory = value as typeof activeGameCategory )"
+                    />
 
                     <!-- Game cards -->
                     <div class="space-y-3">
@@ -492,18 +473,24 @@
           // Game categories for filter tabs
           , gameCategories = computed( () => [
               {
-                  id: 'all' as const,
+                  value: 'all' as const,
                   label: t( 'lobby.games_tab_all' ),
               },
               {
-                  id: 'board' as const,
+                  value: 'board' as const,
                   label: t( 'lobby.games_tab_board' ),
               },
               {
-                  id: 'preserata' as const,
+                  value: 'preserata' as const,
                   label: t( 'lobby.games_tab_preserata' ),
               },
           ] )
+
+          // Destinatari dating per USelect (id tavolo abbreviato come etichetta).
+          , datingTargetItems = computed( () => datingRoomStatus.value.availableTableSessionIds.map( tid => ( {
+              label: t( 'lobby.dating_table_label', { id: tid.slice( 0, 8 ) } ),
+              value: tid,
+          } ) ) )
 
           , filteredGames = computed( () => getGamesByCategory( activeGameCategory.value ) )
 
@@ -518,17 +505,17 @@
 
           , tabs = computed( () => [
               {
-                  id: 'players' as const,
+                  value: 'players' as const,
                   label: t( 'lobby.tab_players' ),
                   icon: 'i-lucide-users',
               },
               {
-                  id: 'areas' as const,
+                  value: 'areas' as const,
                   label: t( 'lobby.tab_areas' ),
                   icon: 'i-lucide-layout-grid',
               },
               {
-                  id: 'games' as const,
+                  value: 'games' as const,
                   label: t( 'lobby.tab_games' ),
                   icon: 'i-lucide-gamepad-2',
               },
