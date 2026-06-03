@@ -344,12 +344,14 @@
 
                 <template v-else>
 
-                    <!-- Category filter (design system: UTabs pill, solo trigger) -->
+                    <!-- Category filter (design system: UTabs pill a tutta larghezza) -->
                     <u-tabs
+                        class="w-full"
                         :content="false"
                         :items="gameCategories"
                         :model-value="activeGameCategory"
                         size="sm"
+                        :ui="{ list: 'w-full', trigger: 'grow justify-center' }"
                         variant="pill"
                         @update:model-value="value => ( activeGameCategory = value as typeof activeGameCategory )"
                     />

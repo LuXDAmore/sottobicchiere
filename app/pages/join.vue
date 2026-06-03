@@ -17,37 +17,41 @@
         </div>
 
         <div class="max-w-sm w-full">
-            <u-card :ui="{ body: 'flex flex-col gap-5 p-6' }">
+            <u-card :ui="{ body: 'p-6' }">
+                <u-form
+                    class="flex flex-col gap-5"
+                    :schema="codeSchema"
+                    :state="state"
+                    @submit="handleResolve"
+                >
+                    <u-form-field :label="$t('room.code_label')" name="code">
+                        <u-input
+                            v-model="state.code"
+                            autocapitalize="characters"
+                            autocomplete="off"
+                            class="w-full"
+                            :disabled="resolving"
+                            maxlength="8"
+                            :placeholder="$t('room.code_placeholder')"
+                            size="xl"
+                            spellcheck="false"
+                        />
+                    </u-form-field>
 
-                <u-form-field :label="$t('room.code_label')">
-                    <u-input
-                        v-model="code"
-                        autocapitalize="characters"
-                        autocomplete="off"
-                        class="w-full"
+                    <u-button
+                        block
                         :disabled="resolving"
-                        maxlength="8"
-                        :placeholder="$t('room.code_placeholder')"
+                        icon="i-lucide-arrow-right"
+                        :label="$t('room.go_button')"
+                        :loading="resolving"
                         size="xl"
-                        spellcheck="false"
-                        @keyup.enter="handleResolve"
+                        type="submit"
                     />
-                </u-form-field>
 
-                <u-button
-                    block
-                    :disabled="resolving || ! isCodeValid"
-                    icon="i-lucide-arrow-right"
-                    :label="$t('room.go_button')"
-                    :loading="resolving"
-                    size="xl"
-                    @click="handleResolve"
-                />
-
-                <p v-if="resolveError" class="text-center text-error-500 text-sm">
-                    {{ resolveError }}
-                </p>
-
+                    <p v-if="resolveError" class="text-center text-error-500 text-sm">
+                        {{ resolveError }}
+                    </p>
+                </u-form>
             </u-card>
         </div>
 
@@ -63,33 +67,37 @@
 
 <script setup lang="ts">
 
+    import { z } from 'zod';
+
     import { isValidRoomCode, normalizeRoomCode } from '#shared/utils/room-code';
 
     const { t } = useI18n()
           , localePath = useLocalePath()
           , toast = useToast()
-          , code = ref( '' )
+          // Normalizza (maiuscolo, scarta caratteri estranei) e valida lato client:
+          // l'eventuale errore appare sotto il campo tramite UForm/UFormField.
+          , codeSchema = z.object( { code: z.string().transform( normalizeRoomCode ).refine( isValidRoomCode, t( 'room.invalid_code' ) ) } )
+          , state = reactive( { code: '' } )
           , resolving = ref( false )
           , resolveError = ref<string | null>( null )
-          , normalized = computed( () => normalizeRoomCode( code.value ) )
-          , isCodeValid = computed( () => isValidRoomCode( normalized.value ) )
           , newRoomPath = computed( () => localePath( '/new' ) );
 
     /**
      *
+     * @param event
+     * @param event.data
+     * @param event.data.code
      */
-    async function handleResolve() {
+    async function handleResolve( event: { data: { code: string } } ) {
 
-        const value = normalized.value;
-
-        if( resolving.value || ! isValidRoomCode( value ) ) return;
+        if( resolving.value ) return;
 
         resolving.value = true;
         resolveError.value = null;
 
         try {
 
-            const data = await $fetch<ResolvedRoomResponse>( '/api/rooms/resolve', { query: { code: value } } );
+            const data = await $fetch<ResolvedRoomResponse>( '/api/rooms/resolve', { query: { code: event.data.code } } );
 
             await navigateTo( localePath( `/${ data.venueSlug }/table/${ data.qrToken }` ) );
 

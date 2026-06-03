@@ -64,6 +64,7 @@
         "join_description": "Choose a nickname to join.",
         "nickname_label": "Nickname",
         "nickname_placeholder": "What's your name?",
+        "nickname_required": "Enter a nickname (1-20 characters).",
         "group_label": "Group (optional)",
         "group_hint": "Play as a team with friends at your table",
         "group_placeholder": "Group name",

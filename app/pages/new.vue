@@ -20,34 +20,39 @@
             </div>
 
             <div class="max-w-sm w-full">
-                <u-card :ui="{ body: 'flex flex-col gap-5 p-6' }">
+                <u-card :ui="{ body: 'p-6' }">
+                    <u-form
+                        class="flex flex-col gap-5"
+                        :schema="createSchema"
+                        :state="state"
+                        @submit="handleCreate"
+                    >
+                        <u-form-field :label="$t('room.name_label')" name="name">
+                            <u-input
+                                v-model="state.name"
+                                autocomplete="off"
+                                class="w-full"
+                                :disabled="creating"
+                                maxlength="40"
+                                :placeholder="$t('room.name_placeholder')"
+                                size="xl"
+                            />
+                        </u-form-field>
 
-                    <u-form-field :label="$t('room.name_label')">
-                        <u-input
-                            v-model="name"
-                            autocomplete="off"
+                        <u-button
+                            block
                             :disabled="creating"
-                            maxlength="40"
-                            :placeholder="$t('room.name_placeholder')"
+                            icon="i-lucide-plus-circle"
+                            :label="$t('room.create_button')"
+                            :loading="creating"
                             size="xl"
-                            @keyup.enter="handleCreate"
+                            type="submit"
                         />
-                    </u-form-field>
 
-                    <u-button
-                        block
-                        :disabled="creating"
-                        icon="i-lucide-plus-circle"
-                        :label="$t('room.create_button')"
-                        :loading="creating"
-                        size="xl"
-                        @click="handleCreate"
-                    />
-
-                    <p v-if="createError" class="text-center text-error-500 text-sm">
-                        {{ createError }}
-                    </p>
-
+                        <p v-if="createError" class="text-center text-error-500 text-sm">
+                            {{ createError }}
+                        </p>
+                    </u-form>
                 </u-card>
             </div>
 
@@ -150,12 +155,15 @@
 
 <script setup lang="ts">
 
-    const { t } = useI18n()
+    import { z } from 'zod';
+
+    const createSchema = z.object( { name: z.string().max( 40 ).optional() } )
+          , state = reactive( { name: '' } )
+          , { t } = useI18n()
           , localePath = useLocalePath()
           , toast = useToast()
           , { origin } = useRequestURL()
           , { copy } = useClipboard()
-          , name = ref( '' )
           , creating = ref( false )
           , createError = ref<string | null>( null )
           , room = ref<RoomCreatedResponse | null>( null )
@@ -188,7 +196,7 @@
                 method: 'POST',
                 // Se l'utente non dà un nome, manda un default localizzato (la lingua
                 // del creatore): così non si salva testo non localizzato lato server.
-                body: { name: name.value.trim() || t( 'room.default_name' ) },
+                body: { name: state.name.trim() || t( 'room.default_name' ) },
             } );
 
             room.value = data;
