@@ -39,7 +39,9 @@ function isUniqueViolation( error: { code?: string } | null ): boolean {
 export async function createAdhocRoom( client: ServiceClient, createdByUserId: string, name?: string ): Promise<CreatedRoom> {
 
     const expiresAt = new Date( Date.now() + ROOM_TTL_MS ).toISOString()
-        , roomName = name?.trim() || 'Stanza Sottobicchiere';
+        // Fallback neutro (brand): il nome localizzato di default lo invia il client
+        // in base alla sua lingua. Qui evitiamo di salvare testo IT visibile in UI EN.
+        , roomName = name?.trim() || 'Sottobicchiere';
 
     let venue: { id: string; slug: string } | null = null;
 

@@ -36,7 +36,7 @@
 
                 <u-button
                     block
-                    :disabled="resolving || normalized.length !== 6"
+                    :disabled="resolving || ! isCodeValid"
                     icon="i-lucide-arrow-right"
                     :label="$t('room.go_button')"
                     :loading="resolving"
@@ -63,7 +63,7 @@
 
 <script setup lang="ts">
 
-    import { normalizeRoomCode } from '#shared/utils/room-code';
+    import { isValidRoomCode, normalizeRoomCode } from '#shared/utils/room-code';
 
     const { t } = useI18n()
           , localePath = useLocalePath()
@@ -72,6 +72,7 @@
           , resolving = ref( false )
           , resolveError = ref<string | null>( null )
           , normalized = computed( () => normalizeRoomCode( code.value ) )
+          , isCodeValid = computed( () => isValidRoomCode( normalized.value ) )
           , newRoomPath = computed( () => localePath( '/new' ) );
 
     /**
@@ -81,7 +82,7 @@
 
         const value = normalized.value;
 
-        if( resolving.value || value.length !== 6 ) return;
+        if( resolving.value || ! isValidRoomCode( value ) ) return;
 
         resolving.value = true;
         resolveError.value = null;

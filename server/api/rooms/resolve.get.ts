@@ -21,10 +21,13 @@ export default defineEventHandler( async event => {
     // controllare la scadenza qui renderebbe il codice non equivalente al QR (che
     // passa da `resolveTableRow`, senza check di scadenza). Le venue davvero morte
     // vengono rimosse dal pg_cron e qui diventano naturalmente 404.
+    // I codici brevi appartengono solo alle stanze ad-hoc: filtriamo su kind per non
+    // risolvere mai (in futuro) un tavolo di un bar che avesse uno short_code.
     const { data } = await serviceClient( event )
         .from( 'tables' )
-        .select( 'qr_token, venues!inner( slug )' )
+        .select( 'qr_token, venues!inner( slug, kind )' )
         .eq( 'short_code', code )
+        .eq( 'venues.kind', 'adhoc' )
         .limit( 1 )
         .maybeSingle();
 

@@ -36,7 +36,11 @@ create trigger trg_notify_lobby_areas
 after insert or update or delete on public.areas
 for each row execute function public.notify_lobby_changes();
 
+-- Solo INSERT (join) e UPDATE (es. assegnazione area): le uscite "vive" sono gestite
+-- dalla presence, non da DELETE di riga. Le righe player_sessions vengono cancellate
+-- solo dal cleanup pg_cron (cascade), quando nessuno è in ascolto: includere DELETE
+-- genererebbe solo una raffica inutile di broadcast durante la pulizia.
 drop trigger if exists trg_notify_lobby_players on public.player_sessions;
 create trigger trg_notify_lobby_players
-after insert or update or delete on public.player_sessions
+after insert or update on public.player_sessions
 for each row execute function public.notify_lobby_changes();

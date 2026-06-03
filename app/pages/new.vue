@@ -186,7 +186,9 @@
 
             const data = await $fetch<RoomCreatedResponse>( '/api/rooms', {
                 method: 'POST',
-                body: { name: name.value.trim() || undefined },
+                // Se l'utente non dà un nome, manda un default localizzato (la lingua
+                // del creatore): così non si salva testo non localizzato lato server.
+                body: { name: name.value.trim() || t( 'room.default_name' ) },
             } );
 
             room.value = data;

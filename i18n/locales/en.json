@@ -26,6 +26,7 @@
         "new_description": "Spin up a space on the fly and let others join via QR, link or code. No account, fully temporary.",
         "name_label": "Table name (optional)",
         "name_placeholder": "e.g. Game night at Luca's",
+        "default_name": "Sottobicchiere table",
         "create_button": "Create table",
         "create_error": "Could not create the table. Please try again.",
         "create_pending_toast": "Creating your table…",

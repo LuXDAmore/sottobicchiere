@@ -412,9 +412,22 @@
 
         try {
 
-            const [ groupsData, playersData ] = await Promise.all( [ $fetch<GroupInfo[]>( `/api/${ venueSlug }/table/${ qrToken }/groups`, { query: { session: playerStore.tableSessionId ?? undefined } } ), $fetch<PlayerInfo[]>( `/api/${ venueSlug }/table/${ qrToken }/players` ) ] );
+            const sessionQuery = { query: { session: playerStore.tableSessionId ?? undefined } }
+                  , groupsData = await $fetch<GroupInfo[]>( `/api/${ venueSlug }/table/${ qrToken }/groups`, sessionQuery );
 
             groups.value = groupsData;
+
+            // Nessuna squadra (caso comune board/bar): niente classifica, niente fetch dei player.
+            if( groupsData.length === 0 ) {
+
+                playerGroups.value = {};
+                return;
+
+            }
+
+            // Stessa sessione di /groups, per non mischiare appartenenze tra sessioni diverse del tavolo.
+            const playersData = await $fetch<PlayerInfo[]>( `/api/${ venueSlug }/table/${ qrToken }/players`, sessionQuery );
+
             playerGroups.value = Object.fromEntries( playersData.map( p => [ p.id, p.groupId ] ) );
 
         } catch{

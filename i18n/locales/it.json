@@ -26,6 +26,7 @@
         "new_description": "Crea uno spazio al volo e fai entrare gli altri con QR, link o codice. Nessun account, tutto temporaneo.",
         "name_label": "Nome del tavolo (opzionale)",
         "name_placeholder": "Es: Serata giochi da Luca",
+        "default_name": "Tavolo Sottobicchiere",
         "create_button": "Crea tavolo",
         "create_error": "Non sono riuscito a creare il tavolo. Riprova.",
         "create_pending_toast": "Sto creando il tavolo…",
