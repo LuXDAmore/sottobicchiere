@@ -50,23 +50,27 @@ export function aggregateTeamScores( input: TeamScoreInput ): TeamScore[] {
 
     }
 
-    return input.groups
-        .map( group => {
+    const ranked = input.groups.map( group => {
 
-            const bucket = totals.get( group.id ) ?? {
-                score: 0,
-                members: 0,
-            };
+        const bucket = totals.get( group.id ) ?? {
+            score: 0,
+            members: 0,
+        };
 
-            return {
-                groupId: group.id,
-                name: group.name,
-                color: group.color,
-                score: bucket.score,
-                memberCount: bucket.members,
-            };
+        return {
+            groupId: group.id,
+            name: group.name,
+            color: group.color,
+            score: bucket.score,
+            memberCount: bucket.members,
+        };
 
-        } )
-        .toSorted( ( a, b ) => b.score - a.score );
+    } );
+
+    // .sort() su un array appena creato da map() (nessun input esterno mutato).
+    // Non usiamo .toSorted(): è ES2023 e non è coperto da browserslist `defaults`
+    // senza polyfill → rischio crash a runtime su browser più datati.
+    // eslint-disable-next-line unicorn/no-array-sort
+    return ranked.sort( ( a, b ) => b.score - a.score );
 
 }

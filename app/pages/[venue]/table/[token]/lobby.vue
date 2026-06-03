@@ -165,14 +165,16 @@
         </transition>
 
         <!-- Tabs navigation -->
-        <div class="border-[var(--ui-border)] border-b flex px-4 shrink-0">
+        <div class="border-[var(--ui-border)] border-b flex px-4 shrink-0" role="tablist">
             <button
                 v-for="tab in tabs"
                 :key="tab.id"
+                :aria-selected="activeTab === tab.id"
                 class="-mb-px border-b-2 flex font-semibold gap-2 items-center px-4 py-3 text-sm transition-colors"
                 :class="activeTab === tab.id
                     ? 'border-primary-500 text-primary-500'
                     : 'border-transparent text-muted hover:text-highlighted'"
+                role="tab"
                 @click="activeTab = tab.id"
             >
                 <u-icon class="size-4" :name="tab.icon" />

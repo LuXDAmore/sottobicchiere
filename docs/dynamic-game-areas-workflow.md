@@ -2,9 +2,10 @@
 
 > Documento di workflow per la feature **Dynamic Game Areas**.
 > Contratto SpecDD associato: [`docs/specs/dynamic-game-areas.feature.sdd`](specs/dynamic-game-areas.feature.sdd).
-> Stato: **in corso** — decisioni confermate (§3); **F1–F3 implementate** (modello dati, API,
-> UI crea/entra) e **F4 in corso** (aree & squadre in lobby); resta **F5** (scope gioco + e2e).
-> La verifica funzionale end-to-end richiede un Supabase reale (`pnpm db:reset`).
+> Stato: **F1–F5 implementate** — decisioni confermate (§3); modello dati, API stanze, UI
+> crea/entra, aree & squadre in lobby e punteggio per squadra nei giochi sono fatti e
+> verificati (typecheck/eslint/unit/build). Lo schema è applicato a un Supabase reale e
+> verificato a livello API. Resta solo l'**e2e automatico** e la prova interattiva del realtime.
 
 ## 1. Visione
 
