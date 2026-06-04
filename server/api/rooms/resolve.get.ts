@@ -23,13 +23,25 @@ export default defineEventHandler( async event => {
     // vengono rimosse dal pg_cron e qui diventano naturalmente 404.
     // I codici brevi appartengono solo alle stanze ad-hoc: filtriamo su kind per non
     // risolvere mai (in futuro) un tavolo di un bar che avesse uno short_code.
-    const { data } = await serviceClient( event )
+    const { data, error } = await serviceClient( event )
         .from( 'tables' )
         .select( 'qr_token, venues!inner( slug, kind )' )
         .eq( 'short_code', code )
         .eq( 'venues.kind', 'adhoc' )
         .limit( 1 )
         .maybeSingle();
+
+    // Un errore DB/connessione non è "stanza non trovata": fallisci con 500 esplicito
+    // (debug più chiaro, messaggio corretto) invece di mascherarlo con un 404.
+    if( error ) {
+
+        throw createError( {
+            statusCode: 500,
+            statusMessage: 'RESOLVE_FAILED',
+            message: 'Non riesco a verificare il codice ora. Riprova tra qualche secondo.',
+        } );
+
+    }
 
     if( ! data ) {
 

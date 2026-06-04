@@ -10,7 +10,7 @@ Aggiornato: 2026-06-02
   `url`/`key` del modulo in `nuxt.config.ts` (sovrascritte dalle env reali) e guardia
   in `app/plugins/supabase-anon.client.ts` che salta l'accesso anonimo se non
   configurato. Verificato: build senza env → homepage HTTP 200.
-- [x] Spec SpecDD feature "Dynamic Game Areas" (`docs/specs/dynamic-game-areas.feature.sdd`)
+- [x] Spec SpecDD della feature "Dynamic Game Areas" (`docs/specs/dynamic-game-areas.feature.sdd`)
 - [x] Documento workflow/agenti (`docs/dynamic-game-areas-workflow.md`)
 - [x] Decisioni confermate: #1 squadre per-tavolo · #2 gioco per-tavolo + punteggio squadra · #3 TTL 8h
 - [x] F1 — Migration: venue ad-hoc, `short_code`, tabella `areas`, `player_sessions.area_id`, RLS, cron esteso

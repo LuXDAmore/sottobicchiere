@@ -167,7 +167,8 @@
           , creating = ref( false )
           , createError = ref<string | null>( null )
           , room = ref<RoomCreatedResponse | null>( null )
-          , joinUrl = computed( () => ( room.value ? `${ origin }${ room.value.joinPath }` : '' ) )
+          // Link condivisibile con prefisso di lingua del creatore (i18n prefix_except_default).
+          , joinUrl = computed( () => ( room.value ? `${ origin }${ localePath( room.value.joinPath ) }` : '' ) )
           , enterPath = computed( () => ( room.value ? localePath( room.value.joinPath ) : localePath( '/' ) ) );
 
     /**
