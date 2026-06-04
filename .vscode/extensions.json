@@ -48,7 +48,8 @@
         "mylesmurphy.prettify-ts",
         "yoavbls.pretty-ts-errors",
         "bradlc.vscode-tailwindcss",
-        "antfu.iconify"
+        "antfu.iconify",
+        "anthropic.claude-code"
     ],
     // List of extensions recommended by VS Code that should not be recommended for users of this workspace.
     "unwantedRecommendations": []
