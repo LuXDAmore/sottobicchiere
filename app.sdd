@@ -9,7 +9,7 @@ Purpose:
 
 Structure:
   app: Nuxt client application, pages, layouts, stores, composables, middleware, and UI utilities.
-  server: Nitro API, WebSocket handlers, database schema, server utilities, tasks.
+  server: Nitro API (REST su Vercel), server utilities, integrazione Supabase (service role).
   shared: Cross-runtime TypeScript types and pure utilities shared by app, server, and tests.
   test: Vitest and Playwright tests.
   docs: Human-facing architecture, product, QA, and operational documentation.
@@ -60,11 +60,12 @@ Can read:
   docs/agents-changelog.md
 
 Must:
-  Usare Nuxt 4, Nitro, Vue 3, TypeScript, Nuxt UI, NuxtHub, Neon PostgreSQL, Drizzle ORM,
-    Vercel Redis (KV), Vercel Blob secondo la configurazione esistente.
+  Usare Nuxt 4, Nitro, Vue 3, TypeScript, Nuxt UI, e Supabase (Postgres + Realtime +
+    auth anonima) secondo la configurazione esistente.
   Mantenere la privacy dei giocatori: nessun dato PII salvato, sessioni effimere con TTL.
   Mantenere i18n con italiano come lingua primaria.
-  Usare WebSocket (Nitro) per la sincronizzazione real-time dello stato di gioco.
+  Usare Supabase Realtime (presence + broadcast da DB via trigger) per la sincronizzazione
+    real-time dello stato di gioco; lo stato autoritativo vive su Postgres.
   Mantenere il design system "Notte Italiana" (Indigo + Violet + Amber + Stone dark).
   Aggiornare relevant .sdd specs, tests, TODO.md, e docs/agents-changelog.md in ogni sessione.
 
@@ -82,11 +83,9 @@ Depends on:
   Vue 3
   TypeScript
   Nuxt UI
-  NuxtHub
-  Neon PostgreSQL
-  Drizzle ORM
-  Vercel Redis
-  Vercel Blob
+  Supabase (Postgres + Realtime + Auth anonima)
+  @nuxtjs/supabase
+  pg_cron (cleanup sessioni effimere)
 
 Tasks:
   [x] Bootstrap documentazione: README.md, Agents.md, .specdd, app.sdd.
@@ -101,6 +100,9 @@ Tasks:
   [ ] Primo gioco MVP.
   [ ] Scheduled task: cleanup sessioni scadute.
   [ ] Test unit e integration per schema e composables.
+  [x] Resilienza: la homepage renderizza anche senza Supabase configurato (no 500).
+  [x] Pianificazione feature "Dynamic Game Areas" — vedi docs/specs/dynamic-game-areas.feature.sdd.
+  [ ] Implementare la feature "Dynamic Game Areas" dopo conferma della spec e delle decisioni [?].
 
 Done when:
   La relevant ancestor spec chain può essere risolta prima di editare il codice.

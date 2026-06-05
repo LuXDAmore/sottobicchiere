@@ -10,6 +10,15 @@ Ogni visitatore ha una sessione **Supabase anonima** (JWT, plugin `supabase-anon
 
 Convenzioni: JSON, `camelCase`. Errori con `createError` → `{ statusCode, statusMessage, message }`. Base path: `/api/[venue]/table/[token]`.
 
+### Stanze dinamiche (`/api/rooms`)
+
+Creazione al volo di un tavolo fuori dal bar (venue `kind='adhoc'` + tavolo generato). Riusa poi il flusso `/[venue]/table/[token]`.
+
+| Metodo | Path | Descrizione |
+|---|---|---|
+| POST | `/api/rooms` | Crea una stanza ad-hoc (richiede utente anonimo). Body `{ name? }`. Restituisce `{ venueSlug, qrToken, shortCode, joinPath }`. |
+| GET | `/api/rooms/resolve?code=ABC234` | Risolve uno `short_code` in `{ venueSlug, qrToken }`. 400 se malformato, 404 se inesistente o stanza scaduta. |
+
 ### Join & sessione
 
 | Metodo | Path | Descrizione |

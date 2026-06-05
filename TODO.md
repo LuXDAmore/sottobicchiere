@@ -1,6 +1,32 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-01
+Aggiornato: 2026-06-02
+
+## Resilienza & Tavoli dinamici (2026-06-02)
+
+- [x] Fix "Server error" in homepage senza Supabase configurato: il plugin server di
+  `@nuxtjs/supabase` chiamava `createServerClient('','')` ad ogni richiesta SSR e
+  lanciava → 500 su ogni pagina. Aggiunti fallback placeholder alle opzioni native
+  `url`/`key` del modulo in `nuxt.config.ts` (sovrascritte dalle env reali) e guardia
+  in `app/plugins/supabase-anon.client.ts` che salta l'accesso anonimo se non
+  configurato. Verificato: build senza env → homepage HTTP 200.
+- [x] Spec SpecDD della feature "Dynamic Game Areas" (`docs/specs/dynamic-game-areas.feature.sdd`)
+- [x] Documento workflow/agenti (`docs/dynamic-game-areas-workflow.md`)
+- [x] Decisioni confermate: #1 squadre per-tavolo · #2 gioco per-tavolo + punteggio squadra · #3 TTL 8h
+- [x] F1 — Migration: venue ad-hoc, `short_code`, tabella `areas`, `player_sessions.area_id`, RLS, cron esteso
+- [x] F1 — Tipi `shared/types/database.ts` allineati a mano (rieseguire `db:types` su DB reale per conferma)
+- [x] F2 — API: `POST /api/rooms`, `GET /api/rooms/resolve` + `shared/utils/room-code` + unit test (7)
+- [x] F3 — UI: pagina `/new`, share (QR+link+code), pagina `/join`, CTA homepage + i18n IT/EN
+- [x] Fix realtime `user.id`→`user.sub` (claims JWT) in join/request/room — sblocca i channel privati
+- [x] F4 — API aree (`/areas`, `/areas/assign`) + tab "Aree" in lobby + broadcast `lobby:changed`
+- [x] Test `createAdhocRoom` (retry/rollback) + review Copilot PR #25 risolte
+- [x] F5 — Punteggio per squadra: `aggregateTeamScores` + `GET /groups` + classifica squadre in thumbs
+- [x] DB applicato al progetto Supabase reale (9 tabelle + RLS + seed + trigger + pg_cron) e
+      verificato a livello API (preview: `GET /api/demo/table/demo-001` → 200)
+- [x] Hardening da Supabase advisors: revoke EXECUTE sulle funzioni, search_path, indice FK groups
+- [ ] Prova interattiva (browser): crea stanza `/new` → join via QR/link/codice → tab Aree +
+      classifica per squadra in tempo reale. Richiede Anonymous sign-ins = ON in Supabase.
+- [ ] Test e2e automatico (Playwright) crea→condividi→join→gioca
 
 ## Bootstrap (fase 0) — Documentazione e Design System
 

@@ -289,12 +289,21 @@ export default defineNuxtConfig(
         sitemap: { zeroRuntime: true },
 
         supabase: {
+            // Fallback sicuri quando l'ambiente non è ancora configurato.
+            // Il plugin server di @nuxtjs/supabase chiama `createServerClient` ad ogni
+            // richiesta SSR: con url/key vuoti lancia «URL and Key are required» e manda
+            // in 500 OGNI pagina (homepage compresa). Con un placeholder l'app si avvia
+            // comunque — le pagine statiche renderizzano e solo le chiamate realtime
+            // falliscono (gestite a runtime) finché non si imposta un vero progetto.
+            // Con env valide (build o runtime) questi placeholder vengono sovrascritti.
+            key: process.env.NUXT_PUBLIC_SUPABASE_KEY || 'placeholder-anon-key',
             // Gestiamo l'autenticazione (anonima) da un plugin: niente redirect a /login.
             redirect: false,
             // Tipi del database tenuti a mano in shared/types: senza questo path il
             // modulo cerca il default `~/types/database.types.ts` (inesistente) e
             // tipa `useSupabaseClient()` come `unknown`.
             types: '~~/shared/types/database.ts',
+            url: process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
         },
 
         ui: {

@@ -1,0 +1,153 @@
+Spec: Dynamic Game Areas (Tavoli & Aree Dinamiche)
+Platform: TypeScript/Nuxt 4/Nitro + Supabase
+
+Purpose:
+  Permettere a chiunque (non solo ai bar) di creare al volo uno spazio di gioco
+  effimero — a casa, al parco, al circoletto — e farci aggregare gli altri tramite
+  QR, link condivisibile o codice breve. Riusa il flusso esistente
+  venue → tavolo → sessione → gioco, aggiungendo due livelli organizzativi:
+  AREE (zone di gioco) dentro un tavolo e SQUADRE (groups, già esistenti) per-tavolo,
+  livello parallelo alle aree (decisione #1: squadre per-tavolo, non per-area).
+
+  Stato: IMPLEMENTATA (F1–F5). Decisioni confermate (vedi sotto). Modello dati, API stanze,
+  UI crea/entra, aree & squadre in lobby, e punteggio per squadra nei giochi sono fatti e
+  verificati a typecheck/eslint/unit/build. Resta SOLO l'e2e e la verifica funzionale
+  end-to-end, che richiedono un Supabase reale attivo (`pnpm db:push`).
+
+References:
+  ../../app.sdd
+  ../architecture.md
+  ../database-schema.md
+  ../realtime-supabase.md
+  ../api-contracts.md
+  dynamic-game-areas-workflow.md   (il documento di workflow/agenti che orchestra questa spec)
+
+Structure:
+  supabase/migrations: nuova migration per venue ad-hoc, short_code, areas, player area.
+  server/api/rooms: API per creare e risolvere stanze dinamiche.
+  server/api/[venue]/table/[token]/areas: API per gestire le aree di una sessione.
+  app/pages/new.vue: pagina "crea tavolo".
+  app/pages/join.vue: pagina "entra con codice".
+  shared/types: tipi dominio per Room/Area.
+
+Owns:
+  Concetto di "stanza dinamica" (venue kind='adhoc' + tavolo generato).
+  Concetto di "area di gioco" (entità areas).
+  short_code di un tavolo e la sua risoluzione.
+
+Must:
+  Riusare il modello esistente: una stanza dinamica È una venue kind='adhoc' con un solo
+    tavolo generato; il join e la lobby restano il flusso /[venue]/table/[token] attuale.
+  Mantenere tutto ANONIMO ed EFFIMERO: l'host è l'utente anonimo che crea; nessun PII;
+    venue/tavolo ad-hoc con expires_at e cleanup via pg_cron (cascade).
+  Generare per ogni stanza tre forme di accesso equivalenti: QR, link condivisibile,
+    short_code breve (default 6 caratteri, leggibili, no ambiguità 0/O/1/I).
+  Esporre le aree come livello opzionale: un tavolo può avere 0..N aree; un giocatore
+    può stare in un'area e in una squadra (group). Le squadre restano i `groups` attuali.
+  Applicare RLS coerente con l'attuale: i client leggono solo la propria riga; la scrittura
+    passa dalle API server (service role); i client non scrivono mai le tabelle.
+  Propagare i cambi di area via broadcast da DB (stesso meccanismo di table_sessions/games).
+  i18n IT/EN per ogni stringa nuova; italiano primario.
+
+Must not:
+  Introdurre account utente, login persistente, OAuth o sessioni permanenti (resta anonimo).
+  Introdurre pagamenti o email transazionali.
+  Salvare PII o geolocalizzazione del giocatore.
+  Rompere il flusso esistente dei bar (venue kind='venue', tavoli preimpostati).
+  Aggiungere dipendenze nuove: QR già via `nuxt-qrcode`, realtime via `@nuxtjs/supabase`.
+
+Depends on:
+  @nuxtjs/supabase (client, server, realtime — composables/utility native)
+  nuxt-qrcode (rendering QR)
+  supabase/migrations (SQL native + RLS + pg_cron)
+  shared/utils/games.ts, shared/utils/colors.ts
+
+Exposes (allineato all'implementazione):
+  POST /api/rooms                                → crea stanza ad-hoc (venue + tavolo). NON crea
+                                                   sessione/host: l'host entra dal join esistente.
+  GET  /api/rooms/resolve?code=ABC234            → risolve short_code in { venueSlug, qrToken }
+  GET  /api/[venue]/table/[token]/areas          → lista aree con membri + non assegnati  (F4)
+  POST /api/[venue]/table/[token]/areas          → (host) crea area                       (F4)
+  POST /api/[venue]/table/[token]/areas/assign   → assegna sé stessi a un'area (o null)    (F4)
+
+Accepts:
+  POST /api/rooms        { name? }
+  resolve (query)        { code }
+  areas POST             { playerId, name }
+  areas/assign POST      { playerId, areaId | null }
+
+Returns:
+  RoomCreated   { venueSlug, qrToken, shortCode, joinPath }
+  ResolvedCode  { venueSlug, qrToken }
+  Area          { id, name, color, ordinal }
+  AreasResponse { areas: AreaWithMembers[], unassigned: AreaMember[] }   (F4)
+
+Raises:
+  InvalidCode (codice inesistente o stanza scaduta)
+  RoomExpired
+  ValidationError (nickname/area mancanti o non validi)
+
+Handles:
+  Collisione di short_code (retry generazione)
+  Stanza scaduta durante il join (messaggio chiaro, no 500)
+  Host che abbandona (riusa l'elezione host esistente)
+
+Decisioni (confermate dall'Operator, 2026-06-02):
+  #1  Squadre (groups) PER-TAVOLO (non per-area). Niente groups.area_id per ora.
+  #2  Scope del gioco: per-tavolo + punteggio per squadra. "Per-area" rinviato.
+  #3  TTL stanza ad-hoc: 8h come table_session, nessun rinnovo manuale per ora.
+
+Tasks:
+  [x] #0  Pianificazione: questa spec + documento workflow/agenti + fix resilienza homepage.
+  [x] #4  Migration: venues.kind + created_by_user_id + expires_at; tables.short_code (unique)
+            + created_by_user_id; tabella areas; player_sessions.area_id; RLS + indici +
+            estensione pg_cron per le venue ad-hoc. (20260602120000_dynamic_game_areas.sql)
+  [x] #5  shared/types/database.ts aggiornato a mano allo schema (è mantenuto a mano).
+            Nota: rieseguire `pnpm db:types` contro un Supabase reale per la verifica finale.
+  [x] #6  API POST /api/rooms e GET /api/rooms/resolve (zod, service role, anti-collisione code).
+  [x] #7  API aree: GET/POST areas + areas/assign; players.get include area_id. (F4)
+  [x] #8  UI: pagina /new (crea), share (QR+link+code), pagina /join (codice), CTA in homepage.
+  [x] #9  UI lobby: tab "Aree" (host crea, ognuno si auto-assegna) + broadcast `lobby:changed`. (F4)
+            Le squadre (groups) restano per-tavolo come da decisione #1.
+  [x] #10 Punteggio per squadra (decisione #2): util puro `aggregateTeamScores` + endpoint
+            `GET /groups` + classifica per squadra nel gioco thumbs (round e finale). (F5)
+  [x] #11 i18n IT/EN: stringhe `room`, CTA homepage, tab aree, classifica squadre (parità).
+  [~] #12 Test: unit room-code, createAdhocRoom, supabaseUserId, aggregateTeamScores (34 tot).
+            Resta l'e2e crea→condividi→join→gioca (richiede un Supabase reale). (F5)
+  [x] #13 Docs aggiornati: database-schema.md, api-contracts.md, README, TODO, changelog, questa spec.
+
+  Verifica end-to-end ancora da fare contro un Supabase reale: `pnpm db:reset` (applica la
+  migration) + creazione stanza + join via QR/link/codice. In questo ambiente non è disponibile
+  la Supabase CLI; verificati typecheck, eslint, unit e build (SSR delle pagine = HTTP 200).
+
+Scenario: crea una stanza a casa
+  Given un visitatore anonimo sulla homepage
+  When tocca "Crea un tavolo" e (facoltativo) dà un nome, poi conferma
+  Then viene creata una venue ad-hoc con un tavolo e uno short_code
+  And vede QR, link condivisibile e codice da mostrare agli altri
+  And "Entra nel tavolo" lo porta al join esistente, dove sceglie il nickname e diventa host
+
+Scenario: gli altri si aggregano
+  Given una stanza dinamica attiva con short_code "ABC234"
+  When un'altra persona scansiona il QR oppure apre il link oppure digita "ABC234"
+  Then atterra sulla pagina di join del tavolo
+  And sceglie nickname (ed eventualmente la squadra) ed entra nella stessa lobby del creatore
+  And in lobby, nel tab "Aree", può assegnarsi a una zona se l'host ne ha create
+
+Scenario: codice scaduto
+  Given una stanza il cui tavolo/venue è scaduto
+  When qualcuno prova a usare il codice o il link
+  Then riceve un messaggio chiaro "stanza non più disponibile" (no errore 500)
+
+Scenario: due aree, due squadre
+  Given una stanza con aree "Salotto" e "Cucina"
+  When i giocatori si distribuiscono nelle aree e scelgono Team Blu / Team Rosso
+  Then ogni giocatore risulta in un'area e in una squadra
+  And lo stato è visibile a tutti in lobby in tempo reale
+
+Done when:
+  Le decisioni [?] #1–#3 sono risolte e riflesse nella spec.
+  Esistono .sdd locali accanto al codice per ogni layer toccato (migration/api/pages).
+  Tutti gli Scenario hanno test.
+  Nessuna dipendenza nuova; nessun PII; flusso bar invariato.
+  Codice, test, spec, TODO.md e docs/agents-changelog.md allineati nello stesso PR.

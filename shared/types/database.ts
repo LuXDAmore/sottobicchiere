@@ -10,15 +10,21 @@ export interface Database {
     public: {
         Tables: {
             venues: {
-                Row: { id: string; slug: string; name: string; config: Json; created_at: string };
-                Insert: { id?: string; slug: string; name: string; config?: Json; created_at?: string };
+                Row: { id: string; slug: string; name: string; config: Json; created_at: string; kind: string; created_by_user_id: string | null; expires_at: string | null };
+                Insert: { id?: string; slug: string; name: string; config?: Json; created_at?: string; kind?: string; created_by_user_id?: string | null; expires_at?: string | null };
                 Update: Partial<Database['public']['Tables']['venues']['Insert']>;
                 Relationships: [];
             };
             tables: {
-                Row: { id: string; venue_id: string; table_number: number; qr_token: string; created_at: string };
-                Insert: { id?: string; venue_id: string; table_number: number; qr_token: string; created_at?: string };
+                Row: { id: string; venue_id: string; table_number: number; qr_token: string; created_at: string; short_code: string | null; created_by_user_id: string | null };
+                Insert: { id?: string; venue_id: string; table_number: number; qr_token: string; created_at?: string; short_code?: string | null; created_by_user_id?: string | null };
                 Update: Partial<Database['public']['Tables']['tables']['Insert']>;
+                Relationships: [];
+            };
+            areas: {
+                Row: { id: string; table_session_id: string; name: string; color: string; ordinal: number; created_at: string };
+                Insert: { id?: string; table_session_id: string; name: string; color: string; ordinal?: number; created_at?: string };
+                Update: Partial<Database['public']['Tables']['areas']['Insert']>;
                 Relationships: [];
             };
             table_sessions: {
@@ -60,6 +66,7 @@ export interface Database {
                     id: string;
                     table_session_id: string;
                     group_id: string | null;
+                    area_id: string | null;
                     user_id: string | null;
                     nickname: string;
                     color: string;
@@ -70,6 +77,7 @@ export interface Database {
                     id?: string;
                     table_session_id: string;
                     group_id?: string | null;
+                    area_id?: string | null;
                     user_id?: string | null;
                     nickname: string;
                     color: string;

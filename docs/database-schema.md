@@ -13,25 +13,43 @@
 
 ### venues
 
-Locali/bar che ospitano i tavoli.
+Locali/bar che ospitano i tavoli — oppure **stanze dinamiche** create al volo (`kind='adhoc'`).
 
 | Campo | Tipo | Note |
 |---|---|---|
 | id | uuid | PK |
 | slug | text | univoco, per URL |
-| name | text | nome locale |
+| name | text | nome locale/stanza |
+| kind | text | `venue` (bar preimpostato) \| `adhoc` (stanza creata al volo); check |
+| created_by_user_id | uuid | FK → auth.users (set null); creatore di una stanza ad-hoc |
+| expires_at | timestamptz | TTL per le stanze ad-hoc (null per i bar); indice parziale |
 | created_at | timestamptz | |
 
 ### tables
 
-Tavoli fisici con QR.
+Tavoli fisici con QR — oppure il tavolo generato di una stanza ad-hoc.
 
 | Campo | Tipo | Note |
 |---|---|---|
 | id | uuid | PK |
 | venue_id | uuid | FK → venues.id (cascade) |
 | qr_token | text | univoco, nel QR |
+| short_code | text | codice breve condivisibile (unique parziale); null per i tavoli dei bar |
 | table_number | integer | numero tavolo; `unique(venue_id, table_number)` |
+| created_by_user_id | uuid | FK → auth.users (set null) |
+| created_at | timestamptz | |
+
+### areas
+
+Zone di gioco opzionali dentro una sessione (es. "Salotto", "Cucina"). Livello **parallelo** alle squadre (`groups`): entrambi pendono dalla sessione e sono indipendenti (le squadre sono per-tavolo, non per-area).
+
+| Campo | Tipo | Note |
+|---|---|---|
+| id | uuid | PK |
+| table_session_id | uuid | FK → table_sessions.id (cascade) |
+| name | text | nome area |
+| color | text | colore UI |
+| ordinal | integer | ordine di visualizzazione |
 | created_at | timestamptz | |
 
 ### table_sessions
@@ -73,7 +91,8 @@ Giocatori effimeri in una sessione.
 | table_session_id | uuid | FK (cascade) |
 | nickname | text | visualizzato |
 | color | text | colore UI |
-| group_id | uuid | FK opzionale (set null) |
+| group_id | uuid | FK opzionale (set null) — squadra |
+| area_id | uuid | FK opzionale → areas (set null) — zona di gioco |
 | user_id | uuid | utente Supabase anonimo (autorizza il channel) |
 | is_host | boolean | host della sessione |
 | joined_at | timestamptz | istante di ingresso al tavolo |
@@ -128,7 +147,8 @@ Messaggi tra tavoli in dating mode.
 
 - venue 1—N tables
 - table 1—N table_sessions
-- table_session 1—N groups, player_sessions; 1—1 games (attiva)
+- table_session 1—N groups, **areas**, player_sessions; 1—1 games (attiva)
+- area 1—N player_sessions (un giocatore sta in 0..1 area e 0..1 squadra)
 - game 1—N votes (per round)
 - table_session N—N table_session via dating_messages
 
@@ -136,10 +156,10 @@ Messaggi tra tavoli in dating mode.
 
 - I cambi su `games`, `table_sessions` e `dating_messages` sono propagati ai client da **trigger** che chiamano `realtime.broadcast_changes()`.
 - I **voti restano segreti**: i client non leggono `votes`; i risultati compaiono in `games.revealed_votes` solo in fase `reveal`.
-- Pulizia con **pg_cron**: rimozione delle sessioni scadute e dei dati correlati (cascade).
+- Pulizia con **pg_cron**: rimozione delle sessioni scadute **e delle venue `kind='adhoc'` scadute** (cascade su tavoli → sessioni → dati correlati).
 
 ## Note di implementazione
 
-- Indici su FK e su `table_sessions.expires_at` per il cleanup.
-- Vincoli univoci: `venues.slug`, `tables.qr_token`, `tables(venue_id, table_number)`, `games.table_session_id`.
+- Indici su FK, su `table_sessions.expires_at` e su `venues.expires_at` (parziale) per il cleanup.
+- Vincoli univoci: `venues.slug`, `tables.qr_token`, `tables.short_code` (parziale), `tables(venue_id, table_number)`, `games.table_session_id`.
 - Soft-delete non necessario (dati effimeri); hard-delete via pg_cron.

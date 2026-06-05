@@ -14,20 +14,20 @@
                 {{ $t('app.name') }}
             </h1>
 
-            <p class="mt-3 text-lg text-muted max-w-xs mx-auto">
+            <p class="max-w-xs mt-3 mx-auto text-lg text-muted">
                 {{ $t('app.tagline') }}
             </p>
         </div>
 
         <!-- Feature pills -->
         <div class="flex flex-wrap gap-3 items-center justify-center max-w-sm">
-            <span class="flex items-center gap-2 bg-primary-500/10 text-primary-500 px-4 py-2 rounded-full text-sm font-semibold">
+            <span class="bg-primary-500/10 flex font-semibold gap-2 items-center px-4 py-2 rounded-full text-primary-500 text-sm">
                 🎲 {{ $t('welcome.feature_board') }}
             </span>
-            <span class="flex items-center gap-2 bg-accent-500/10 text-accent-500 px-4 py-2 rounded-full text-sm font-semibold">
+            <span class="bg-accent-500/10 flex font-semibold gap-2 items-center px-4 py-2 rounded-full text-accent-500 text-sm">
                 🍹 {{ $t('welcome.feature_preserata') }}
             </span>
-            <span class="flex items-center gap-2 bg-secondary-500/10 text-secondary-500 px-4 py-2 rounded-full text-sm font-semibold">
+            <span class="bg-secondary-500/10 flex font-semibold gap-2 items-center px-4 py-2 rounded-full text-secondary-500 text-sm">
                 💌 {{ $t('welcome.feature_dating') }}
             </span>
         </div>
@@ -48,14 +48,57 @@
                     block
                     color="primary"
                     icon="i-lucide-play"
-                    size="xl"
                     :label="$t('welcome.open_demo_table')"
+                    size="xl"
                     :to="demoTablePath"
                 />
 
                 <p class="text-center text-muted text-xs">
                     {{ $t('welcome.mobile_qr_hint') }}
                 </p>
+            </u-card>
+        </div>
+
+        <!-- Separator -->
+        <div class="flex gap-3 items-center max-w-xs w-full">
+            <div class="bg-[var(--ui-border)] flex-1 h-px" />
+            <p class="shrink-0 text-muted text-xs tracking-wide uppercase">
+                {{ $t('welcome.or_separator') }}
+            </p>
+            <div class="bg-[var(--ui-border)] flex-1 h-px" />
+        </div>
+
+        <!-- Create dynamic table CTA -->
+        <div class="max-w-xs w-full">
+            <u-card :ui="{ body: 'flex flex-col gap-4 p-6' }">
+                <div class="text-center">
+                    <p class="font-semibold text-highlighted">
+                        {{ $t('welcome.create_room_title') }}
+                    </p>
+                    <p class="mt-1 text-muted text-sm">
+                        {{ $t('welcome.create_room_description') }}
+                    </p>
+                </div>
+
+                <u-button
+                    block
+                    color="primary"
+                    icon="i-lucide-plus-circle"
+                    :label="$t('welcome.create_room_cta')"
+                    size="xl"
+                    :to="newRoomPath"
+                    variant="solid"
+                />
+
+                <u-button
+                    block
+                    color="neutral"
+                    icon="i-lucide-keyboard"
+                    :label="$t('welcome.join_code_cta')"
+                    size="xl"
+                    :to="joinCodePath"
+                    variant="subtle"
+                />
             </u-card>
         </div>
 
@@ -69,19 +112,21 @@
 
 <script setup lang="ts">
 
-const { t } = useI18n();
-const localePath = useLocalePath();
+    const { t } = useI18n()
+          , localePath = useLocalePath()
 
-const demoTablePath = computed( () => localePath( '/demo/table/demo-001' ) );
+          , demoTablePath = computed( () => localePath( '/demo/table/demo-001' ) )
+          , newRoomPath = computed( () => localePath( '/new' ) )
+          , joinCodePath = computed( () => localePath( '/join' ) );
 
-useHead( {
-    title: computed( () => t( 'welcome.page_title' ) ),
-    meta: [
-        {
-            content: computed( () => t( 'app.description' ) ),
-            name: 'description',
-        },
-    ],
-} );
+    useHead( {
+        title: computed( () => t( 'welcome.page_title' ) ),
+        meta: [
+            {
+                content: computed( () => t( 'app.description' ) ),
+                name: 'description',
+            },
+        ],
+    } );
 
 </script>

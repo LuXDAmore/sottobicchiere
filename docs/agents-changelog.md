@@ -5,6 +5,193 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-03 — Adozione design system Nuxt UI (UTabs/USelect) in lobby
+
+Sostituiti i componenti "fatti a mano" con quelli del design system del progetto (Nuxt UI 4):
+- Tab principali lobby (Giocatori/Aree/Giochi): da `<button v-for>` hand-rolled a **`UTabs`**
+  (`variant="link"`, `:content="false"` → solo i trigger; il contenuto resta nelle section
+  `v-show`, layout/scroll invariati). ARIA tab corretto fornito da Reka UI (rimpiazza i
+  `role=tablist/tab` aggiunti a mano).
+- Filtro categoria giochi: da button-group hand-rolled a **`UTabs`** (`variant="pill"`).
+- Destinatario dating: da `<select>` nativo a **`USelect`** (+ computed `datingTargetItems`).
+Form (new/join/join-tavolo) già su `UFormField`+`UInput`+`UButton`; voto 👍/👎, toggle dating
+e card-lista sessioni restano bespoke (UX non standardizzabile in un componente).
+Verificato: typecheck, eslint, 34 unit test, build.
+
+---
+
+## 2026-06-03 — DB live su Supabase + hardening (advisors) + review Copilot (round 6)
+
+### Database attivato e verificato (progetto reale)
+- Schema applicato al progetto Supabase `sottobicchiere-supabase` (creato dall'integrazione
+  Vercel): 9 tabelle con RLS, seed demo, trigger realtime, pg_cron. Verificato via MCP
+  (`list_tables`) e a livello API: `GET /api/demo/table/demo-001` sulla preview Vercel
+  risponde **200** (`{venueName:"Demo Venue",...}`) → env reali + schema + app collegati.
+- `supabase/migrations/20260603090000_harden_function_grants.sql` (da Supabase advisors):
+  - `revoke execute` su tutte le funzioni trigger/utility (broadcast_*, notify_lobby_changes,
+    touch_updated_at, cleanup_expired_sessions) da `public/anon/authenticated`: non più
+    invocabili via PostgREST RPC (i trigger e pg_cron continuano a funzionare).
+  - `set search_path = ''` su `touch_updated_at`.
+  - indice di copertura su `groups.table_session_id`.
+  - Dopo l'hardening gli advisor di sicurezza non riportano più WARN; restano solo INFO
+    `rls_enabled_no_policy` (voluto: accesso solo server via service-role).
+
+### Review Copilot (round 6) + code-review interno
+- `players.get` ora onora `?session=` (resolveSessionId) come /groups e /areas → classifica
+  per squadra coerente anche con più sessioni attive sullo stesso tavolo.
+- `thumbs.loadTeams`: fetch /groups prima, salta /players se non ci sono squadre, passa la
+  sessione anche a /players.
+- `join.vue`: niente `6` hard-coded → `isValidRoomCode` / `ROOM_CODE_LENGTH`.
+- `room.ts`: default venue neutro; il client invia un default localizzato (`room.default_name`).
+- `resolve.get`: filtro `venues.kind='adhoc'`.
+- migration 130000: trigger player_sessions solo INSERT/UPDATE (no DELETE) → niente raffica
+  di broadcast durante il cleanup pg_cron.
+
+---
+
+## 2026-06-02 — F5 punteggio per squadra + review Copilot (round 5)
+
+### F5 — Punteggio per squadra (decisione #2)
+- `shared/utils/team-scores.ts`: `aggregateTeamScores` — funzione pura che somma i
+  punteggi per-giocatore raggruppandoli per squadra (group) e ordina; testata
+  (`test/unit/team-scores.test.ts`, 5 casi).
+- `server/api/[venue]/table/[token]/groups.get.ts`: `GET /groups` → squadre della
+  sessione (id, name, color). `shared/types/index.ts`: `GroupInfo`.
+- `game/thumbs.vue`: carica squadre + mappa giocatore→squadra (`/groups` + `/players`),
+  calcola `teamScores` e mostra la **classifica per squadra** nel tabellone di round e
+  nella schermata finale (solo se esistono squadre). i18n `game.thumbs.team_scores` IT/EN.
+- Il gioco resta per-tavolo; le squadre sono per-tavolo (decisione #1). Implementato e
+  verificato a typecheck/eslint/unit/build; l'e2e funzionale resta da fare su un DB reale.
+
+### Review Copilot (round 5)
+- `supabase-user.test`: `supabaseUserId( undefined )` esplicito (il parametro non è opzionale).
+- `rooms/index.post`: corretto il commento ("richiediamo che l'id esista" invece di
+  "validato esplicitamente": è un controllo di esistenza, come in join/requirePlayer).
+- `#shared/utils/*` mantenuto: è l'alias nativo Nuxt 4 (`.nuxt/tsconfig.json` → `../shared/*`),
+  il build passa; cambiarlo in relativo dalle pagine profonde sarebbe solo peggiorativo.
+
+---
+
+## 2026-06-02 — F4 aree in lobby, fix user.id→sub, review Copilot
+
+### Fix realtime (user.id → user.sub)
+- `serverSupabaseUser` (v2) restituisce i claims JWT: l'id utente è **`sub`**, non `id`
+  (che era `undefined` a runtime). Corretto in `join.post.ts`, `request.ts`, `room.ts`.
+  Ora `player_sessions.user_id` = `auth.uid()` → l'autorizzazione dei channel realtime
+  combacia. (Era il blocco segnalato nella sessione precedente.)
+
+### F4 — Aree & squadre in lobby
+- Migration `20260602130000_dynamic_areas_realtime.sql`: trigger `notify_lobby_changes()`
+  su `areas` e `player_sessions` → segnale leggero `lobby:changed` sul channel del tavolo
+  (nessuna riga nel payload: privacy-safe).
+- API: `GET /areas` (aree + membri + non assegnati), `POST /areas` (host), `POST /areas/assign`
+  (ognuno sposta solo sé stesso). `players.get` ora include `area_id`.
+- `useTableSocket`: ascolta `lobby:changed` ed espone `lobbyVersion`.
+- `lobby.vue`: nuovo tab **Aree** (host crea zone, ognuno si auto-assegna, lista membri per
+  area + non assegnati), refetch su `lobbyVersion`. Squadre per-tavolo (decisione #1).
+- Tipi `AreaMember`/`AreaWithMembers`/`AreasResponse`; i18n IT/EN per il tab aree.
+
+### Review Copilot (PR #25) — risolti
+- `user.id`→`sub` (2 commenti): risolto come sopra.
+- `resolve.get`: messaggio "sei cifre" → "sei caratteri" (il codice è alfanumerico).
+- `createAdhocRoom`: aggiunti unit test (retry su 23505, stop su errori non-unique, rollback
+  venue) — `test/unit/room.test.ts`. `createError` resta auto-import Nitro; nel test è
+  stubbato come globale (`vi.stubGlobal`, ripristinato in `afterAll`).
+- Spec `.sdd` e `workflow.md`: stato aggiornato (da "planning" a "parz. implementata"),
+  contratto API/Scenario allineati all'implementazione reale, "decisioni aperte" → confermate.
+
+### Resta (F5, richiede DB reale)
+- Scope del gioco con punteggio per squadra + risultati per team; e2e crea→join→gioca.
+- Verifica funzionale su Supabase reale (`pnpm db:reset`): la Supabase CLI non è disponibile
+  in questo ambiente, quindi F4 è verificata a typecheck/eslint/unit/build, non con DB attivo.
+
+---
+
+## 2026-06-02 — Tavoli & Aree dinamici: implementazione F1–F3
+
+Implementazione della feature pianificata, dopo conferma delle decisioni
+(#1 squadre per-tavolo, #2 gioco per-tavolo + punteggio squadra, #3 TTL 8h).
+
+### F1 — Modello dati
+- `supabase/migrations/20260602120000_dynamic_game_areas.sql` (additiva, idempotente):
+  `venues` (kind/created_by_user_id/expires_at + check + indice), `tables`
+  (short_code unique parziale + created_by_user_id), nuova tabella `areas` (+RLS),
+  `player_sessions.area_id`; `cleanup_expired_sessions` estesa per rimuovere le
+  venue `kind='adhoc'` scadute (cascade).
+- `shared/types/database.ts` aggiornato a mano allo schema (il file è mantenuto a mano).
+
+### F2 — API
+- `shared/utils/room-code.ts`: generazione/normalizzazione codici (alfabeto non ambiguo,
+  niente I/L/O/0/1) e token URL-safe — pure, testati (`test/unit/room-code.test.ts`, 7 test).
+- `server/utils/room.ts` (`createAdhocRoom`): crea venue ad-hoc + tavolo con retry su
+  collisione di slug/qr_token/short_code; rollback della venue se il tavolo fallisce.
+- `server/api/rooms/index.post.ts` (`POST /api/rooms`) e
+  `server/api/rooms/resolve.get.ts` (`GET /api/rooms/resolve`).
+- Tipi `RoomCreatedResponse` / `ResolvedRoomResponse` in `shared/types/index.ts`.
+
+### F3 — UI
+- `app/pages/new.vue`: crea stanza → pannello di condivisione (QR via `nuxt-qrcode`,
+  link e codice con copia negli appunti) → "Entra nel tavolo".
+- `app/pages/join.vue`: inserimento codice → `resolve` → redirect al join del tavolo.
+- `app/pages/index.vue`: CTA "Crea un tavolo" + "Entra con un codice" in homepage.
+- i18n: sezione `room` + chiavi welcome in IT/EN (parità 155/155).
+
+### Verifica
+- `pnpm typecheck`, `eslint`, unit test e `pnpm build` puliti. Build senza env Supabase
+  → SSR di `/`, `/new`, `/join` (IT ed EN) = **HTTP 200**.
+- Restano F4 (aree/squadre in lobby) e F5 (scope gioco + e2e). La verifica funzionale
+  completa richiede un Supabase reale (`pnpm db:reset`): la Supabase CLI non è
+  disponibile in questo ambiente.
+
+### Nota tecnica rilevata (pre-esistente, non modificata)
+- `serverSupabaseUser` (v2) restituisce i **claims JWT** (`JwtPayload`), dove l'id utente
+  è `sub`, non `id`. Il codice esistente (`join.post.ts`, `request.ts`) e il nuovo
+  (`room.ts`) usano `user.id`, che l'index signature `[key:string]:any` rende valido a
+  compile-time ma è `undefined` a runtime. Va verificato/uniformato (probabilmente a
+  `user.sub`) quando il DB sarà attivo: impatta l'autorizzazione realtime di TUTTI i tavoli,
+  non solo le stanze dinamiche. Non toccato qui per non uscire dallo scope.
+
+---
+
+## 2026-06-02 — Fix Server error homepage + pianificazione Tavoli/Aree dinamici
+
+Sessione in due parti: (1) fix di resilienza della homepage quando Supabase non è
+ancora configurato; (2) pianificazione SpecDD della feature "tavoli e aree di gioco
+dinamici". Nessun codice della feature scritto (in attesa di conferma della spec).
+
+### Fix resilienza homepage (no Supabase configurato)
+- **Causa accertata** (lettura sorgente del modulo + verifica runtime con
+  `@supabase/ssr`): il plugin server di `@nuxtjs/supabase` esegue `createServerClient`
+  ad ogni richiesta SSR senza guardie; con `url`/`key` vuoti lancia
+  *"Your project's URL and Key are required"* → **500 su ogni pagina**, homepage compresa.
+  La homepage in sé è statica e non tocca il DB.
+- `nuxt.config.ts` — aggiunti fallback placeholder alle **opzioni native** `url`/`key`
+  del blocco `supabase` (`process.env.NUXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'`,
+  idem key). Con env valide (build o runtime) i placeholder vengono sovrascritti dal modulo.
+- `app/plugins/supabase-anon.client.ts` — guardia che salta `signInAnonymously()` quando
+  l'URL è il placeholder, con warning chiaro. Usa solo composable/config nativi
+  (`useRuntimeConfig().public.supabase`, `useSupabaseClient`, `useSupabaseUser`).
+- **Nessuna dipendenza aggiunta** (`package.json`/lockfile invariati).
+- **Verificato**: `pnpm build` senza env Supabase → avvio server → `GET /` restituisce
+  **HTTP 200** e renderizza "Sottobicchiere" (prima: 500).
+
+### Pianificazione feature (SpecDD)
+- `docs/specs/dynamic-game-areas.feature.sdd` — contratto SpecDD: stanze dinamiche come
+  venue `kind='adhoc'` + tavolo generato (riusa join/lobby/gioco/cleanup); aree come nuovo
+  livello, squadre = `groups` esistenti; accesso via QR + link + short_code; tutto
+  anonimo/effimero. Include Scenari, Tasks e decisioni aperte `[?]`.
+- `docs/dynamic-game-areas-workflow.md` — workflow a fasi (F0–F5), modello dati proposto,
+  decisioni da confermare e **ruoli degli agenti** (DB, Types, API, Realtime, Frontend,
+  i18n, QA/Test, Docs) con scope e *done when*.
+
+### Allineamento documentazione
+- `app.sdd` e `.specdd/bootstrap.project.md` — corretti i riferimenti di stack rimasti
+  indietro (Neon/NuxtHub/Drizzle/WebSocket Nitro) allineandoli allo stack reale
+  **Supabase** (DB + realtime + auth anonima), come da README e migrazioni esistenti.
+- `TODO.md` — nuova sezione 2026-06-02.
+
+---
+
 ## 2026-06-01 — Audit MVP pre-preview: bugfix realtime, anti-spam, branding
 
 Controllo completo A→Z del repository in vista della preview pubblica. Backend

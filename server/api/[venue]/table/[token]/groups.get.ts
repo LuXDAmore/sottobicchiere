@@ -1,5 +1,7 @@
 import { requireTable, resolveSessionId } from '../../../../utils/request';
 
+// Squadre (groups) di una sessione: id, nome, colore. Servono al gioco per
+// mostrare la classifica per squadra (punteggio aggregato). Dati pubblici al tavolo.
 export default defineEventHandler( async event => {
 
     const { client, table } = await requireTable( event )
@@ -9,18 +11,15 @@ export default defineEventHandler( async event => {
     if( ! sessionId ) return [];
 
     const { data } = await client
-        .from( 'player_sessions' )
-        .select( 'id, nickname, color, group_id, area_id, joined_at' )
+        .from( 'groups' )
+        .select( 'id, name, color' )
         .eq( 'table_session_id', sessionId )
-        .order( 'joined_at', { ascending: true } );
+        .order( 'created_at', { ascending: true } );
 
-    return ( data ?? [] ).map( p => ( {
-        areaId: p.area_id,
-        color: p.color,
-        groupId: p.group_id,
-        id: p.id,
-        joinedAt: p.joined_at,
-        nickname: p.nickname,
+    return ( data ?? [] ).map( g => ( {
+        id: g.id,
+        name: g.name,
+        color: g.color,
     } ) );
 
 } );

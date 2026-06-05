@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { pickAvailableColor } from '../../../../../shared/utils/colors';
+import { supabaseUserId } from '../../../../../shared/utils/supabase-user';
 import { requireTable } from '../../../../utils/request';
 
 import { serverSupabaseUser } from '#supabase/server';
@@ -33,9 +34,10 @@ export default defineEventHandler( async event => {
 
         // Il giocatore deve essere autenticato (anche solo anonimo): l'user_id collega
         // la sua iscrizione all'utente Supabase ed è ciò che autorizza il channel realtime.
-        , user = await serverSupabaseUser( event ).catch( () => null );
+        , user = await serverSupabaseUser( event ).catch( () => null )
+        , userId = supabaseUserId( user );
 
-    if( ! user ) {
+    if( ! userId ) {
 
         throw createError( {
             statusCode: 401,
@@ -149,11 +151,15 @@ export default defineEventHandler( async event => {
 
             // L'utente ha chiesto un gruppo: se l'INSERT fallisce non proseguire con
             // groupId null (stato incoerente lato UI), ma fallire esplicitamente.
-            if( groupError || ! newGroup ) throw createError( {
-                statusCode: 500,
-                statusMessage: 'GROUP_CREATE_FAILED',
-                message: 'Non sono riuscito a creare il gruppo. Riprova.',
-            } );
+            if( groupError || ! newGroup ) {
+
+                throw createError( {
+                    statusCode: 500,
+                    statusMessage: 'GROUP_CREATE_FAILED',
+                    message: 'Non sono riuscito a creare il gruppo. Riprova.',
+                } );
+
+            }
 
             groupId = newGroup.id;
 
@@ -168,7 +174,7 @@ export default defineEventHandler( async event => {
         .from( 'player_sessions' )
         .select( 'id, color, is_host, group_id, nickname' )
         .eq( 'table_session_id', session.id )
-        .eq( 'user_id', user.id )
+        .eq( 'user_id', userId )
         .maybeSingle();
 
     if( existing ) {
@@ -201,7 +207,7 @@ export default defineEventHandler( async event => {
                 nickname,
                 color: playerColor,
                 group_id: groupId,
-                user_id: user.id,
+                user_id: userId,
                 is_host: isHost,
             } )
             .select( 'id, color, is_host' )
@@ -228,11 +234,15 @@ export default defineEventHandler( async event => {
             .eq( 'id', session.id )
             .is( 'host_player_id', null );
 
-        if( hostError ) throw createError( {
-            statusCode: 500,
-            statusMessage: 'HOST_REGISTER_FAILED',
-            message: 'Non sono riuscito a registrarti come host. Riprova.',
-        } );
+        if( hostError ) {
+
+            throw createError( {
+                statusCode: 500,
+                statusMessage: 'HOST_REGISTER_FAILED',
+                message: 'Non sono riuscito a registrarti come host. Riprova.',
+            } );
+
+        }
 
     }
 
