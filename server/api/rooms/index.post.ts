@@ -6,7 +6,7 @@ import { serviceClient } from '../../utils/supabase';
 
 import { serverSupabaseUser } from '#supabase/server';
 
-const createRoomSchema = z.object( { name: z.string().max( 40 ).trim().optional() } );
+const createRoomSchema = z.object( { name: z.string().trim().max( 40 ).optional() } );
 
 export default defineEventHandler( async event => {
 
