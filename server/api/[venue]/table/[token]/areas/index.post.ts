@@ -5,7 +5,7 @@ import { requireHostSession, requireTable } from '../../../../../utils/request';
 
 const createAreaSchema = z.object( {
     playerId: z.string().uuid(),
-    name: z.string().min( 1 ).max( 30 ).trim(),
+    name: z.string().trim().min( 1 ).max( 30 ),
 } );
 
 // Crea un'area nella sessione. Solo l'host (decisione di prodotto: l'host

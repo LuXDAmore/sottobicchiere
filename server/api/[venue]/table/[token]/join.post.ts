@@ -7,8 +7,8 @@ import { requireTable } from '../../../../utils/request';
 import { serverSupabaseUser } from '#supabase/server';
 
 const joinSchema = z.object( {
-    nickname: z.string().min( 1 ).max( 20 ).trim(),
-    groupName: z.string().max( 30 ).trim().optional(),
+    nickname: z.string().trim().min( 1 ).max( 20 ),
+    groupName: z.string().trim().max( 30 ).optional(),
     createSession: z.boolean().optional(),
     sessionId: z.string().uuid().optional(),
 } );
