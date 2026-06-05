@@ -18,13 +18,24 @@ const TOKEN_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
  */
 function randomString( alphabet: string, length: number ): string {
 
-    const bytes = new Uint8Array( length );
-
-    globalThis.crypto.getRandomValues( bytes );
+    const size = alphabet.length
+        // Soglia per il rejection sampling: scartiamo i byte oltre il più grande
+        // multiplo di `size` ≤ 256, così `byte % size` resta uniforme (niente modulo
+        // bias). I codici/token restano indovinabili solo a forza bruta.
+        , max = Math.floor( 256 / size ) * size
+        , buffer = new Uint8Array( 1 );
 
     let out = '';
 
-    for( let index = 0; index < length; index ++ ) out += alphabet[ bytes[ index ]! % alphabet.length ];
+    while( out.length < length ) {
+
+        globalThis.crypto.getRandomValues( buffer );
+
+        const byte = buffer[ 0 ]!;
+
+        if( byte < max ) out += alphabet[ byte % size ];
+
+    }
 
     return out;
 

@@ -6,7 +6,8 @@ Purpose:
   effimero — a casa, al parco, al circoletto — e farci aggregare gli altri tramite
   QR, link condivisibile o codice breve. Riusa il flusso esistente
   venue → tavolo → sessione → gioco, aggiungendo due livelli organizzativi:
-  AREE (zone di gioco) dentro un tavolo e SQUADRE (groups, già esistenti) dentro le aree.
+  AREE (zone di gioco) dentro un tavolo e SQUADRE (groups, già esistenti) per-tavolo,
+  livello parallelo alle aree (decisione #1: squadre per-tavolo, non per-area).
 
   Stato: IMPLEMENTATA (F1–F5). Decisioni confermate (vedi sotto). Modello dati, API stanze,
   UI crea/entra, aree & squadre in lobby, e punteggio per squadra nei giochi sono fatti e

@@ -29,12 +29,23 @@ export default defineEventHandler( async event => {
     // L'area deve appartenere alla stessa sessione del giocatore.
     if( parsed.data.areaId ) {
 
-        const { data: area } = await client
+        const { data: area, error } = await client
             .from( 'areas' )
             .select( 'id' )
             .eq( 'id', parsed.data.areaId )
             .eq( 'table_session_id', session.id )
             .maybeSingle();
+
+        // Errore DB ≠ area inesistente: 500 esplicito, non un 404 fuorviante.
+        if( error ) {
+
+            throw createError( {
+                statusCode: 500,
+                statusMessage: 'AREA_LOOKUP_FAILED',
+                message: 'Non riesco a verificare l\'area ora. Riprova.',
+            } );
+
+        }
 
         if( ! area ) {
 

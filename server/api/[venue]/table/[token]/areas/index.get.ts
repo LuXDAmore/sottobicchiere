@@ -18,20 +18,31 @@ export default defineEventHandler( async event => {
     }
 
     const [ areasResult, playersResult ] = await Promise.all( [
-            client
-                .from( 'areas' )
-                .select( 'id, name, color, ordinal' )
-                .eq( 'table_session_id', sessionId )
-                .order( 'ordinal', { ascending: true } )
-                .order( 'created_at', { ascending: true } ),
-            client
-                .from( 'player_sessions' )
-                .select( 'id, nickname, color, group_id, area_id' )
-                .eq( 'table_session_id', sessionId )
-                .order( 'joined_at', { ascending: true } ),
-        ] )
+        client
+            .from( 'areas' )
+            .select( 'id, name, color, ordinal' )
+            .eq( 'table_session_id', sessionId )
+            .order( 'ordinal', { ascending: true } )
+            .order( 'created_at', { ascending: true } ),
+        client
+            .from( 'player_sessions' )
+            .select( 'id, nickname, color, group_id, area_id' )
+            .eq( 'table_session_id', sessionId )
+            .order( 'joined_at', { ascending: true } ),
+    ] );
 
-        , members = ( playersResult.data ?? [] ).map( p => ( {
+    // Un errore DB non è "nessuna area": fallisci con 500 invece di un 200 con liste vuote.
+    if( areasResult.error || playersResult.error ) {
+
+        throw createError( {
+            statusCode: 500,
+            statusMessage: 'AREAS_FETCH_FAILED',
+            message: 'Non riesco a caricare le aree ora. Riprova tra qualche secondo.',
+        } );
+
+    }
+
+    const members = ( playersResult.data ?? [] ).map( p => ( {
             id: p.id,
             nickname: p.nickname,
             color: p.color,

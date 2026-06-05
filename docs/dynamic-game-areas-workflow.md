@@ -34,15 +34,15 @@ un solo tavolo generato**: così join, lobby, presence, giochi e cleanup funzion
 venue (kind = 'venue'  → bar preimpostato | 'adhoc' → stanza creata al volo)
   └─ table (qr_token + short_code generati per le stanze ad-hoc)
        └─ table_session (effimera, TTL)
-            ├─ areas[]        ← NUOVO livello 1: zone (es. "Salotto", "Cucina")
-            │     └─ groups[] ← livello 2: squadre (Team Blu vs Rosso) — già esistenti
+            ├─ areas[]            ← NUOVO: zone (es. "Salotto", "Cucina")
+            ├─ groups[]           ← squadre PER-TAVOLO (Team Blu vs Rosso) — già esistenti
             └─ player_sessions[]  (ogni player: area_id? + group_id? + nickname)
 ```
 
-Due livelli, entrambi **opzionali**:
+Due livelli **paralleli**, entrambi **opzionali** (decisione #1: squadre per-tavolo):
 
-1. **Aree** = zone fisiche/logiche dentro la stanza (nuova entità `areas`).
-2. **Squadre** = i `groups` già esistenti (Team Blu vs Rosso).
+1. **Aree** = zone fisiche/logiche dentro la stanza (nuova entità `areas`, FK alla sessione).
+2. **Squadre** = i `groups` già esistenti, per-tavolo (FK alla sessione, indipendenti dalle aree).
 
 ### Modifiche di schema previste
 

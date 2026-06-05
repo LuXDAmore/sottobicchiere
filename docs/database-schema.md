@@ -41,7 +41,7 @@ Tavoli fisici con QR — oppure il tavolo generato di una stanza ad-hoc.
 
 ### areas
 
-Zone di gioco opzionali dentro una sessione (es. "Salotto", "Cucina"). Livello tra la sessione e le squadre (`groups`).
+Zone di gioco opzionali dentro una sessione (es. "Salotto", "Cucina"). Livello **parallelo** alle squadre (`groups`): entrambi pendono dalla sessione e sono indipendenti (le squadre sono per-tavolo, non per-area).
 
 | Campo | Tipo | Note |
 |---|---|---|

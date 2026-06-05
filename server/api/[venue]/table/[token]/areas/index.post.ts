@@ -28,11 +28,22 @@ export default defineEventHandler( async event => {
         , { session } = await requireHostSession( event, client, parsed.data.playerId )
 
         // requireHostSession non verifica che la sessione sia di QUESTO tavolo: controllalo.
-        , { data: owner } = await client
+        , { data: owner, error: ownerError } = await client
             .from( 'table_sessions' )
             .select( 'table_id' )
             .eq( 'id', session.id )
             .maybeSingle();
+
+    // Errore DB ≠ mismatch di autorizzazione: 500 esplicito, non un 403 fuorviante.
+    if( ownerError ) {
+
+        throw createError( {
+            statusCode: 500,
+            statusMessage: 'SESSION_LOOKUP_FAILED',
+            message: 'Non riesco a verificare la sessione ora. Riprova.',
+        } );
+
+    }
 
     if( ! owner || owner.table_id !== table.tableId ) {
 
