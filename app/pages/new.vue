@@ -157,6 +157,8 @@
 
     import { z } from 'zod';
 
+    import { useSupabaseAnonReady } from '~/composables/useSupabaseAnonReady';
+
     const createSchema = z.object( { name: z.string().max( 40 ).optional() } )
           , state = reactive( { name: '' } )
           , { t } = useI18n()

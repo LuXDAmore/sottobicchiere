@@ -195,6 +195,8 @@
 <script setup lang="ts">
     import { z } from 'zod';
 
+    import { useSupabaseAnonReady } from '~/composables/useSupabaseAnonReady';
+
     const route = useRoute()
           , { t } = useI18n()
           , playerStore = usePlayerStore()
