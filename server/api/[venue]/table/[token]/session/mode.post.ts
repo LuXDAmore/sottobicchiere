@@ -25,9 +25,9 @@ export default defineEventHandler( async event => {
 
     }
 
-    const { client } = await requireTable( event )
+    const { client, table } = await requireTable( event )
         , { playerId, mode } = parsed.data
-        , { session } = await requireHostSession( event, client, playerId )
+        , { session } = await requireHostSession( event, client, playerId, table.tableId )
 
         // L'UPDATE viene propagato ai client dal trigger di broadcast su table_sessions.
         , { error } = await client

@@ -98,14 +98,15 @@ export async function requirePlayer( event: H3Event, client: ReturnType<typeof s
  * @param event - evento H3 della request.
  * @param client - client Supabase service role.
  * @param playerId - id del giocatore.
+ * @param tableId - id del tavolo atteso (opzionale, per vincolare la route).
  */
-export async function requireHostSession( event: H3Event, client: ReturnType<typeof serviceClient>, playerId: string ) {
+export async function requireHostSession( event: H3Event, client: ReturnType<typeof serviceClient>, playerId: string, tableId?: string ) {
 
     const player = await requirePlayer( event, client, playerId )
 
         , { data: session } = await client
             .from( 'table_sessions' )
-            .select( 'id, host_player_id, session_mode, dating_enabled' )
+            .select( 'id, host_player_id, session_mode, dating_enabled, table_id' )
             .eq( 'id', player.table_session_id )
             .gt( 'expires_at', new Date().toISOString() )
             .maybeSingle();
@@ -116,6 +117,16 @@ export async function requireHostSession( event: H3Event, client: ReturnType<typ
             statusCode: 404,
             statusMessage: 'SESSION_NOT_FOUND',
             message: 'La sessione è scaduta. Torna alla lobby e riprova.',
+        } );
+
+    }
+
+    if( tableId && session.table_id !== tableId ) {
+
+        throw createError( {
+            statusCode: 403,
+            statusMessage: 'PLAYER_TABLE_MISMATCH',
+            message: 'Questo giocatore non appartiene a questo tavolo o la sessione è scaduta.',
         } );
 
     }

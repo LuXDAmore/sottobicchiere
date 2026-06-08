@@ -155,8 +155,8 @@ Documentazione estesa in `docs/`:
 GitHub Actions:
 
 - **CI** (`.github/workflows/ci.yml`): lint, typecheck, unit, build su ogni push/PR.
-- **E2E** (`.github/workflows/e2e.yml`): Playwright su push/PR verso `main`.
-- **Deploy** (`.github/workflows/deploy.yml`): deploy a Vercel su push verso `main` (richiede secrets `VERCEL_*`).
+- **Security** (`.github/workflows/security.yml`): actionlint + CodeQL + Scorecard su push/PR e scansione schedulata.
+- **Clear PR cache** (`.github/workflows/clear-pr-cache.yml`): pulizia cache GitHub Actions alla chiusura delle PR.
 
 ## Setup Supabase (sintesi)
 

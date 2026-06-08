@@ -6,7 +6,7 @@ import {
     DATING_SEND_COOLDOWN_MS,
     validateDatingContent,
 } from '../../../../../utils/dating';
-import { requirePlayer, requireTable } from '../../../../../utils/request';
+import { requirePlayerForTable, requireTable } from '../../../../../utils/request';
 
 const payloadSchema = z.object( {
     playerId: z.string().uuid(),
@@ -28,9 +28,9 @@ export default defineEventHandler( async event => {
 
     }
 
-    const { client } = await requireTable( event )
+    const { client, table } = await requireTable( event )
         , { playerId, toTableSessionId, body } = parsed.data
-        , player = await requirePlayer( event, client, playerId )
+        , { player } = await requirePlayerForTable( event, client, playerId, table.tableId )
         , fromTableSessionId = player.table_session_id;
 
     if( toTableSessionId === fromTableSessionId ) {

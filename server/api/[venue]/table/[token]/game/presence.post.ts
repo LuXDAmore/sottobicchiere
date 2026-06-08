@@ -17,9 +17,9 @@ export default defineEventHandler( async event => {
 
     if( ! parsed.success ) return { ok: true };
 
-    const { client } = await requireTable( event )
+    const { client, table } = await requireTable( event )
         , { playerId, online } = parsed.data
-        , { session } = await requireHostSession( event, client, playerId )
+        , { session } = await requireHostSession( event, client, playerId, table.tableId )
         , game = await getActiveGame( client, session.id );
 
     if( ! game || game.phase !== 'voting' ) return { ok: true };
