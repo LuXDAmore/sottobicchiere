@@ -1,6 +1,6 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-02
+Aggiornato: 2026-06-08
 
 ## Resilienza & Tavoli dinamici (2026-06-02)
 
@@ -27,6 +27,20 @@ Aggiornato: 2026-06-02
 - [ ] Prova interattiva (browser): crea stanza `/new` → join via QR/link/codice → tab Aree +
       classifica per squadra in tempo reale. Richiede Anonymous sign-ins = ON in Supabase.
 - [ ] Test e2e automatico (Playwright) crea→condividi→join→gioca
+
+## Priorità operative (Now / Next / Later)
+
+### Now
+- [ ] E2E reale del flusso core: crea stanza → join multiplo → aree → partita → classifica team
+- [ ] Join lock robusto durante partita attiva con UX chiara (spettatore/attesa prossima partita)
+
+### Next
+- [ ] Venue Admin MVP: gestione tavoli/QR/sfide con premi
+- [ ] Moderazione dating: rate-limit avanzato, filtri contenuto, segnalazioni
+
+### Later
+- [ ] Analytics privacy-first per venue (engagement, conversioni gioco, retention sessione)
+- [ ] Account opt-in post-MVP (progressi, profilo, continuità cross-venue)
 
 ## Bootstrap (fase 0) — Documentazione e Design System
 
@@ -59,11 +73,11 @@ Aggiornato: 2026-06-02
 - [ ] Rigenerare il set completo di icone PWA dal nuovo SVG (`/images/icons/*` sono ancora i raster ereditati)
 - [ ] Lock join durante partita attiva (attualmente chi entra viene portato direttamente nel gioco in corso)
 
-## Database (fase 1)
+## Database (fase 1 — post-migrazione Supabase SQL)
 
-- [x] Schema Drizzle: `venues`, `tables`, `table_sessions`, `player_sessions`, `groups`
-- [ ] Generare e applicare la prima migrazione
-- [x] Scheduled task Nitro: `cleanup-expired-sessions` (run giornaliero alle 06:00 UTC)
+- [x] Schema SQL Supabase: `venues`, `tables`, `table_sessions`, `groups`, `areas`, `player_sessions`, `games`, `votes`, `dating_messages`
+- [x] Migrazioni applicate via `supabase/migrations/` + `pnpm db:push`
+- [x] Cleanup sessioni scadute su `pg_cron` (Supabase), non più su task Nitro
 
 ## App Structure (fase 1)
 
@@ -135,7 +149,7 @@ Aggiornato: 2026-06-02
 - [x] Implementare "Word Blitz" (prototipo locale)
 - [x] WebSocket handler Nitro per sync real-time
 - [x] Game state in-memory con `game-state.ts`
-- [ ] Host handover automatico se host disconnette
+- [x] Host handover automatico se host disconnette (elezione deterministica + `POST /session/claim-host`)
 - [ ] Lock join durante partita attiva (messaggio "partita in corso")
 - [ ] Terzo gioco MVP: trivia/quiz a scelta multipla
 - [ ] Replay/rematch senza tornare alla join page
