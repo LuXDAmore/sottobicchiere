@@ -25,37 +25,8 @@ export default defineEventHandler( async event => {
     }
 
     const { client, table } = await requireTable( event )
-        , { session } = await requireHostSession( event, client, parsed.data.playerId )
-
-        // requireHostSession non verifica che la sessione sia di QUESTO tavolo: controllalo.
-        , { data: owner, error: ownerError } = await client
-            .from( 'table_sessions' )
-            .select( 'table_id' )
-            .eq( 'id', session.id )
-            .maybeSingle();
-
-    // Errore DB ≠ mismatch di autorizzazione: 500 esplicito, non un 403 fuorviante.
-    if( ownerError ) {
-
-        throw createError( {
-            statusCode: 500,
-            statusMessage: 'SESSION_LOOKUP_FAILED',
-            message: 'Non riesco a verificare la sessione ora. Riprova.',
-        } );
-
-    }
-
-    if( ! owner || owner.table_id !== table.tableId ) {
-
-        throw createError( {
-            statusCode: 403,
-            statusMessage: 'PLAYER_TABLE_MISMATCH',
-            message: 'Questo giocatore non appartiene a questo tavolo o la sessione è scaduta.',
-        } );
-
-    }
-
-    const { data: existing } = await client
+        , { session } = await requireHostSession( event, client, parsed.data.playerId, table.tableId )
+        , { data: existing } = await client
             .from( 'areas' )
             .select( 'color, ordinal' )
             .eq( 'table_session_id', session.id )
