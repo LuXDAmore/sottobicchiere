@@ -28,13 +28,12 @@ export function useSupabaseAnonReady() {
 
         if( sessionData.session?.user ) return true;
 
-        const { error } = await client.auth.signInAnonymously();
+        // signInAnonymously restituisce già user/session: non serve un getUser() extra.
+        const { data, error } = await client.auth.signInAnonymously();
 
         if( error ) return false;
 
-        const { data: currentUser } = await client.auth.getUser();
-
-        return !! currentUser.user;
+        return !! data.user;
 
     };
 
