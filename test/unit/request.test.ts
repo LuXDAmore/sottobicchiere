@@ -39,12 +39,31 @@ function makeClient(
 
     return {
         from( table: string ) {
+            let filteredPlayer = player
+                , filteredSession = session;
 
             return {
                 select() {
 
                     return {
-                        eq() {
+                        eq( column: string, value: string ) {
+                            if( table === 'player_sessions' && column === 'id' && filteredPlayer?.id !== value ) {
+
+                                filteredPlayer = null;
+
+                            }
+
+                            if( table === 'table_sessions' && column === 'id' && filteredSession?.id !== value ) {
+
+                                filteredSession = null;
+
+                            }
+
+                            if( table === 'table_sessions' && column === 'table_id' && filteredSession?.table_id !== value ) {
+
+                                filteredSession = null;
+
+                            }
 
                             return this;
 
@@ -57,8 +76,8 @@ function makeClient(
                         maybeSingle() {
 
                             return Promise.resolve( table === 'player_sessions'
-                                ? { data: player }
-                                : { data: session } );
+                                ? { data: filteredPlayer }
+                                : { data: filteredSession } );
 
                         },
                     };
@@ -140,7 +159,13 @@ describe( 'requirePlayerForTable', () => {
                 is_host: false,
                 user_id: 'user-1',
             },
-            null
+            {
+                id: 'session-1',
+                host_player_id: null,
+                session_mode: 'board',
+                dating_enabled: false,
+                table_id: 'table-other',
+            }
         );
 
         await expect( requirePlayerForTable( {} as never, client, 'player-1', 'table-expected' ) )
