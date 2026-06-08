@@ -9,7 +9,7 @@ import {
 
 import type { ServiceClient } from '../../server/utils/supabase';
 
-import { requireHostSession } from '../../server/utils/request';
+import { requireHostSession, requirePlayerForTable } from '../../server/utils/request';
 
 vi.mock( '#supabase/server', () => ( { serverSupabaseUser: vi.fn( () => Promise.resolve( { sub: 'user-1' } ) ) } ) );
 
@@ -96,6 +96,64 @@ describe( 'requireHostSession', () => {
             .toMatchObject( {
                 statusCode: 403,
                 statusMessage: 'PLAYER_TABLE_MISMATCH',
+            } );
+
+            describe( 'requirePlayerForTable', () => {
+
+                it( 'nega accesso se il player appartiene a una sessione di un altro tavolo', async() => {
+
+                    const client = makeClient(
+                        {
+                            id: 'player-1',
+                            table_session_id: 'session-1',
+                            is_host: false,
+                            user_id: 'user-1',
+                        },
+                        {
+                            id: 'session-1',
+                            host_player_id: null,
+                            session_mode: 'board',
+                            dating_enabled: false,
+                            table_id: 'table-other',
+                        }
+                    );
+
+                    await expect( requirePlayerForTable( {} as never, client, 'player-1', 'table-expected' ) )
+                        .rejects
+                        .toMatchObject( {
+                            statusCode: 403,
+                            statusMessage: 'PLAYER_TABLE_MISMATCH',
+                        } );
+
+                } );
+
+                it( 'consente accesso se player e route appartengono allo stesso tavolo', async() => {
+
+                    const client = makeClient(
+                        {
+                            id: 'player-1',
+                            table_session_id: 'session-1',
+                            is_host: false,
+                            user_id: 'user-1',
+                        },
+                        {
+                            id: 'session-1',
+                            host_player_id: null,
+                            session_mode: 'board',
+                            dating_enabled: false,
+                            table_id: 'table-expected',
+                        }
+                    );
+
+                    await expect( requirePlayerForTable( {} as never, client, 'player-1', 'table-expected' ) )
+                        .resolves
+                        .toMatchObject( {
+                            player: { id: 'player-1' },
+                            session: { id: 'session-1' },
+                        } );
+
+                } );
+
             } );
 
     } );
