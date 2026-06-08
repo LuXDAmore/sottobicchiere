@@ -198,6 +198,7 @@
     const route = useRoute()
           , { t } = useI18n()
           , playerStore = usePlayerStore()
+          , ensureSupabaseAnonReady = useSupabaseAnonReady()
           , localePath = useLocalePath()
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
@@ -268,6 +269,8 @@
         const isCreating = selectedSessionId.value === null;
 
         try {
+
+            await ensureSupabaseAnonReady();
 
             const data = await $fetch<JoinResponse>( `/api/${ venueSlug }/table/${ qrToken }/join`, {
                 method: 'POST',

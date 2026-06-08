@@ -160,6 +160,7 @@
     const createSchema = z.object( { name: z.string().max( 40 ).optional() } )
           , state = reactive( { name: '' } )
           , { t } = useI18n()
+          , ensureSupabaseAnonReady = useSupabaseAnonReady()
           , localePath = useLocalePath()
           , toast = useToast()
           , { origin } = useRequestURL()
@@ -192,6 +193,8 @@
         } );
 
         try {
+
+            await ensureSupabaseAnonReady();
 
             const data = await $fetch<RoomCreatedResponse>( '/api/rooms', {
                 method: 'POST',
