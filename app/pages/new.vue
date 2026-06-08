@@ -196,7 +196,7 @@
 
         try {
 
-            await ensureSupabaseAnonReady();
+            if( ! await ensureSupabaseAnonReady() ) throw new Error( t( 'room.create_error' ) );
 
             const data = await $fetch<RoomCreatedResponse>( '/api/rooms', {
                 method: 'POST',

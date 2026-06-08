@@ -272,7 +272,7 @@
 
         try {
 
-            await ensureSupabaseAnonReady();
+            if( ! await ensureSupabaseAnonReady() ) throw new Error( t( 'table.join_error_generic' ) );
 
             const data = await $fetch<JoinResponse>( `/api/${ venueSlug }/table/${ qrToken }/join`, {
                 method: 'POST',
