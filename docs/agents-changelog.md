@@ -5,7 +5,29 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
-## 2026-06-03 — Adozione design system Nuxt UI (UTabs/USelect) in lobby
+## 2026-06-11 — Review prontezza MVP + diagnosi "errore generico" creazione tavolo
+
+### Diagnosi (root cause della creazione tavolo che fallisce)
+- Verificato dal vivo: il deploy Vercel è sano (homepage 200, env Supabase corrette) e lo
+  schema DB è applicato; ma sul progetto Supabase reale gli **Anonymous sign-ins sono
+  disabilitati** (`POST /auth/v1/signup` → `anonymous_provider_disabled`). Senza JWT anonimo
+  ogni `POST /api/rooms` risponde 401 `NOT_AUTHENTICATED` → l'"errore generico" in `/new`.
+  Fix di configurazione (dashboard → Authentication → Sign In / Providers → Anonymous), non di codice.
+
+### Fix dalla review MVP
+- `package.json`: `stylelint:check`/`stylelint:fix` puntavano a `**/*.scss` (nessun file
+  SCSS nel repo → exit 1, `pnpm lint` e job CI `lint` rotti). Ora puntano ai `.css`.
+- `.github/workflows/ci.yml`: rimossi i residui WeGree (fallback `NUXT_SITE_*`, colori) e le
+  env dello stack vecchio (`DATABASE_URL`, `REDIS_URL`, `NUXT_BETTER_AUTH_SECRET`, ecc.);
+  la validazione env ora richiede `NUXT_PUBLIC_SUPABASE_URL/KEY` e `NUXT_SUPABASE_SECRET_KEY`.
+- `app/composables/useTableSocket.ts`: i 2 messaggi d'errore hardcoded in italiano ora usano
+  i18n (`error.generic`, `error.connection_lost`, aggiunti in IT/EN).
+- `supabase/migrations/20260611090000_games_host_player_index.sql`: indice sulla FK
+  `games.host_player_id` (advisor/review). Applicato anche al progetto reale via MCP.
+- `README.md`: sezione CI/CD allineata alla realtà (niente `e2e.yml`/`deploy.yml`; il deploy
+  è l'integrazione Git di Vercel; esiste `security.yml`).
+
+Verificato: `pnpm lint` ora exit 0, typecheck, 34 unit test, build di produzione.
 
 Sostituiti i componenti "fatti a mano" con quelli del design system del progetto (Nuxt UI 4):
 - Tab principali lobby (Giocatori/Aree/Giochi): da `<button v-for>` hand-rolled a **`UTabs`**

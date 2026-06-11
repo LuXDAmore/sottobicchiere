@@ -185,6 +185,8 @@
     },
     "error": {
         "title": "Oops! C'è stato un errore",
-        "back": "Torna alla home"
+        "back": "Torna alla home",
+        "generic": "Si è verificato un errore. Riprova.",
+        "connection_lost": "Connessione interrotta, riprovo…"
     }
 }

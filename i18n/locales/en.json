@@ -185,6 +185,8 @@
     },
     "error": {
         "title": "Oops! Something went wrong",
-        "back": "Back to home"
+        "back": "Back to home",
+        "generic": "Something went wrong. Please try again.",
+        "connection_lost": "Connection lost, retrying…"
     }
 }

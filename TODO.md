@@ -1,6 +1,23 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-02
+Aggiornato: 2026-06-11
+
+## Review MVP & go-live (2026-06-11)
+
+- [x] Fix `pnpm lint` rotto: `stylelint:check` puntava a `**/*.scss` inesistenti → ora `.css`
+      (sbloccato anche il job CI `lint`, prerequisito di `build`)
+- [x] CI: rimossi residui WeGree (fallback env/branding) e variabili dello stack vecchio;
+      validazione env ora sul trio Supabase
+- [x] i18n: messaggi d'errore hardcoded in `useTableSocket.ts` → chiavi `error.generic` /
+      `error.connection_lost` (IT/EN)
+- [x] DB: indice su FK `games.host_player_id` (migration + applicato al progetto reale)
+- [x] README: sezione CI/CD allineata ai workflow reali (no e2e.yml/deploy.yml)
+- [x] Diagnosi "errore generico" su creazione tavolo: **Anonymous sign-ins disabilitati** sul
+      progetto Supabase reale → 401 su `/api/rooms`. Da abilitare in dashboard
+      (Authentication → Sign In / Providers → Anonymous)
+- [ ] Riabilitare l'indicizzazione al go-live (`public/_robots.txt` + `robots` in
+      `nuxt.config.ts` oggi bloccano tutti i crawler — scelta QA voluta)
+- [ ] Manifest PWA monolingue (`lang: "it"` anche su `/en/`) + icone raster da rigenerare
 
 ## Resilienza & Tavoli dinamici (2026-06-02)
 
