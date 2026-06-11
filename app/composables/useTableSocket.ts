@@ -24,9 +24,11 @@ const _useTableSocket = createGlobalState( () => {
     const playerStore = usePlayerStore()
         , supabase = useSupabaseClient<Database>()
 
-        // Catturata qui (contesto setup) per tradurre i messaggi d'errore anche
-        // nei callback realtime, dove `useNuxtApp()` non sarebbe disponibile.
-        , { $i18n } = useNuxtApp()
+        // $i18n risolto al momento dell'uso (mai catturato): questo stato è un
+        // singleton condiviso, in SSR terrebbe viva l'istanza della prima richiesta
+        // (cross-request state pollution). Sul client `tryUseNuxtApp()` risolve
+        // l'app anche nei callback realtime; il fallback copre solo l'SSR.
+        , translateError = ( key: string, fallback: string ) => tryUseNuxtApp()?.$i18n.t( key ) ?? fallback
 
         , players = ref<WsPlayer[]>( [] )
         , gameState = ref<ThumbsClientState | null>( null )
@@ -77,7 +79,7 @@ const _useTableSocket = createGlobalState( () => {
 
             const e = exception as { data?: { message?: string }; statusMessage?: string };
 
-            wsError.value = e?.data?.message ?? e?.statusMessage ?? $i18n.t( 'error.generic' );
+            wsError.value = e?.data?.message ?? e?.statusMessage ?? translateError( 'error.generic', 'Si è verificato un errore. Riprova.' );
             return null;
 
         }
@@ -396,7 +398,7 @@ const _useTableSocket = createGlobalState( () => {
                     case 'TIMED_OUT': {
 
                         status.value = 'CONNECTING';
-                        wsError.value = $i18n.t( 'error.connection_lost' );
+                        wsError.value = translateError( 'error.connection_lost', 'Connessione interrotta, riprovo…' );
 
                         break;
 
