@@ -13,8 +13,12 @@ Aggiornato: 2026-06-11
 - [x] DB: indice su FK `games.host_player_id` (migration + applicato al progetto reale)
 - [x] README: sezione CI/CD allineata ai workflow reali (no e2e.yml/deploy.yml)
 - [x] Diagnosi "errore generico" su creazione tavolo: **Anonymous sign-ins disabilitati** sul
-      progetto Supabase reale → 401 su `/api/rooms`. Da abilitare in dashboard
-      (Authentication → Sign In / Providers → Anonymous)
+      progetto Supabase reale → 401 su `/api/rooms`. Abilitati in dashboard ✓
+- [x] **Verifica live su produzione** (`scripts/e2e-live-game.mjs`): 2 utenti anonimi →
+      crea stanza → short code/link condivisibile → join → channel realtime privati
+      SUBSCRIBED → thumbs → voti → reveal → broadcast DB ricevuti da entrambi. 15/15 step ✓
+- [ ] I workflow GitHub Actions (CI/Security) risultano attivi ma **non sono mai stati
+      eseguiti** (0 run nella storia del repo): controllare Settings → Actions
 - [ ] Riabilitare l'indicizzazione al go-live (`public/_robots.txt` + `robots` in
       `nuxt.config.ts` oggi bloccano tutti i crawler — scelta QA voluta)
 - [ ] Manifest PWA monolingue (`lang: "it"` anche su `/en/`) + icone raster da rigenerare

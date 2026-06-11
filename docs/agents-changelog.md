@@ -29,6 +29,20 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 Verificato: `pnpm lint` ora exit 0, typecheck, 34 unit test, build di produzione.
 
+### Verifica live su produzione (dopo abilitazione Anonymous sign-ins)
+- `scripts/e2e-live-game.mjs` eseguito contro `https://sottobicchiere.vercel.app`:
+  2 utenti anonimi → crea stanza (short code + link) → resolve codice → join nella stessa
+  sessione → subscribe ai channel realtime privati (RLS ok) → select "thumbs" → start →
+  voti di entrambi → reveal automatico al quorum → broadcast DB (INSERT/UPDATE su games)
+  ricevuti da entrambi i client. **15/15 step passati.**
+- Nota operativa: al primissimo collegamento realtime del tenant il channel può fallire con
+  `CHANNEL_ERROR` (cold start: partizioni `realtime.messages` create in quel momento,
+  `UnableToSetPolicies` transitorio nei log). Al retry successivo funziona.
+- Da review (Gemini): `$i18n` non più catturato dentro `createGlobalState` (rischio
+  cross-request state pollution in SSR) → risolto al momento dell'uso con `tryUseNuxtApp()`.
+- Segnalato: i workflow GitHub Actions non sono mai stati eseguiti (0 run); verificare
+  Settings → Actions del repo.
+
 Sostituiti i componenti "fatti a mano" con quelli del design system del progetto (Nuxt UI 4):
 - Tab principali lobby (Giocatori/Aree/Giochi): da `<button v-for>` hand-rolled a **`UTabs`**
   (`variant="link"`, `:content="false"` → solo i trigger; il contenuto resta nelle section
