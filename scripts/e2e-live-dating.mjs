@@ -67,7 +67,8 @@ async function createTable( label ) {
 
     step( `${ label }: accesso anonimo`, ! error && !! data?.session, error?.message ?? '' );
 
-    const cookie = sessionCookies( data.session )
+    // EXTRA_COOKIE: es. _vercel_jwt per testare una preview Vercel protetta.
+    const cookie = [ sessionCookies( data.session ), process.env.EXTRA_COOKIE ].filter( Boolean ).join( '; ' )
 
         /**
          * @param path

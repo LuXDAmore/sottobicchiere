@@ -237,6 +237,11 @@
 
     onMounted( () => {
 
+        // Sessione scaduta rimasta in localStorage (es. browser riaperto il giorno
+        // dopo): pulisci lo store, così il form riparte da zero invece di portarsi
+        // dietro dati morti nei flussi successivi.
+        if( playerStore.isJoined && playerStore.isExpired ) playerStore.leave();
+
         if( playerStore.isJoined && ! playerStore.isExpired && playerStore.venueSlug === venueSlug && playerStore.qrToken === qrToken )
             navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
 

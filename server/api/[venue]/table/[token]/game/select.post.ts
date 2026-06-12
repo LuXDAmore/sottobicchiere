@@ -56,7 +56,14 @@ export default defineEventHandler( async event => {
         } );
 
     }
-    if( session.host_player_id && session.host_player_id !== body.playerId ) {
+    // Stessa semantica di requireHostSession: se host_player_id non è ancora
+    // valorizzato (race subito dopo la creazione), può procedere solo chi ha
+    // creato la sessione (is_host) — non il primo guest che seleziona un gioco.
+    const isAuthorized = session.host_player_id === null
+        ? player.is_host
+        : session.host_player_id === body.playerId;
+
+    if( ! isAuthorized ) {
 
         throw createError( {
             statusCode: 403,
