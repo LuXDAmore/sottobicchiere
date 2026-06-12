@@ -17,6 +17,24 @@ Aggiornato: 2026-06-12
       trigger negli header di lobby/thumbs/word-blitz e CTA nell'attesa "servono 2 giocatori"
 - [ ] Estrarre un `GameHeader` condiviso (header oggi duplicato in lobby/thumbs/word-blitz)
 - [ ] Mostrare il pannello invito anche nella pagina di join (`index.vue`) per chi non è ancora entrato
+- [x] **Fix "Connection lost" dopo "back to lobby"**: reference counting dei consumatori in
+      `useTableSocket` (Vue monta la pagina nuova PRIMA di smontare la vecchia: il close
+      della vecchia non deve smontare il channel appena riusato) + `reconnect()` dedicato
+- [x] Lobby: spinner solo sulla card del gioco selezionato (prima giravano tutte)
+- [x] Niente navigazione forzata su stato recuperato: refresh/riconnessione/broadcast non
+      ributtano in partita; banner "Partita in corso" con **Rientra** + **Termina** (host)
+- [x] `POST /game/end` (host): termina la partita e sblocca la selezione → si può cambiare gioco
+- [x] `POST /leave`: rimuove il giocatore (conteggi sessioni veritieri), fa scadere la sessione
+      vuota e azzera `host_player_id` se esce l'host
+- [x] Regole giochi: descrizione breve sulle card + modale "Come si gioca" (`game-rules-modal`)
+      in lobby e dentro thumbs/word-blitz; back-to-lobby sempre presente nell'header di thumbs
+- [x] Filtro "siamo in N" nella tab Giochi (min/max dal catalogo)
+- [x] **Verifica live sui flussi** (`scripts/e2e-live-flows.mjs`, contro la preview del PR):
+      22/22 step — min giocatori, end/sblocco, ri-selezione, guardie host/impersonificazione,
+      leave singolo/doppio, sessione svuotata scaduta. Regressione gioco completo 15/15 ✓
+- [ ] Game page: se l'host termina e seleziona un ALTRO gioco mentre un guest è ancora nella
+      pagina del vecchio, il guest rientra passando dalla lobby (banner) — valutare un watcher
+      di cambio gioco nelle pagine di gioco
 - [x] Agenti Claude Code verticali (`.claude/agents/`): docs-curator, design-system-guardian,
       code-reviewer, test-author, supabase-guardian; workflow (`.claude/commands/`):
       `/verifica`, `/pre-pr`, `/nuovo-gioco` (vedi Agents.md §6)

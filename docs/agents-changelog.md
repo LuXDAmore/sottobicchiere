@@ -67,6 +67,24 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
   (pagina + `game/start.post.ts`, che ora applica anche l'eventuale massimo con 422
   `TOO_MANY_PLAYERS`). `docs/game-modes.md` aggiornato (catalogo = fonte unica dei vincoli).
 
+### Terzo giro (feedback dal campo: flussi rotti) + verifica live
+- **Root cause "Connection lost" dopo "back to lobby"**: in Vue il `mounted` della pagina
+  nuova scatta PRIMA dell'`unmounted` della vecchia → il close differito della vecchia non
+  veniva mai annullato e smontava il channel appena riusato. Fix: reference counting dei
+  consumatori in `useTableSocket` (open/close per pagina) + grazia per l'ordine inverso;
+  `reconnect()` dedicato per il bottone "Riconnetti".
+- **Niente più "ributtato in partita"**: rimossa la navigazione forzata della lobby su
+  `gameState` recuperato; il watcher su `lockedAt` naviga solo su lock freschi (<15s) o
+  propri; banner "Partita in corso" con Rientra + Termina (host).
+- `POST /game/end` (host) e `POST /leave` (vedi `docs/api-contracts.md`): prima nessun
+  endpoint azzerava `locked_at`/`selected_game` (sessione bloccata fino al TTL) e il leave
+  era solo client-side (conteggi gonfiati, tavoli fantasma).
+- Lobby: spinner solo sulla card selezionata; filtro "siamo in N"; descrizioni giochi sulle
+  card + modale regole (`game-rules-modal`) riusata dentro thumbs/word-blitz; back-to-lobby
+  fisso nell'header di thumbs.
+- **Verifica live contro la preview del PR** (bypass Vercel via share link):
+  `scripts/e2e-live-flows.mjs` (nuovo) 22/22 step; regressione `e2e-live-game.mjs` 15/15.
+
 Verificato: lint (0 errori), typecheck, 41 unit test, build di produzione.
 
 ## 2026-06-11 — Review prontezza MVP + diagnosi "errore generico" creazione tavolo
