@@ -43,6 +43,24 @@ Verificato: `pnpm lint` ora exit 0, typecheck, 34 unit test, build di produzione
 - Segnalato: i workflow GitHub Actions non sono mai stati eseguiti (0 run); verificare
   Settings → Actions del repo.
 
+### Round finale (2026-06-12): dating live, merge main, fix review pre-go-live
+- Merge di `origin/main` (PR #27/#28 Copilot) nel branch: conflitti risolti combinando
+  `stylelint:check`→css (branch) con `--allow-empty-input` (main).
+- `scripts/e2e-live-dating.mjs`: verifica live del dating — 2 tavoli, toggle online/offline,
+  messaggio A→B e risposta B→A via broadcast realtime, invio verso tavolo offline → 409,
+  ritorno online. **21/21 step** su produzione e sulla preview del branch.
+- Giro finale di review (backend+frontend) con fix:
+  - `game/select.post.ts`: con `host_player_id` null poteva diventare host il primo che
+    selezionava un gioco → ora stessa semantica di `requireHostSession` (solo `is_host`).
+  - `lobby.vue`: timeout 8s (`useTimeoutFn`) che sblocca l'invio dating se l'ACK realtime
+    non arriva (prima restava bloccato per sempre) + chiave i18n dedicata.
+  - `[token]/index.vue`: reset dello store player persistito se la sessione è scaduta.
+  - Script e2e: `EXTRA_COOKIE` per testare le preview Vercel protette (`_vercel_jwt`).
+- Falsi allarmi scartati con verifica: ordine cleanup timer in `close()` (già corretto),
+  fallback host in `session/index.get.ts` (design ok), quorum presence (richiede host).
+- Verificato: lint, typecheck, 40/40 unit test, build; e2e gioco 15/15 + dating 21/21
+  sulla preview del branch (deployment `e20ebdc`).
+
 Sostituiti i componenti "fatti a mano" con quelli del design system del progetto (Nuxt UI 4):
 - Tab principali lobby (Giocatori/Aree/Giochi): da `<button v-for>` hand-rolled a **`UTabs`**
   (`variant="link"`, `:content="false"` → solo i trigger; il contenuto resta nelle section

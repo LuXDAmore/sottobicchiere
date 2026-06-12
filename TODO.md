@@ -17,6 +17,11 @@ Aggiornato: 2026-06-11
 - [x] **Verifica live su produzione** (`scripts/e2e-live-game.mjs`): 2 utenti anonimi →
       crea stanza → short code/link condivisibile → join → channel realtime privati
       SUBSCRIBED → thumbs → voti → reveal → broadcast DB ricevuti da entrambi. 15/15 step ✓
+- [x] **Verifica live dating** (`scripts/e2e-live-dating.mjs`): 2 tavoli → online/offline
+      → messaggio A→B + risposta B→A via realtime → invio a tavolo offline rifiutato (409)
+      → ritorno online. 21/21 step ✓ (anche su preview del branch con i fix)
+- [x] Giro finale di review pre-go-live: fix host-claim in `game/select` (semantica
+      requireHostSession), timeout ACK dating in lobby (8s), reset store player scaduto
 - [ ] I workflow GitHub Actions (CI/Security) risultano attivi ma **non sono mai stati
       eseguiti** (0 run nella storia del repo): controllare Settings → Actions
 - [ ] Riabilitare l'indicizzazione al go-live (`public/_robots.txt` + `robots` in
