@@ -21,9 +21,9 @@ export default defineEventHandler( async event => {
 
     }
 
-    const { client } = await requireTable( event )
+    const { client, table } = await requireTable( event )
         , { playerId } = parsed.data
-        , { session } = await requireHostSession( event, client, playerId )
+        , { session } = await requireHostSession( event, client, playerId, table.tableId )
         , game = await getActiveGame( client, session.id );
 
     if( ! game ) {

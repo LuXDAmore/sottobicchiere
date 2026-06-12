@@ -28,6 +28,20 @@ describe( 'buildGameRounds', () => {
 
     } );
 
+    it( 'normalizza input non numerici o non finiti a 1 round', () => {
+
+        expect( buildGameRounds( Number.NaN ).totalRounds ).toBe( 1 );
+        expect( buildGameRounds( Number.POSITIVE_INFINITY ).totalRounds ).toBe( 1 );
+
+    } );
+
+    it( 'tronca i decimali per evitare round frazionari', () => {
+
+        expect( buildGameRounds( 3.9 ).totalRounds ).toBe( 3 );
+        expect( buildGameRounds( 3.9 ).questions ).toHaveLength( 3 );
+
+    } );
+
 } );
 
 describe( 'computeReveal', () => {

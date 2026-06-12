@@ -8,7 +8,10 @@ import { type Question, THUMBS_QUESTIONS, shuffleQuestions } from './questions';
  */
 export function buildGameRounds( totalRounds = 10 ): { questions: Question[]; totalRounds: number } {
 
-    const rounds = Math.min( Math.max( 1, totalRounds ), THUMBS_QUESTIONS.length )
+    const requestedRounds = Number.isFinite( totalRounds )
+            ? Math.trunc( totalRounds )
+            : 1
+        , rounds = Math.min( Math.max( 1, requestedRounds ), THUMBS_QUESTIONS.length )
         , questions = shuffleQuestions( THUMBS_QUESTIONS ).slice( 0, rounds );
 
     return {

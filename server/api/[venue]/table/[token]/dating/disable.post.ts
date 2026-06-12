@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { requirePlayer, requireTable } from '../../../../../utils/request';
+import { requirePlayerForTable, requireTable } from '../../../../../utils/request';
 
 const payloadSchema = z.object( { playerId: z.string().uuid() } );
 
@@ -18,8 +18,8 @@ export default defineEventHandler( async event => {
 
     }
 
-    const { client } = await requireTable( event )
-        , player = await requirePlayer( event, client, parsed.data.playerId );
+    const { client, table } = await requireTable( event )
+        , { player } = await requirePlayerForTable( event, client, parsed.data.playerId, table.tableId );
 
     const { error } = await client
         .from( 'table_sessions' )

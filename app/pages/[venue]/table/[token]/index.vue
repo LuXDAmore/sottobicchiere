@@ -195,9 +195,12 @@
 <script setup lang="ts">
     import { z } from 'zod';
 
+    import { useSupabaseAnonReady } from '~/composables/useSupabaseAnonReady';
+
     const route = useRoute()
           , { t } = useI18n()
           , playerStore = usePlayerStore()
+          , ensureSupabaseAnonReady = useSupabaseAnonReady()
           , localePath = useLocalePath()
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
@@ -268,6 +271,8 @@
         const isCreating = selectedSessionId.value === null;
 
         try {
+
+            if( ! await ensureSupabaseAnonReady() ) throw new Error( t( 'table.join_error_generic' ) );
 
             const data = await $fetch<JoinResponse>( `/api/${ venueSlug }/table/${ qrToken }/join`, {
                 method: 'POST',
