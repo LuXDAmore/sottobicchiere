@@ -464,6 +464,25 @@
           , datingBody = ref( '' )
           , isSendingDating = ref( false )
           , isTogglingDating = ref( false )
+
+          // Sblocca l'invio dating se l'ACK realtime non arriva (es. connessione
+          // caduta tra la POST e il broadcast): senza, spinner e input resterebbero
+          // bloccati per sempre.
+          , datingAckTimeout = useTimeoutFn( () => {
+
+              if( ! isSendingDating.value ) return;
+
+              toast.remove( 'lobby-dating-send-loading' );
+              isSendingDating.value = false;
+              pendingDatingMessage.value = null;
+              toast.add( {
+                  color: 'warning',
+                  description: t( 'lobby.dating_message_timeout_toast' ),
+                  duration: 4000,
+                  icon: 'i-lucide-clock-alert',
+              } );
+
+          }, 8000, { immediate: false } )
           , pendingSelectedGame = ref<string | null>( null )
           , pendingDatingMessage = ref<{ body: string; toTableSessionId: string } | null>( null )
           , areas = ref<AreaWithMembers[]>( [] )
@@ -654,6 +673,7 @@
             isSelectingGame.value = false;
             toast.remove( 'lobby-select-game-loading' );
             toast.remove( 'lobby-dating-send-loading' );
+            datingAckTimeout.stop();
             isSendingDating.value = false;
             pendingDatingMessage.value = null;
             toast.add( {
@@ -704,6 +724,7 @@
 
         if( ! isOwnAck ) return;
 
+        datingAckTimeout.stop();
         toast.remove( 'lobby-dating-send-loading' );
         isSendingDating.value = false;
         pendingDatingMessage.value = null;
@@ -783,6 +804,7 @@
             icon: 'i-lucide-loader-2',
         } );
         sendDatingMessage( datingTarget.value, messageBody );
+        datingAckTimeout.start();
         datingBody.value = '';
 
     }

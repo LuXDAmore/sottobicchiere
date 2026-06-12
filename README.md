@@ -157,6 +157,7 @@ GitHub Actions:
 - **CI** (`.github/workflows/ci.yml`): lint, typecheck, unit, build su ogni push/PR.
 - **Security** (`.github/workflows/security.yml`): actionlint + CodeQL + Scorecard su push/PR e scansione schedulata.
 - **Clear PR cache** (`.github/workflows/clear-pr-cache.yml`): pulizia cache GitHub Actions alla chiusura delle PR.
+- **Deploy**: gestito dall'integrazione Git di Vercel (push su `main` → deploy production).
 
 ## Setup Supabase (sintesi)
 

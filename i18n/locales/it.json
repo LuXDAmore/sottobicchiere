@@ -138,7 +138,8 @@
         "game_select_error_toast": "Non è stato possibile selezionare il gioco. Riprova tra qualche secondo.",
         "leave_pending_toast": "Uscita dalla lobby in corso…",
         "leave_error_toast": "Errore durante l’uscita dalla lobby. Riprova.",
-        "dating_message_sending_toast": "Invio messaggio anonimo in corso…"
+        "dating_message_sending_toast": "Invio messaggio anonimo in corso…",
+        "dating_message_timeout_toast": "Conferma non ricevuta: il messaggio potrebbe non essere arrivato. Riprova."
     },
     "game": {
         "thumbs": {
@@ -185,6 +186,8 @@
     },
     "error": {
         "title": "Oops! C'è stato un errore",
-        "back": "Torna alla home"
+        "back": "Torna alla home",
+        "generic": "Si è verificato un errore. Riprova.",
+        "connection_lost": "Connessione interrotta, riprovo…"
     }
 }

@@ -138,7 +138,8 @@
         "game_select_error_toast": "Could not select game. Please try again in a moment.",
         "leave_pending_toast": "Leaving lobby…",
         "leave_error_toast": "Error while leaving lobby. Please try again.",
-        "dating_message_sending_toast": "Sending anonymous message…"
+        "dating_message_sending_toast": "Sending anonymous message…",
+        "dating_message_timeout_toast": "No confirmation received: your message may not have been delivered. Try again."
     },
     "game": {
         "thumbs": {
@@ -185,6 +186,8 @@
     },
     "error": {
         "title": "Oops! Something went wrong",
-        "back": "Back to home"
+        "back": "Back to home",
+        "generic": "Something went wrong. Please try again.",
+        "connection_lost": "Connection lost, retrying…"
     }
 }

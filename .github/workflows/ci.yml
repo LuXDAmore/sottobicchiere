@@ -17,19 +17,17 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NUXT_SITE_URL: ${{ vars.NUXT_SITE_URL || 'https://www.wegree.com' }}
+  NUXT_SITE_URL: ${{ vars.NUXT_SITE_URL || 'https://sottobicchiere.vercel.app' }}
   NUXT_APP_BASE_URL: ${{ vars.NUXT_APP_BASE_URL || '/' }}
   NUXT_APP_ENV: ${{ vars.NUXT_APP_ENV || 'production' }}
   NUXT_SITE_ENV: ${{ vars.NUXT_SITE_ENV || 'production' }}
-  NUXT_SITE_NAME: ${{ vars.NUXT_SITE_NAME || 'WeGree' }}
-  NUXT_SITE_DESCRIPTION: ${{ vars.NUXT_SITE_DESCRIPTION || 'B2B telematic auction marketplace | WeGree' }}
-  NUXT_COLORS: ${{ vars.NUXT_COLORS || '#1f9263,#4d6dab' }}
-  NUXT_PUBLIC_SITE_URL: ${{ vars.NUXT_PUBLIC_SITE_URL || 'https://www.wegree.com' }}
-  BLOB_READ_WRITE_TOKEN: ${{ vars.BLOB_READ_WRITE_TOKEN }}
-  DATABASE_URL: ${{ vars.DATABASE_URL }}
-  POSTGRES_URL: ${{ vars.POSTGRES_URL }}
-  NUXT_BETTER_AUTH_SECRET: ${{ secrets.NUXT_BETTER_AUTH_SECRET }}
-  REDIS_URL: ${{ vars.REDIS_URL }}
+  NUXT_SITE_NAME: ${{ vars.NUXT_SITE_NAME || 'Sottobicchiere' }}
+  NUXT_SITE_DESCRIPTION: ${{ vars.NUXT_SITE_DESCRIPTION || 'Giochi da tavolo per il tuo locale' }}
+  NUXT_COLORS: ${{ vars.NUXT_COLORS || '#4F46E5,#F59E0B' }}
+  NUXT_PUBLIC_SITE_URL: ${{ vars.NUXT_PUBLIC_SITE_URL || 'https://sottobicchiere.vercel.app' }}
+  NUXT_PUBLIC_SUPABASE_URL: ${{ vars.NUXT_PUBLIC_SUPABASE_URL }}
+  NUXT_PUBLIC_SUPABASE_KEY: ${{ vars.NUXT_PUBLIC_SUPABASE_KEY }}
+  NUXT_SUPABASE_SECRET_KEY: ${{ secrets.NUXT_SUPABASE_SECRET_KEY }}
 
 jobs:
   typecheck:
@@ -117,7 +115,7 @@ jobs:
       - name: Validate production env wiring
         continue-on-error: true
         run: |
-          required=(BLOB_READ_WRITE_TOKEN DATABASE_URL POSTGRES_URL NUXT_BETTER_AUTH_SECRET REDIS_URL)
+          required=(NUXT_PUBLIC_SUPABASE_URL NUXT_PUBLIC_SUPABASE_KEY NUXT_SUPABASE_SECRET_KEY)
           missing=0
           for key in "${required[@]}"; do
             if [ -z "${!key}" ]; then
