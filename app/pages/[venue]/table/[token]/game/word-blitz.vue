@@ -9,6 +9,15 @@
             </div>
 
             <div class="flex gap-2 items-center">
+                <!-- Regole sempre consultabili -->
+                <u-button
+                    :aria-label="$t('lobby.game_rules_aria')"
+                    color="neutral"
+                    icon="i-lucide-circle-help"
+                    size="sm"
+                    variant="ghost"
+                    @click="rulesOpen = true"
+                />
                 <!-- Invita al tavolo (QR/link/codice per chi arriva dopo) -->
                 <table-invite>
                     <u-button
@@ -80,6 +89,9 @@
                 </ul>
             </u-card>
         </main>
+
+        <!-- Regole del gioco, consultabili in ogni fase -->
+        <game-rules-modal v-model:open="rulesOpen" :game="wordBlitzDefinition" />
     </div>
 </template>
 
@@ -95,6 +107,9 @@
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
+
+          , wordBlitzDefinition = getGameDefinition( 'word-blitz' )
+          , rulesOpen = ref( false )
 
           , letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split( '' )
           , currentLetter = useState<string>(

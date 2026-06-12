@@ -74,7 +74,12 @@ const _useTableSocket = createGlobalState( () => {
         // ingresso su un tavolo appena creato l'autorizzazione realtime può non essere
         // ancora visibile e il server chiude il join). Equivale a premere "Riconnetti".
         , reopenTimer: ReturnType<typeof setTimeout> | null = null
-        , reopenAttempts = 0;
+        , reopenAttempts = 0
+        // Pagine che stanno usando la connessione (open() in onMounted / close() in
+        // onUnmounted). Vue monta la pagina nuova PRIMA di smontare la vecchia:
+        // senza questo contatore il close() della vecchia pagina (che arriva DOPO
+        // l'open() della nuova) smonterebbe il channel appena riusato.
+        , openConsumers = 0;
 
     const apiBase = () => `/api/${ playerStore.venueSlug }/table/${ playerStore.qrToken }`;
 
@@ -360,10 +365,12 @@ const _useTableSocket = createGlobalState( () => {
 
         if( ! sessionId || ! playerId ) return;
 
-        // Un open() esplicito (mount pagina, bottone "Riconnetti") azzera il budget
-        // dei retry automatici e supera eventuali riaperture pianificate.
+        // Solo l'open() di una pagina (onMounted) conta come consumatore e azzera
+        // il budget dei retry: le riaperture interne (scheduleReopen/reconnect)
+        // passano isRetry=true e non alterano il conteggio.
         if( ! isRetry ) {
 
+            openConsumers += 1;
             reopenAttempts = 0;
 
             if( reopenTimer ) {
@@ -544,14 +551,38 @@ const _useTableSocket = createGlobalState( () => {
     }
 
     /**
-     * Chiusura "morbida": schedula lo smaltimento con una finestra di grazia.
-     * Navigando tra le pagine del tavolo (lobby ↔ gioco) l'onUnmounted chiama
-     * close() e l'onMounted successivo chiama open(), che annulla il timer: la
-     * connessione resta viva (il topic è lo stesso) e non c'è né flash del banner
-     * "disconnesso" né race sul riuso del channel in realtime-js. Solo un close()
-     * "vero" (leave, uscita dal tavolo) arriva fino a disposeChannels().
+     * Riconnessione manuale (bottone "Riconnetti"): azzera il budget dei retry
+     * e riapre senza contare un nuovo consumatore di pagina.
+     */
+    function reconnect() {
+
+        reopenAttempts = 0;
+
+        if( reopenTimer ) {
+
+            clearTimeout( reopenTimer );
+            reopenTimer = null;
+
+        }
+
+        return open( true );
+
+    }
+
+    /**
+     * Chiusura "morbida": decrementa i consumatori e, solo quando nessuna pagina
+     * usa più la connessione, schedula lo smaltimento con una finestra di grazia.
+     * Navigando tra le pagine del tavolo (lobby ↔ gioco) Vue monta la pagina nuova
+     * (open) PRIMA di smontare la vecchia (close): il conteggio resta ≥ 1 e la
+     * connessione sopravvive senza flash né race sul riuso del channel. La grazia
+     * copre anche l'ordine inverso (close prima di open). Solo un close() "vero"
+     * (leave, uscita dal tavolo) arriva fino a disposeChannels().
      */
     function close() {
+
+        openConsumers = Math.max( 0, openConsumers - 1 );
+
+        if( openConsumers > 0 ) return;
 
         if( disposeTimer ) clearTimeout( disposeTimer );
 
@@ -771,6 +802,7 @@ const _useTableSocket = createGlobalState( () => {
         nextRound,
         open,
         players,
+        reconnect,
         sendDatingMessage,
         sessionMode,
         setSessionMode,

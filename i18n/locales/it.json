@@ -107,8 +107,17 @@
         "games_description": "I minigiochi multiplayer saranno disponibili presto.",
         "game_min_players": "Min. {n} giocatori",
         "game_players_range": "{min}–{max} giocatori",
+        "players_filter_label": "Filtra per numero di giocatori",
+        "players_filter_all": "Qualsiasi numero di giocatori",
+        "players_filter_n": "Siamo in {n}",
+        "games_filter_empty": "Nessun gioco adatto a questo numero di giocatori.",
+        "game_rules_aria": "Regole del gioco",
         "game_duration": "~{n} min",
         "game_in_progress": "Partita in corso",
+        "game_resume": "Rientra in partita",
+        "game_end": "Termina partita",
+        "game_end_success_toast": "Partita terminata: potete scegliere un altro gioco.",
+        "game_end_error_toast": "Non sono riuscito a terminare la partita. Riprova.",
         "game_host_only": "Solo l'host può scegliere il gioco.",
         "leave": "Esci",
         "connecting": "Connessione in corso…",
@@ -154,6 +163,7 @@
         "dating_message_timeout_toast": "Conferma non ricevuta: il messaggio potrebbe non essere arrivato. Riprova."
     },
     "game": {
+        "rules_heading": "Come si gioca",
         "thumbs": {
             "title": "Pollice Su",
             "description": "Vota 👍 o 👎 su domande di opinione e sfida i tuoi amici!",
@@ -180,7 +190,8 @@
             "start_success_toast": "Partita avviata.",
             "vote_pending_toast": "Invio voto in corso…",
             "vote_success_toast": "Voto inviato.",
-            "next_round_pending_toast": "Passaggio al prossimo round…"
+            "next_round_pending_toast": "Passaggio al prossimo round…",
+            "rules": "Ad ogni round appare una domanda di opinione: vota 👍 (sì) o 👎 (no).\nQuando tutti i presenti hanno votato, i voti vengono svelati.\nGuadagni 1 punto ogni volta che il tuo voto è in maggioranza: si vince stando dalla parte del gruppo, si resta a zero andando controcorrente.\nVince chi ha più punti dopo l'ultimo round (c'è anche la classifica per squadre, se ne avete create).\nL'host avanza i round, può rigiocare a fine partita o terminarla in anticipo dalla lobby."
         },
         "word_blitz": {
             "title": "Word Blitz",
@@ -190,7 +201,8 @@
             "input_placeholder": "Es: Barca",
             "submit": "Invia parola",
             "history": "Storico parole",
-            "local_note": "Modalità prototipo locale: nel prossimo step diventa realtime al tavolo."
+            "local_note": "Modalità prototipo locale: nel prossimo step diventa realtime al tavolo.",
+            "rules": "Appare una lettera: scrivi al volo una parola che inizia con quella lettera e premi Invio.\nLa parola entra nello storico e arriva subito una nuova lettera: l'obiettivo è essere rapidi, a voce alta vale doppio.\nModalità prototipo locale: le parole restano sul tuo dispositivo e non ci sono ancora punti né vincitori — allenati in attesa della versione realtime."
         }
     },
     "layout": {

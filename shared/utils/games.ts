@@ -9,6 +9,9 @@ export interface GameDefinition {
     avgDurationMinutes: number;
     icon: string;
     labelKey: string;
+    // Descrizione breve (card della lobby) e regole estese (modale "come si gioca").
+    descriptionKey: string;
+    rulesKey: string;
 }
 
 export const GAME_DEFINITIONS: GameDefinition[] = [
@@ -19,6 +22,8 @@ export const GAME_DEFINITIONS: GameDefinition[] = [
         avgDurationMinutes: 8,
         icon: '👍',
         labelKey: 'game.thumbs.title',
+        descriptionKey: 'game.thumbs.description',
+        rulesKey: 'game.thumbs.rules',
     },
     {
         id: 'word-blitz',
@@ -28,6 +33,8 @@ export const GAME_DEFINITIONS: GameDefinition[] = [
         avgDurationMinutes: 5,
         icon: '⚡',
         labelKey: 'game.word_blitz.title',
+        descriptionKey: 'game.word_blitz.description',
+        rulesKey: 'game.word_blitz.rules',
     },
 ];
 
