@@ -39,6 +39,19 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - i18n: nuova sezione `invite` (IT/EN); riusate le chiavi `room.share_*`/`room.copy_*`.
 - Test: `table-resolver.test.ts` aggiornato + caso `shortCode: null` per tavoli fisici.
 
+### Agenti e workflow Claude Code di progetto
+- `.claude/agents/` (5 agenti verticali): `docs-curator` (Documentation Rule),
+  `design-system-guardian` (componenti Nuxt UI al posto di HTML grezzo — UTabs/UTable/
+  USelect/UModal/… — palette "Notte Italiana", i18n nei template, a11y),
+  `code-reviewer` (bug, race realtime, boundary RLS/service-role, convenzioni SpecDD),
+  `test-author` (Vitest secondo i pattern di `test/unit/`), `supabase-guardian`
+  (migrations idempotenti, RLS, policy realtime.messages, anti-spoofing, TTL).
+- `.claude/commands/` (3 workflow): `/verifica` (lint+typecheck+test+parità i18n+build),
+  `/pre-pr` (verifica + review parallele degli agenti + docs + PR draft),
+  `/nuovo-gioco` (scaffolding guidato di un minigioco: spec SpecDD → DB → API → pagina →
+  i18n → test, sul modello di thumbs).
+- `Agents.md` §6: indice di agenti e workflow per le sessioni future.
+
 Verificato: lint (0 errori), typecheck, 41 unit test, build di produzione.
 
 ## 2026-06-11 — Review prontezza MVP + diagnosi "errore generico" creazione tavolo

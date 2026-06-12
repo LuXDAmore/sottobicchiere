@@ -17,6 +17,9 @@ Aggiornato: 2026-06-12
       trigger negli header di lobby/thumbs/word-blitz e CTA nell'attesa "servono 2 giocatori"
 - [ ] Estrarre un `GameHeader` condiviso (header oggi duplicato in lobby/thumbs/word-blitz)
 - [ ] Mostrare il pannello invito anche nella pagina di join (`index.vue`) per chi non è ancora entrato
+- [x] Agenti Claude Code verticali (`.claude/agents/`): docs-curator, design-system-guardian,
+      code-reviewer, test-author, supabase-guardian; workflow (`.claude/commands/`):
+      `/verifica`, `/pre-pr`, `/nuovo-gioco` (vedi Agents.md §6)
 
 ## Review MVP & go-live (2026-06-11)
 
