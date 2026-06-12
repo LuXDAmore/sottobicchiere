@@ -185,6 +185,27 @@
             <!-- Players tab -->
             <section v-show="activeTab === 'players'" class="p-4 space-y-4">
 
+                <!-- Da soli al tavolo: avviso soft + invito (la maggior parte dei giochi richiede 2+) -->
+                <div v-if="isAloneAtTable" class="space-y-3">
+                    <u-alert
+                        color="warning"
+                        :description="$t('lobby.alone_description')"
+                        icon="i-lucide-user-round-plus"
+                        :title="$t('lobby.alone_title')"
+                        variant="soft"
+                    />
+                    <table-invite>
+                        <u-button
+                            block
+                            color="warning"
+                            icon="i-lucide-user-plus"
+                            :label="$t('invite.waiting_cta')"
+                            size="lg"
+                            variant="soft"
+                        />
+                    </table-invite>
+                </div>
+
                 <div class="flex gap-2 items-center">
                     <span v-if="status === 'OPEN'" class="live-dot" />
                     <p class="font-medium text-muted text-xs tracking-wide uppercase">
@@ -390,7 +411,9 @@
                                     <div class="flex gap-3 items-center mt-1">
                                         <span class="flex gap-1 items-center text-muted text-xs">
                                             <u-icon class="size-3" name="i-lucide-users" />
-                                            {{ $t('lobby.game_min_players', { n: game.minPlayers }) }}
+                                            {{ game.maxPlayers
+                                                ? $t('lobby.game_players_range', { min: game.minPlayers, max: game.maxPlayers })
+                                                : $t('lobby.game_min_players', { n: game.minPlayers }) }}
                                         </span>
                                         <span class="flex gap-1 items-center text-muted text-xs">
                                             <u-icon class="size-3" name="i-lucide-clock" />
@@ -534,6 +557,10 @@
               ? gameSelection.value.hostPlayerId === playerStore.playerId
               : playerStore.isHost ) )
           , isWsBootstrapping = computed( () => status.value === 'CONNECTING' && players.value.length === 0 )
+
+          // Da soli al tavolo (connessione viva e presence sincronizzata): mostra
+          // l'avviso che quasi tutti i giochi richiedono almeno 2 giocatori.
+          , isAloneAtTable = computed( () => status.value === 'OPEN' && players.value.length === 1 )
 
           , tabs = computed( () => [
               {

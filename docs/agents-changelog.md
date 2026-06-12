@@ -52,6 +52,21 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
   i18n → test, sul modello di thumbs).
 - `Agents.md` §6: indice di agenti e workflow per le sessioni future.
 
+### Secondo giro (feedback dal campo)
+- **Fix "Connection lost" al primo ingresso nel tavolo creato**: una chiusura voluta del
+  channel passa da `disposeChannels()` (filtrata dalla guardia), quindi un `CLOSED` che
+  raggiunge il callback di subscribe è il server che chiude inaspettatamente — tipico al
+  primo join su un tavolo appena creato (autorizzazione realtime non ancora visibile,
+  cold start già osservato nei log). Ora `scheduleReopen()` riapre in automatico con
+  backoff lineare (3 tentativi, budget azzerato da open() esplicito/"Riconnetti"),
+  conservando lo stato della sessione (`disposeChannels(keepState)`).
+- Lobby: avviso `UAlert` "Sei solo al tavolo" + CTA invito quando la presence conta 1.
+- `shared/utils/games.ts`: `maxPlayers?` in `GameDefinition`, helper `getGameDefinition()`;
+  `word-blitz` → `minPlayers: 1` (prototipo locale, allineato alla descrizione "1+").
+  Card lobby: "Min. {n}" o "{min}–{max} giocatori". Il minimo di thumbs è data-driven
+  (pagina + `game/start.post.ts`, che ora applica anche l'eventuale massimo con 422
+  `TOO_MANY_PLAYERS`). `docs/game-modes.md` aggiornato (catalogo = fonte unica dei vincoli).
+
 Verificato: lint (0 errori), typecheck, 41 unit test, build di produzione.
 
 ## 2026-06-11 — Review prontezza MVP + diagnosi "errore generico" creazione tavolo

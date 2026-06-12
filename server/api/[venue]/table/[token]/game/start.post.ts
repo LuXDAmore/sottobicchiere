@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import type { Json } from '../../../../../../shared/types/database';
 
+import { getGameDefinition } from '../../../../../../shared/utils/games';
 import { getActiveGame } from '../../../../../utils/game-engine';
 import { buildGameRounds } from '../../../../../utils/game-thumbs';
 import { requireHostSession, requireTable } from '../../../../../utils/request';
@@ -48,14 +49,28 @@ export default defineEventHandler( async event => {
             .select( 'id' )
             .eq( 'table_session_id', tableSessionId )
 
-        , playerIds = ( players ?? [] ).map( p => p.id );
+        , playerIds = ( players ?? [] ).map( p => p.id )
 
-    if( playerIds.length < 2 ) {
+        // Vincoli giocatori dal catalogo condiviso (fonte unica con la UI della lobby).
+        , definition = getGameDefinition( 'thumbs' )
+        , minPlayers = definition?.minPlayers ?? 2;
+
+    if( playerIds.length < minPlayers ) {
 
         throw createError( {
             statusCode: 422,
             statusMessage: 'NOT_ENOUGH_PLAYERS',
-            message: 'Servono almeno 2 giocatori per iniziare.',
+            message: `Servono almeno ${ minPlayers } giocatori per iniziare.`,
+        } );
+
+    }
+
+    if( definition?.maxPlayers && playerIds.length > definition.maxPlayers ) {
+
+        throw createError( {
+            statusCode: 422,
+            statusMessage: 'TOO_MANY_PLAYERS',
+            message: `Questo gioco supporta al massimo ${ definition.maxPlayers } giocatori.`,
         } );
 
     }

@@ -20,6 +20,15 @@ Aggiornato: 2026-06-12
 - [x] Agenti Claude Code verticali (`.claude/agents/`): docs-curator, design-system-guardian,
       code-reviewer, test-author, supabase-guardian; workflow (`.claude/commands/`):
       `/verifica`, `/pre-pr`, `/nuovo-gioco` (vedi Agents.md §6)
+- [x] **Fix "Connection lost" al primo ingresso nel tavolo appena creato**: riapertura
+      automatica con backoff (3 tentativi) quando il server chiude il channel inaspettatamente
+      (autorizzazione realtime non ancora visibile al cold start) — equivale al "Riconnetti"
+      manuale che già funzionava
+- [x] Avviso "Sei solo al tavolo" in lobby (UAlert + CTA invito) quando presence = 1
+- [x] `GameDefinition.maxPlayers` opzionale + min/max mostrati sulle card della lobby
+      ("Min. {n}" o "{min}–{max}"); min/max applicati anche server-side in `game/start`;
+      `word-blitz` ora `minPlayers: 1` (allineato alla descrizione "1+"); il minimo di
+      thumbs è data-driven dal catalogo (UI + API)
 
 ## Review MVP & go-live (2026-06-11)
 

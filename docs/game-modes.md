@@ -70,17 +70,24 @@ interface GameDefinition {
     id: 'thumbs' | 'word-blitz';
     category: 'board' | 'preserata' | 'both'; // 'both' = compare in entrambi i filtri
     minPlayers: number;
+    maxPlayers?: number; // undefined = nessun limite superiore
     avgDurationMinutes: number;
     icon: string;
     labelKey: string; // chiave i18n
 }
 ```
 
+Il catalogo è la **fonte unica** dei vincoli sui giocatori: la card in lobby mostra
+"Min. {n}" (o "{min}–{max}" se esiste un massimo), la pagina del gioco mostra il
+gate di attesa con lo stesso minimo, e l'API di start (`game/start.post.ts`) li
+applica server-side (422 `NOT_ENOUGH_PLAYERS` / `TOO_MANY_PLAYERS`). I giochi con
+`minPlayers: 1` (es. solitari) sono giocabili da soli senza warning bloccanti.
+
 Giochi implementati nell'MVP:
-| ID | Category | Min players | Durata media |
-|----|----------|------------|-------------|
-| `thumbs` | `both` | 2 | 8 min |
-| `word-blitz` | `preserata` | 2 | 5 min |
+| ID | Category | Min players | Max players | Durata media |
+|----|----------|------------|-------------|-------------|
+| `thumbs` | `both` | 2 | — | 8 min |
+| `word-blitz` | `preserata` | 1 | — | 5 min |
 
 ## Implicazioni MVP
 

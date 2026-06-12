@@ -99,7 +99,7 @@
                     </div>
 
                     <u-button
-                        v-if="players.length >= 2"
+                        v-if="players.length >= thumbsMinPlayers"
                         :disabled="isStartingGame || status !== 'OPEN'"
                         icon="i-lucide-play"
                         :label="$t('game.thumbs.start_button')"
@@ -114,7 +114,7 @@
                         class="flex flex-col gap-3 items-center"
                     >
                         <p class="text-center text-muted text-sm">
-                            {{ $t('game.thumbs.need_players') }}
+                            {{ $t('game.thumbs.need_players', { n: thumbsMinPlayers }) }}
                         </p>
                         <table-invite>
                             <u-button
@@ -404,6 +404,9 @@
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
+
+          // Minimo giocatori dal catalogo condiviso (stessa fonte del server e della lobby).
+          , thumbsMinPlayers = getGameDefinition( 'thumbs' )?.minPlayers ?? 2
 
           , {
               players, gameState, status, open, close, isHost, startGame, vote, nextRound, wsError,

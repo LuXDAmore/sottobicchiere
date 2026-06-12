@@ -18,9 +18,11 @@ quorum, min giocatori), chiedile all'utente PRIMA di implementare.
 
 ## 1. Definizione del gioco (client)
 
-- Registra il gioco nel catalogo della lobby (cerca `getGamesByCategory` /
-  dove è definito l'elenco giochi con `id`, `icon`, `labelKey`, `category`,
-  `minPlayers`, `avgDurationMinutes`).
+- Registra il gioco nel catalogo `shared/utils/games.ts` (`id`, `icon`,
+  `labelKey`, `category`, `minPlayers`, `maxPlayers?`, `avgDurationMinutes`).
+  Il catalogo è la fonte unica dei vincoli giocatori: la lobby li mostra,
+  la pagina del gioco li usa per il gate di attesa, l'API di start li applica
+  server-side (`getGameDefinition`).
 - Tipi client in `shared/types/realtime.ts` (stato del gioco lato client,
   pattern `ThumbsClientState`).
 
