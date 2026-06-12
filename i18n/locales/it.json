@@ -83,6 +83,15 @@
         "join_pending_toast": "Ti stiamo facendo entrare nel tavolo…",
         "join_success_toast": "Perfetto {name}, ingresso completato."
     },
+    "invite": {
+        "trigger_label": "Invita al tavolo",
+        "title": "Invita al tavolo",
+        "description": "Chi arriva dopo entra al volo: fai inquadrare il QR o condividi link e codice.",
+        "qr_hint": "Fai inquadrare questo QR a chi vuole unirsi.",
+        "share_native": "Condividi invito",
+        "share_text": "Unisciti al nostro tavolo da gioco «{venue}» su Sottobicchiere! 🎲",
+        "waiting_cta": "Invita amici al tavolo"
+    },
     "lobby": {
         "page_title": "Lobby — {venue}",
         "players_title": "Giocatori",

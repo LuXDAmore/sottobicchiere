@@ -8,14 +8,26 @@
                 </p>
             </div>
 
-            <u-button
-                color="neutral"
-                icon="i-lucide-arrow-left"
-                :label="$t('game.thumbs.back_lobby')"
-                size="sm"
-                variant="ghost"
-                @click="goBack"
-            />
+            <div class="flex gap-2 items-center">
+                <!-- Invita al tavolo (QR/link/codice per chi arriva dopo) -->
+                <table-invite>
+                    <u-button
+                        :aria-label="$t('invite.trigger_label')"
+                        color="neutral"
+                        icon="i-lucide-user-plus"
+                        size="sm"
+                        variant="ghost"
+                    />
+                </table-invite>
+                <u-button
+                    color="neutral"
+                    icon="i-lucide-arrow-left"
+                    :label="$t('game.thumbs.back_lobby')"
+                    size="sm"
+                    variant="ghost"
+                    @click="goBack"
+                />
+            </div>
         </header>
 
         <main class="flex flex-1 flex-col gap-6 items-center justify-center p-4">

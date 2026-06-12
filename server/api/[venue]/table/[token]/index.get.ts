@@ -7,6 +7,7 @@ export default defineEventHandler( async event => {
 
     return {
         hasActiveSession: !! activeSession,
+        shortCode: table.shortCode,
         tableNumber: table.tableNumber,
         venueName: table.venueName,
         venueSlug: table.venueSlug,

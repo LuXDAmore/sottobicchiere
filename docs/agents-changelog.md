@@ -5,6 +5,42 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-12 — Invito al tavolo da lobby/gioco + fix race connessione realtime
+
+### Diagnosi (errore di connessione entrando in un gioco)
+- Il sintomo "errore di connessione dentro thumbs" NON dipende dall'essere da soli: è una
+  race nella navigazione lobby↔gioco. `close()` (onUnmounted) avviava `unsubscribe()` e
+  `open()` (onMounted) creava "un nuovo" channel sullo stesso topic — ma realtime-js
+  (`RealtimeClient.channel()`, v2.106) restituisce l'istanza ESISTENTE finché il leave non è
+  completato. Risultato: subscribe no-op su channel in leaving (status bloccato su
+  CONNECTING) oppure throw di `.on('presence')` su channel ancora joined, e banner
+  "Connessione persa" appena entrati nel gioco. Gli e2e live non lo beccavano perché non
+  navigano tra pagine.
+
+### Fix & feature
+- `app/composables/useTableSocket.ts`:
+  - `close()` ora è "morbida": schedula lo smaltimento con finestra di grazia (250ms);
+    l'`open()` della pagina successiva la annulla → la connessione resta viva tra lobby e
+    giochi (stesso topic), niente flash del banner né race sul riuso del channel.
+  - Smaltimento reale in `disposeChannels()`: serializzato via `disposalPromise` (open()
+    la attende prima di creare un nuovo channel), azzera lo stato condiviso (players,
+    gameState, gameSelection, dating) così un rientro/cambio tavolo riparte pulito.
+  - `open()` ricrea il channel se lo status è CLOSED (channel chiuso dal server): prima il
+    bottone "Riconnetti" poteva essere un no-op.
+  - Toast `error.connection_lost` solo dopo 3 errori consecutivi di subscribe: i retry
+    automatici (rejoin con backoff, cold start realtime) restano attesa soft.
+- `server/utils/table-resolver.ts` + `GET /api/[venue]/table/[token]`: esposto `shortCode`
+  (null per i tavoli fisici dei locali) — serve all'invito da qualunque membro del tavolo.
+- `app/components/table-invite.vue` (nuovo): bottom sheet d'invito riusabile (USlideover
+  side=bottom) con QR, codice breve (fetch pigro alla prima apertura), link localizzato e
+  Web Share nativo. Trigger: icona `user-plus` negli header di lobby/thumbs/word-blitz e
+  CTA "Invita amici al tavolo" nello stato di attesa di thumbs (<2 giocatori) — da soli
+  l'attesa diventa un invito invece di un vicolo cieco.
+- i18n: nuova sezione `invite` (IT/EN); riusate le chiavi `room.share_*`/`room.copy_*`.
+- Test: `table-resolver.test.ts` aggiornato + caso `shortCode: null` per tavoli fisici.
+
+Verificato: lint (0 errori), typecheck, 41 unit test, build di produzione.
+
 ## 2026-06-11 — Review prontezza MVP + diagnosi "errore generico" creazione tavolo
 
 ### Diagnosi (root cause della creazione tavolo che fallisce)

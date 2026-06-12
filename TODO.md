@@ -1,6 +1,22 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-11
+Aggiornato: 2026-06-12
+
+## Condivisione tavolo & resilienza realtime (2026-06-12)
+
+- [x] **Fix race connessione lobby↔gioco**: `useTableSocket` non smonta più il channel a ogni
+      navigazione (close differito con finestra di grazia + smaltimento serializzato).
+      Root cause: realtime-js riusa l'istanza per topic finché il leave non è completato →
+      il channel "nuovo" era quello morente (subscribe no-op o throw su `.on('presence')`),
+      da cui i banner "Connessione persa" entrando in un gioco.
+- [x] Toast "Connessione interrotta" solo dopo 3 errori consecutivi di subscribe (prima era
+      immediato): i retry transitori (es. cold start realtime) restano un'attesa soft (banner ambra)
+- [x] Bottone "Riconnetti" ora ricrea il channel anche se il vecchio è stato chiuso dal server
+- [x] `GET /api/[venue]/table/[token]` espone `shortCode` (null per i tavoli fisici)
+- [x] Componente `table-invite`: bottom sheet d'invito (QR + codice + link + share nativo),
+      trigger negli header di lobby/thumbs/word-blitz e CTA nell'attesa "servono 2 giocatori"
+- [ ] Estrarre un `GameHeader` condiviso (header oggi duplicato in lobby/thumbs/word-blitz)
+- [ ] Mostrare il pannello invito anche nella pagina di join (`index.vue`) per chi non è ancora entrato
 
 ## Review MVP & go-live (2026-06-11)
 

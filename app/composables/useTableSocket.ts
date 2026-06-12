@@ -56,7 +56,20 @@ const _useTableSocket = createGlobalState( () => {
         , lobbyChannel: RealtimeChannel | null = null
         , presenceSyncTimer: ReturnType<typeof setTimeout> | null = null
         , hostClaimTimer: ReturnType<typeof setTimeout> | null = null
-        , lastRoundIndex = - 1;
+        , lastRoundIndex = - 1
+        // Sessione a cui è agganciato tableChannel: open() la confronta con lo store
+        // per riusare la connessione (stessa sessione) o ricrearla (sessione cambiata).
+        , connectedSessionId: string | null = null
+        // Smaltimento differito (vedi close()): il timer è la finestra di grazia tra
+        // l'unmount di una pagina e il mount della successiva.
+        , disposeTimer: ReturnType<typeof setTimeout> | null = null
+        // Promise dello smaltimento in corso: open() la attende prima di creare un
+        // nuovo channel, perché realtime-js riusa l'istanza per topic finché il
+        // leave non è completato (un channel morente non è più sottoscrivibile).
+        , disposalPromise: Promise<void> | null = null
+        // Errori consecutivi di subscribe: il toast d'errore appare solo oltre la
+        // soglia, prima è una normale attesa di riconnessione (rejoin con backoff).
+        , consecutiveChannelErrors = 0;
 
     const apiBase = () => `/api/${ playerStore.venueSlug }/table/${ playerStore.qrToken }`;
 
@@ -333,7 +346,44 @@ const _useTableSocket = createGlobalState( () => {
      */
     async function open() {
 
-        if( ! playerStore.tableSessionId || ! playerStore.playerId ) return;
+        // Cattura subito sessione e giocatore: gli await qui sotto lasciano spazio
+        // a un leave/join concorrente e il channel deve restare coerente con i
+        // valori per cui open() è stata chiamata.
+        const sessionId = playerStore.tableSessionId
+            , playerId = playerStore.playerId;
+
+        if( ! sessionId || ! playerId ) return;
+
+        // Navigazione lobby↔gioco: il close() della pagina precedente ha solo
+        // schedulato lo smaltimento. Annullarlo qui mantiene viva la connessione
+        // (il topic è lo stesso), senza flash di "disconnesso" né race sul channel.
+        if( disposeTimer ) {
+
+            clearTimeout( disposeTimer );
+            disposeTimer = null;
+
+        }
+
+        if( tableChannel ) {
+
+            // Channel vivo sulla stessa sessione: nulla da fare. Se invece lo status
+            // è CLOSED il channel è morto (es. chiuso dal server): va ricreato,
+            // altrimenti il bottone "Riconnetti" non avrebbe effetto.
+            if( connectedSessionId === sessionId && status.value !== 'CLOSED' ) return;
+
+            // Sessione cambiata (leave + join di un altro tavolo) o channel morto:
+            // smaltisci il vecchio prima di crearne uno nuovo.
+            disposalPromise = disposeChannels();
+
+        }
+
+        // realtime-js restituisce l'istanza ESISTENTE per lo stesso topic finché il
+        // leave non è completato: creare il channel durante lo smaltimento darebbe
+        // l'istanza morente (subscribe no-op, o throw su .on('presence')). Attendere
+        // qui serializza chiusura e riapertura.
+        if( disposalPromise ) await disposalPromise;
+
+        // Un open() concorrente potrebbe aver già ricreato il channel durante l'await.
         if( tableChannel ) return;
 
         status.value = 'CONNECTING';
@@ -342,17 +392,19 @@ const _useTableSocket = createGlobalState( () => {
         await supabase.auth.getSession();
         await supabase.realtime.setAuth();
 
+        if( tableChannel ) return;
+
         const meta: PresenceMeta = {
             color: ( playerStore.playerColor ?? '#6366F1' ) as PlayerColor,
-            id: playerStore.playerId,
+            id: playerId,
             nickname: playerStore.playerNickname ?? '',
         }
 
             , channel = supabase
-                .channel( `table:${ playerStore.tableSessionId }`, {
+                .channel( `table:${ sessionId }`, {
                     config: {
                         private: true,
-                        presence: { key: playerStore.playerId },
+                        presence: { key: playerId },
                     },
                 } )
                 .on( 'broadcast', { event: 'INSERT' }, handleDatabaseBroadcast )
@@ -367,6 +419,8 @@ const _useTableSocket = createGlobalState( () => {
                 .on( 'presence', { event: 'sync' }, syncPresence );
 
         tableChannel = channel;
+        // eslint-disable-next-line require-atomic-updates -- falso positivo: gli early-return su `tableChannel` sopra impediscono open() concorrenti di arrivare qui
+        connectedSessionId = sessionId;
 
         channel
             .subscribe( async statusValue => {
@@ -381,6 +435,7 @@ const _useTableSocket = createGlobalState( () => {
                 switch( statusValue ) {
                     case 'SUBSCRIBED': {
 
+                        consecutiveChannelErrors = 0;
                         status.value = 'OPEN';
                         await channel.track( meta );
                         await loadInitialState();
@@ -397,8 +452,14 @@ const _useTableSocket = createGlobalState( () => {
                     case 'CHANNEL_ERROR':
                     case 'TIMED_OUT': {
 
+                        // realtime-js rientra da solo con backoff: finché i tentativi
+                        // sono pochi è una normale attesa (banner ambra), il toast
+                        // d'errore scatta solo su fallimenti ripetuti.
                         status.value = 'CONNECTING';
-                        wsError.value = translateError( 'error.connection_lost', 'Connessione interrotta, riprovo…' );
+                        consecutiveChannelErrors += 1;
+
+                        if( consecutiveChannelErrors >= 3 )
+                            wsError.value = translateError( 'error.connection_lost', 'Connessione interrotta, riprovo…' );
 
                         break;
 
@@ -421,13 +482,33 @@ const _useTableSocket = createGlobalState( () => {
     }
 
     /**
-     *
+     * Chiusura "morbida": schedula lo smaltimento con una finestra di grazia.
+     * Navigando tra le pagine del tavolo (lobby ↔ gioco) l'onUnmounted chiama
+     * close() e l'onMounted successivo chiama open(), che annulla il timer: la
+     * connessione resta viva (il topic è lo stesso) e non c'è né flash del banner
+     * "disconnesso" né race sul riuso del channel in realtime-js. Solo un close()
+     * "vero" (leave, uscita dal tavolo) arriva fino a disposeChannels().
      */
-    async function close() {
+    function close() {
 
-        // Solo disconnessione dal realtime: il record del giocatore resta nel DB
-        // (come con il vecchio WS), così navigare tra lobby e gioco o ricaricare
-        // la pagina non distrugge la sessione. La pulizia avviene a scadenza.
+        if( disposeTimer ) clearTimeout( disposeTimer );
+
+        disposeTimer = setTimeout( () => {
+
+            disposeTimer = null;
+            disposalPromise = disposeChannels();
+
+        }, 250 );
+
+    }
+
+    /**
+     * Disconnette davvero dal realtime e azzera lo stato condiviso. Il record del
+     * giocatore resta nel DB (la pulizia avviene a scadenza), così un rientro o
+     * un refresh non distruggono la sessione.
+     */
+    async function disposeChannels() {
+
         if( presenceSyncTimer ) {
 
             clearTimeout( presenceSyncTimer );
@@ -442,19 +523,36 @@ const _useTableSocket = createGlobalState( () => {
 
         }
 
-        // Azzera i riferimenti in modo SINCRONO prima di awaitare l'unsubscribe.
-        // Navigando tra pagine (lobby → gioco) l'onUnmounted chiama close() e
-        // l'onMounted della nuova pagina chiama open(): se i ref fossero ancora
-        // valorizzati durante l'await, open() farebbe early-return su `if(tableChannel)`
-        // e la connessione resterebbe morta (banner "disconnesso"). Catturando i
-        // channel in locali e azzerando subito i ref, un open() concorrente ricrea
-        // sempre un channel pulito mentre il vecchio viene smaltito qui sotto.
+        // Azzera i riferimenti in modo SINCRONO prima di awaitare l'unsubscribe:
+        // un open() concorrente (rientro immediato) trova i ref puliti e attende
+        // disposalPromise prima di ricreare il channel.
         const closingTable = tableChannel
             , closingLobby = lobbyChannel;
 
         tableChannel = null;
         lobbyChannel = null;
+        connectedSessionId = null;
+        consecutiveChannelErrors = 0;
         status.value = 'CLOSED';
+
+        // Stato di sessione azzerato: chi rientra (anche su un altro tavolo)
+        // riparte pulito invece di vedere giocatori/partita del tavolo precedente.
+        players.value = [];
+        gameState.value = null;
+        lastRoundIndex = - 1;
+        gameSelection.value = {
+            selectedGame: null,
+            gameMode: null,
+            lockedAt: null,
+            hostPlayerId: null,
+        };
+        datingEnabled.value = false;
+        datingUnreadCount.value = 0;
+        datingInbox.value = [];
+        datingRoomStatus.value = {
+            availableTableSessionIds: [],
+            unavailableTableSessionIds: [],
+        };
 
         if( closingTable ) {
 

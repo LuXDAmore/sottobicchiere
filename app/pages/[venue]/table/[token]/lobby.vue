@@ -15,6 +15,17 @@
 
             <div class="flex gap-2 items-center shrink-0">
 
+                <!-- Invita al tavolo (QR/link/codice per chi arriva dopo) -->
+                <table-invite>
+                    <u-button
+                        :aria-label="$t('invite.trigger_label')"
+                        color="neutral"
+                        icon="i-lucide-user-plus"
+                        size="sm"
+                        variant="ghost"
+                    />
+                </table-invite>
+
                 <!-- Dating toggle -->
                 <button
                     :aria-label="$t('lobby.dating_toggle_label')"

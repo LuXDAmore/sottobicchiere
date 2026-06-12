@@ -13,6 +13,16 @@
             </div>
 
             <div class="flex gap-3 items-center">
+                <!-- Invita al tavolo (QR/link/codice per chi arriva dopo) -->
+                <table-invite>
+                    <u-button
+                        :aria-label="$t('invite.trigger_label')"
+                        color="neutral"
+                        icon="i-lucide-user-plus"
+                        size="sm"
+                        variant="ghost"
+                    />
+                </table-invite>
                 <span
                     v-if="gameState"
                     class="font-mono text-muted text-sm"
@@ -97,12 +107,25 @@
                         size="xl"
                         @click="handleStartGame"
                     />
-                    <p
+
+                    <!-- Da soli l'attesa È l'invito: niente errore, CTA di condivisione -->
+                    <div
                         v-else
-                        class="text-center text-muted text-sm"
+                        class="flex flex-col gap-3 items-center"
                     >
-                        {{ $t('game.thumbs.need_players') }}
-                    </p>
+                        <p class="text-center text-muted text-sm">
+                            {{ $t('game.thumbs.need_players') }}
+                        </p>
+                        <table-invite>
+                            <u-button
+                                color="primary"
+                                icon="i-lucide-user-plus"
+                                :label="$t('invite.waiting_cta')"
+                                size="lg"
+                                variant="soft"
+                            />
+                        </table-invite>
+                    </div>
                 </div>
             </template>
 

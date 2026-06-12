@@ -83,6 +83,15 @@
         "join_pending_toast": "Joining your table…",
         "join_success_toast": "All set {name}, you're in."
     },
+    "invite": {
+        "trigger_label": "Invite to the table",
+        "title": "Invite to the table",
+        "description": "Latecomers can join in seconds: show the QR or share the link and code.",
+        "qr_hint": "Have whoever wants to join scan this QR.",
+        "share_native": "Share invite",
+        "share_text": "Join our game table “{venue}” on Sottobicchiere! 🎲",
+        "waiting_cta": "Invite friends to the table"
+    },
     "lobby": {
         "page_title": "Lobby — {venue}",
         "players_title": "Players",

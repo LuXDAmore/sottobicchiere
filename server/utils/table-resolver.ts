@@ -5,6 +5,8 @@ export interface ResolvedTableRow {
     tableNumber: number;
     venueName: string;
     venueSlug: string;
+    // Codice breve condivisibile (presente solo per i tavoli ad-hoc creati da /new).
+    shortCode: string | null;
 }
 
 /**
@@ -24,7 +26,7 @@ export const resolveTableRow = async(
 
     const { data, error } = await client
         .from( 'tables' )
-        .select( 'id, table_number, venues!inner( name, slug )' )
+        .select( 'id, table_number, short_code, venues!inner( name, slug )' )
         .eq( 'qr_token', qrToken )
         .eq( 'venues.slug', venueSlug )
         .limit( 1 )
@@ -39,6 +41,7 @@ export const resolveTableRow = async(
         tableNumber: data.table_number,
         venueName: venue.name,
         venueSlug: venue.slug,
+        shortCode: data.short_code ?? null,
     };
 
 };
