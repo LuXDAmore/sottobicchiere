@@ -540,6 +540,7 @@ const _useTableSocket = createGlobalState( () => {
         players.value = [];
         gameState.value = null;
         lastRoundIndex = - 1;
+        lobbyVersion.value = 0;
         gameSelection.value = {
             selectedGame: null,
             gameMode: null,

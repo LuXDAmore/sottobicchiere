@@ -24,7 +24,7 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
     giochi (stesso topic), niente flash del banner né race sul riuso del channel.
   - Smaltimento reale in `disposeChannels()`: serializzato via `disposalPromise` (open()
     la attende prima di creare un nuovo channel), azzera lo stato condiviso (players,
-    gameState, gameSelection, dating) così un rientro/cambio tavolo riparte pulito.
+    gameState, gameSelection, dating, lobbyVersion) così un rientro/cambio tavolo riparte pulito.
   - `open()` ricrea il channel se lo status è CLOSED (channel chiuso dal server): prima il
     bottone "Riconnetti" poteva essere un no-op.
   - Toast `error.connection_lost` solo dopo 3 errori consecutivi di subscribe: i retry
