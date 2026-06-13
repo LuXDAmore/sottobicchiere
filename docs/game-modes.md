@@ -67,8 +67,8 @@ Ogni gioco è descritto da `GameDefinition` in `shared/utils/games.ts`:
 
 ```typescript
 interface GameDefinition {
-    id: 'thumbs' | 'word-blitz';
-    category: 'board' | 'preserata' | 'both'; // 'both' = compare in entrambi i filtri
+    id: GameId; // unione tipizzata in shared/utils/games.ts
+    category: 'board' | 'preserata' | 'both' | 'solo'; // 'both' = board + preserata
     minPlayers: number;
     maxPlayers?: number; // undefined = nessun limite superiore
     avgDurationMinutes: number;
@@ -83,11 +83,34 @@ gate di attesa con lo stesso minimo, e l'API di start (`game/start.post.ts`) li
 applica server-side (422 `NOT_ENOUGH_PLAYERS` / `TOO_MANY_PLAYERS`). I giochi con
 `minPlayers: 1` (es. solitari) sono giocabili da soli senza warning bloccanti.
 
+`getGamesByCategory(category)` filtra il catalogo per la tab della lobby: i giochi
+`both` (universali) compaiono sia in "board" sia in "preserata", ma **non** tra i
+"solo"; viceversa i giochi `solo` non inquinano board/preserata.
+
+### Realtime vs locale
+
+Due famiglie di implementazione convivono:
+
+- **Realtime/multiplayer** (es. `thumbs`): stato autoritativo su Postgres
+  (`games`), sincronizzato via trigger di broadcast; engine in `server/utils/`,
+  API in `server/api/.../game/`. Vedi `docs/realtime-supabase.md`.
+- **Locale/pass-the-phone** (es. `reflex`, `duello`, `dares`, `categorie`,
+  `word-blitz`): nessuno stato server né riga in `games`. La pagina è
+  completamente client-side; chiama comunque `open()/close()` di `useTableSocket`
+  per restare connessa al tavolo e seguire un eventuale cambio gioco dell'host
+  (`gameLaunch`). I contenuti (mazzi carte, categorie) vivono in
+  `shared/utils/party.ts`. Privacy-first: nessun dato lascia il dispositivo
+  (il record personale di `reflex` è in `localStorage`).
+
 Giochi implementati nell'MVP:
-| ID | Category | Min players | Max players | Durata media |
-|----|----------|------------|-------------|-------------|
-| `thumbs` | `both` | 2 | — | 8 min |
-| `word-blitz` | `preserata` | 1 | — | 5 min |
+| ID | Category | Min | Max | Durata | Tipo |
+|----|----------|-----|-----|--------|------|
+| `thumbs` | `both` | 2 | — | 8 min | realtime |
+| `dares` | `preserata` | 2 | — | 15 min | locale (pass-the-phone) |
+| `categorie` | `both` | 2 | — | 6 min | locale (pass-the-phone) |
+| `duello` | `both` | 2 | 2 | 3 min | locale (1 device, schermo diviso) |
+| `reflex` | `solo` | 1 | 1 | 2 min | locale (solitario) |
+| `word-blitz` | `preserata` | 1 | — | 5 min | locale (prototipo) |
 
 ## Implicazioni MVP
 

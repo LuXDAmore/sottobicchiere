@@ -20,8 +20,8 @@
                         {{ $t('lobby.game_duration', { n: game.avgDurationMinutes }) }}
                     </span>
                     <u-badge
-                        :color="game.category === 'preserata' ? 'warning' : game.category === 'board' ? 'primary' : 'success'"
-                        :label="$t(`lobby.game_category_${ game.category === 'both' ? 'both' : game.category }`)"
+                        :color="game.category === 'preserata' ? 'warning' : game.category === 'board' ? 'primary' : game.category === 'solo' ? 'secondary' : 'success'"
+                        :label="$t(`lobby.game_category_${ game.category }`)"
                         size="sm"
                         variant="soft"
                     />

@@ -5,6 +5,54 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-13 — Quattro nuovi giochi locali + categoria "solo" nel catalogo
+
+### Nuovi giochi (client-side, pass-the-phone / solitari)
+Aggiunti seguendo il precedente di `word-blitz` (nessuno stato server né riga in
+`games`): la pagina è completamente locale ma resta connessa al tavolo via
+`useTableSocket` (`open()/close()`) e segue il cambio gioco dell'host (`gameLaunch`).
+
+- `app/pages/[venue]/table/[token]/game/reflex.vue` — **Riflessi** (solo): reaction
+  time, macchina a stati idle→waiting→go→result, anticipo = fallo; record personale
+  in `localStorage` (`useLocalStorage`, privacy-first).
+- `app/pages/[venue]/table/[token]/game/duello.vue` — **Duello** (2 giocatori, 1
+  device): schermo diviso, metà in alto ruotata 180°; al verde vince il primo a
+  toccare la propria metà, anticipo = round all'avversario, al meglio dei 3 round.
+- `app/pages/[venue]/table/[token]/game/dares.vue` — **Pre-Serata** (stile Picolo):
+  mazzo di carte Verità/Obbligo/Regola/Sorso/Tutti, bilingue, si passa il telefono.
+- `app/pages/[venue]/table/[token]/game/categorie.vue` — **Categorie**: timer per
+  turno (8s), si dice una parola della categoria e si passa il telefono; allo scadere
+  chi ha il telefono fa un pegno.
+
+### Catalogo & contenuti
+- `shared/utils/games.ts`: nuovo tipo `GameId`, categoria `solo` aggiunta a
+  `GameCategory`; 4 nuove `GAME_DEFINITIONS`; `getGamesByCategory` rivisto perché i
+  giochi `both` compaiano in board/preserata ma **non** in solo (e viceversa).
+- `shared/utils/party.ts` (nuovo): mazzo `PARTY_DARES` (30 carte IT/EN), elenco
+  `CATEGORY_PROMPTS` (24 categorie IT/EN), helper puro `shuffle<T>` (Fisher-Yates,
+  non muta l'input).
+- `server/api/[venue]/table/[token]/game/select.post.ts`: l'enum dei giochi
+  selezionabili è ora **derivato dal catalogo** (`GAME_DEFINITIONS`), così aggiungere
+  un gioco lo abilita ovunque senza dimenticanze.
+
+### UI lobby
+- Tab categoria "Da soli" (`solo`) + badge/icona/colore dedicati nelle card e nella
+  modale regole (`lobby.vue`, `game-rules-modal.vue`). `selectGame` tipizzato su `GameId`.
+
+### i18n
+- Sezioni `game.reflex`, `game.duello`, `game.dares`, `game.categorie` in IT ed EN +
+  `lobby.games_tab_solo` / `lobby.game_category_solo`. Parità chiavi 250/250.
+
+### Test
+- `test/unit/party.test.ts`: `shuffle` (no mutazione, conservazione insieme, edge
+  case) + integrità mazzi (IT/EN non vuoti, tipi validi).
+- `test/unit/games.test.ts`: id unici, vincoli min/max coerenti, filtro categorie e
+  isolamento dei giochi `solo`.
+- Verifica: lint + stylelint + typecheck + 53 unit test verdi + build + SSR 200 sulle
+  6 rotte di gioco (IT/EN).
+
+---
+
 ## 2026-06-12 — Invito al tavolo da lobby/gioco + fix race connessione realtime
 
 ### Diagnosi (errore di connessione entrando in un gioco)

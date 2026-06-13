@@ -1,14 +1,21 @@
 import { z } from 'zod';
 
+import type { GameId } from '../../../../../../shared/utils/games';
+
+import { GAME_DEFINITIONS, getGameDefinition } from '../../../../../../shared/utils/games';
 import { requirePlayer, requireTable } from '../../../../../utils/request';
 
-// Solo i giochi con una pagina reale: evita che venga persistito uno slug
-// arbitrario che porterebbe gli altri giocatori su /game/<inesistente> (404).
-const payloadSchema = z.object( {
-    gameMode: z.string().min( 1 ).max( 40 ).optional(),
-    playerId: z.string().uuid(),
-    selectedGame: z.enum( [ 'thumbs', 'word-blitz' ] ),
-} );
+// Solo i giochi del catalogo (che hanno una pagina reale): evita che venga
+// persistito uno slug arbitrario che porterebbe gli altri giocatori su
+// /game/<inesistente> (404). La lista è derivata dal catalogo condiviso, così
+// aggiungere un gioco in `games.ts` lo abilita anche qui senza dimenticanze.
+const gameIds = GAME_DEFINITIONS.map( g => g.id ) as [ GameId, ... GameId[] ]
+
+    , payloadSchema = z.object( {
+        gameMode: z.string().min( 1 ).max( 40 ).optional(),
+        playerId: z.string().uuid(),
+        selectedGame: z.enum( gameIds ),
+    } );
 
 export default defineEventHandler( async event => {
 
@@ -24,19 +31,32 @@ export default defineEventHandler( async event => {
 
     }
 
-    const body = parsed.data
-        , { client, table } = await requireTable( event )
+    const body = parsed.data;
+
+    // I giochi in solitaria si avviano localmente sul singolo dispositivo: non
+    // devono bloccare la sessione né trascinare l'intero tavolo via broadcast.
+    if( getGameDefinition( body.selectedGame )?.category === 'solo' ) {
+
+        throw createError( {
+            statusCode: 422,
+            statusMessage: 'SOLO_GAME_NOT_SELECTABLE',
+            message: 'I giochi in solitaria si avviano direttamente, senza bloccare il tavolo.',
+        } );
+
+    }
+
+    const { client, table } = await requireTable( event )
 
         // Verifica proprietà del giocatore (anti-impersonificazione) e ne ricava la sessione.
-        , player = await requirePlayer( event, client, body.playerId );
+        , player = await requirePlayer( event, client, body.playerId )
 
-    const { data: session } = await client
-        .from( 'table_sessions' )
-        .select( 'id, host_player_id, locked_at' )
-        .eq( 'id', player.table_session_id )
-        .eq( 'table_id', table.tableId )
-        .gt( 'expires_at', new Date().toISOString() )
-        .maybeSingle();
+        , { data: session } = await client
+            .from( 'table_sessions' )
+            .select( 'id, host_player_id, locked_at' )
+            .eq( 'id', player.table_session_id )
+            .eq( 'table_id', table.tableId )
+            .gt( 'expires_at', new Date().toISOString() )
+            .maybeSingle();
 
     if( ! session ) {
 

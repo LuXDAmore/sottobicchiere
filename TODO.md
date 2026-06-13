@@ -1,6 +1,19 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-12
+Aggiornato: 2026-06-13
+
+## Giochi: nuovo set + categoria "solo" (2026-06-13)
+
+- [x] **Riflessi** (`reflex`, solo): reaction game client-side, record in localStorage
+- [x] **Duello** (`duello`, 2 giocatori 1 device): duello di riflessi a schermo diviso, al meglio dei 3
+- [x] **Pre-Serata** (`dares`, preserata): mazzo Picolo-like (Verità/Obbligo/Regola/Sorso/Tutti), bilingue
+- [x] **Categorie** (`categorie`, both): pass-the-phone con timer per turno
+- [x] Categoria `solo` nel catalogo + tab/badge in lobby; `getGamesByCategory` isola i solo dai both
+- [x] Contenuti in `shared/utils/party.ts` (mazzi + `shuffle`) con unit test; catalogo testato (`games.test.ts`)
+- [x] `select.post.ts`: enum giochi derivato dal catalogo (single source of truth)
+- [x] i18n IT/EN per i 4 giochi (parità 250/250); docs (`game-modes.md`) e changelog allineati
+- [ ] Terzo gioco realtime competitivo (trivia/quiz multiplayer con stato su DB) — vedi "Giochi (fase 2)"
+- [ ] Estrarre un `GameHeader` condiviso (header ora duplicato in lobby + 6 pagine di gioco)
 
 ## Condivisione tavolo & resilienza realtime (2026-06-12)
 
@@ -223,12 +236,13 @@ Aggiornato: 2026-06-12
 
 - [x] Implementare "Pollice Su" (Thumbs) con WebSocket realtime
 - [x] Implementare "Word Blitz" (prototipo locale)
+- [x] Giochi locali pass-the-phone/solitari: Riflessi, Duello, Pre-Serata, Categorie (2026-06-13)
 - [x] WebSocket handler Nitro per sync real-time
 - [x] Game state in-memory con `game-state.ts`
 - [x] Host handover automatico se host disconnette (elezione deterministica + `POST /session/claim-host`)
 - [ ] Lock join durante partita attiva (messaggio "partita in corso")
-- [ ] Terzo gioco MVP: trivia/quiz a scelta multipla
-- [ ] Replay/rematch senza tornare alla join page
+- [ ] Gioco realtime competitivo MVP: trivia/quiz multiplayer a scelta multipla (stato su DB)
+- [x] Replay/rematch senza tornare alla join page (thumbs "Gioca ancora", duello "Rivincita")
 
 ## Venue Admin (fase 2)
 

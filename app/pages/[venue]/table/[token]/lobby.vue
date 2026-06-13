@@ -433,11 +433,11 @@
                         >
                             <button
                                 class="bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] p-4 rounded-xl text-left transition-all w-full"
-                                :class="isHostSelector
+                                :class="isGameClickable(game)
                                     ? 'hover:border-primary-500/50 hover:bg-primary-500/5 cursor-pointer active:scale-[0.98]'
                                     : 'opacity-60 cursor-not-allowed'"
-                                :disabled="! isHostSelector || isSelectingGame"
-                                @click="isHostSelector && selectGame(game.id)"
+                                :disabled="! isGameClickable(game) || isSelectingGame"
+                                @click="handleGameClick(game)"
                             >
                                 <div class="flex gap-4 items-center">
                                     <span class="text-3xl">
@@ -467,10 +467,12 @@
                                                     ? 'bg-accent-500/15 text-accent-500'
                                                     : game.category === 'board'
                                                         ? 'bg-primary-500/15 text-primary-500'
-                                                        : 'bg-success-500/15 text-success-500'"
+                                                        : game.category === 'solo'
+                                                            ? 'bg-secondary-500/15 text-secondary-500'
+                                                            : 'bg-success-500/15 text-success-500'"
                                             >
-                                                {{ game.category === 'preserata' ? '🍹' : game.category === 'board' ? '🎲' : '✨' }}
-                                                {{ $t(`lobby.game_category_${ game.category === 'both' ? 'both' : game.category }`) }}
+                                                {{ game.category === 'preserata' ? '🍹' : game.category === 'board' ? '🎲' : game.category === 'solo' ? '🧍' : '✨' }}
+                                                {{ $t(`lobby.game_category_${ game.category }`) }}
                                             </span>
                                         </div>
                                     </div>
@@ -500,7 +502,7 @@
                         </div>
                     </div>
 
-                    <p v-if="! isHostSelector" class="py-2 text-center text-muted text-xs">
+                    <p v-if="! isHostSelector && activeGameCategory !== 'solo'" class="py-2 text-center text-muted text-xs">
                         <u-icon class="inline-block mr-1 size-3" name="i-lucide-lock" />
                         {{ $t('lobby.game_host_only') }}
                     </p>
@@ -603,6 +605,10 @@
               {
                   value: 'preserata' as const,
                   label: t( 'lobby.games_tab_preserata' ),
+              },
+              {
+                  value: 'solo' as const,
+                  label: t( 'lobby.games_tab_solo' ),
               },
           ] )
 
@@ -930,10 +936,45 @@
     }
 
     /**
+     * I giochi in solitaria (categoria `solo`) sono cliccabili da chiunque: si
+     * avviano localmente senza bloccare la sessione. Gli altri restano riservati
+     * all'host (selezione + lock + broadcast a tutto il tavolo).
+     * @param game - definizione del gioco dalla card.
+     */
+    function isGameClickable( game: GameDefinition ): boolean {
+
+        return game.category === 'solo' || isHostSelector.value;
+
+    }
+
+    /**
+     * Click su una card gioco. I giochi `solo` navigano localmente (nessun lock
+     * di sessione né broadcast: restano un passatempo individuale, coerente con
+     * la semantica `solo`/`maxPlayers`). Gli altri passano dal flusso host.
+     * @param game - definizione del gioco dalla card.
+     */
+    function handleGameClick( game: GameDefinition ) {
+
+        if( isSelectingGame.value ) return;
+
+        if( game.category === 'solo' ) {
+
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ game.id }` ) );
+            return;
+
+        }
+
+        if( ! isHostSelector.value ) return;
+
+        selectGame( game.id );
+
+    }
+
+    /**
      *
      * @param selectedGame
      */
-    async function selectGame( selectedGame: 'thumbs' | 'word-blitz' ) {
+    async function selectGame( selectedGame: GameId ) {
 
         if( ! isHostSelector.value || gameSelection.value.lockedAt || isSelectingGame.value ) return;
 
