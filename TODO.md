@@ -11,21 +11,21 @@ Quick win applicati (ottimizzazioni pure, nessun cambio di comportamento):
 - [x] `thumbs.vue`: rimosso `{ deep: true }` ridondante; a11y bottoni voto (aria-label/aria-hidden)
 - [x] Migration indici su FK + FK `votes.player_id` (cleanup orfani) — **da `db:push` + audit**
 
-Migliorie strutturali emerse (richiedono decisione, NON ancora fatte):
-- [ ] Endpoint unico `game/bootstrap` al posto di `game/current` + `game/state` in
-      `loadInitialState` (oggi ~5 query e 2× `requireTable` ad ogni SUBSCRIBED/reconnect)
-- [ ] `recomputeAndMaybeReveal`: `COUNT` leggero prima del fetch voti; caricare il voteMap
-      solo al raggiungimento del quorum (reveal)
-- [ ] `getActiveGame`: variante "lite" con colonne mirate per vote/end/presence/claim-host
-      (oggi caricano il JSON `questions` inutilmente)
-- [ ] Composable `useAsyncAction`/`usePendingToast` per i ~10 pattern toast pending/success/error
-- [ ] Componenti condivisi: `<game-header>`, `<connection-status-banner>`, `<player-pill>`,
-      `<game-category-badge>` (duplicazioni tra lobby e le 6 pagine di gioco)
-- [ ] A11y/DS: tap target language/theme switch <52px; `u-progress` al posto delle barre a mano
-      (timer `categorie`, voted_count `thumbs`); tap target mini-header `duello`
-- [ ] Sicurezza dating: `dating/rooms.get` deriva `self` dalla query string invece che dal
-      giocatore autenticato (valutare anche confine per-venue del dating)
-- [ ] Debito: `start.post.ts`/`game-engine` dispatch per-gioco quando arriva il 2° engine realtime
+Migliorie strutturali (applicate 2026-06-13, batch server + UI + toast):
+- [x] Endpoint unico `game/bootstrap` al posto di `game/current` + `game/state` in
+      `loadInitialState` (da 3 a 2 fetch, una sola risoluzione tavolo/sessione)
+- [x] `recomputeAndMaybeReveal`: `COUNT` leggero (head:true), voteMap solo al quorum
+- [x] `getActiveGameLite`: colonne mirate per vote/end/presence/claim-host
+- [x] Componenti condivisi `<game-header>`, `<connection-status-banner>`, `<player-pill>`,
+      `<game-category-badge>` (de-duplicate lobby + 6 pagine di gioco)
+- [x] A11y/DS: tap target language/theme switch → md; `u-progress` (timer `categorie`,
+      voted_count `thumbs`); tap target mini-header `duello` → sm
+- [x] Sicurezza dating: `dating/rooms.get` deriva `self` dal giocatore autenticato (?player)
+- [x] `useActionToast`: estratto il toast d'errore (cast + fallback i18n) ripetuto ~8 volte;
+      i toast pending/success accoppiati agli ACK realtime sono lasciati invariati (fragili)
+- [ ] Debito (rimandato, niente 2° engine ancora): `start.post.ts`/`game-engine` dispatch
+      per-gioco quando arriverà un secondo gioco realtime con engine server
+- [ ] Valutare confine per-venue del dating (oggi cross-locale by-design)
 
 ## Giochi: nuovo set + categoria "solo" (2026-06-13)
 

@@ -391,6 +391,7 @@
           , playerStore = usePlayerStore()
           , localePath = useLocalePath()
           , toast = useToast()
+          , { errorToast } = useActionToast()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
@@ -595,14 +596,7 @@
         } catch( exception: unknown ) {
 
             toast.remove( leavingGameToastId );
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'game.thumbs.back_lobby_error_toast' ),
-                duration: 4500,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'game.thumbs.back_lobby_error_toast' );
 
         } finally {
 

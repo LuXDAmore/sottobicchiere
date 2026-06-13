@@ -5,6 +5,41 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-13 — Applicazione completa delle migliorie da audit (server + UI + toast)
+
+Dopo i quick win, applicate tutte le migliorie strutturali emerse dai tre audit.
+
+### Server / dati
+- `server/api/.../game/bootstrap.get.ts` (nuovo): unisce game/current + game/state,
+  risolve la sessione una volta; `loadInitialState` passa da 3 a 2 fetch. Rimossi
+  `game/current.get.ts` e `game/state.get.ts` (usati solo dal composable).
+- `server/utils/game-engine.ts`: `getActiveGameLite` (colonne mirate, niente JSON
+  `questions`) per vote/end/presence/claim-host; `recomputeAndMaybeReveal` ora fa un
+  COUNT leggero (`head:true`) e legge le righe dei voti solo al raggiungimento del quorum.
+- `server/api/.../dating/rooms.get.ts`: `self` derivato dal giocatore autenticato
+  (`?player=<id>` + `requirePlayerForTable`) invece che da un id sessione passato dal
+  client — chiude l'enumerazione della rete contatti di un tavolo terzo.
+
+### UI — componenti condivisi (riduzione duplicazione)
+- `app/components/game-header.vue`: header delle pagine di gioco locali (reflex/duello/
+  dares/categorie/word-blitz), slot `meta` per extra (contatore carte).
+- `app/components/player-pill.vue`: pill giocatore (prima duplicata ~7 volte), size + slot.
+- `app/components/connection-status-banner.vue`: banner stato realtime (lobby + thumbs).
+- `app/components/game-category-badge.vue`: badge categoria (lobby + game-rules-modal).
+- `app/composables/useActionToast.ts`: estrae il toast d'errore (cast + fallback i18n)
+  ripetuto in lobby/thumbs; i toast pending/success accoppiati agli ACK realtime restano.
+
+### A11y / design system
+- `u-progress` al posto delle barre a mano (timer `categorie`, voted_count `thumbs`).
+- Tap target: language/theme switch (`default.vue`) → md; mini-header `duello` → sm.
+- `thumbs`: `aria-label`/`aria-hidden` sui bottoni voto (dal batch precedente).
+
+Verifica: lint + stylelint + typecheck + 53 unit test + build verdi; SSR 200 su tutte
+le pagine (IT/EN), nessun warning Vue/componente irrisolto; `game/current` e `game/state`
+ora 404 (rimossi), `game/bootstrap` registrato.
+
+---
+
 ## 2026-06-13 — Pass di ottimizzazione (quick win da audit logica/dati/UI)
 
 Tre audit read-only sull'intera codebase (logica/perf, data layer Supabase, design

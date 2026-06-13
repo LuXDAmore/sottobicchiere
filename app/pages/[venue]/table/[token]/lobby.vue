@@ -486,6 +486,7 @@
           , playerStore = usePlayerStore()
           , localePath = useLocalePath()
           , toast = useToast()
+          , { errorToast } = useActionToast()
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
 
@@ -694,14 +695,7 @@
 
         } catch( exception: unknown ) {
 
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.area_create_error_toast' ),
-                duration: 4000,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.area_create_error_toast' );
 
         } finally {
 
@@ -734,14 +728,7 @@
 
         } catch( exception: unknown ) {
 
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.area_join_error_toast' ),
-                duration: 4000,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.area_join_error_toast' );
 
         } finally {
 
@@ -961,14 +948,7 @@
             pendingSelectedGame.value = null;
             isSelectingGame.value = false;
             toast.remove( selectingToastId );
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.game_select_error_toast' ),
-                duration: 4500,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.game_select_error_toast' );
 
         }
 
@@ -999,14 +979,7 @@
 
         } catch( exception: unknown ) {
 
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.game_end_error_toast' ),
-                duration: 4500,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.game_end_error_toast' );
 
         } finally {
 
@@ -1050,14 +1023,7 @@
         } catch( exception: unknown ) {
 
             toast.remove( leavingToastId );
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.leave_error_toast' ),
-                duration: 4500,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.leave_error_toast' );
 
         } finally {
 
