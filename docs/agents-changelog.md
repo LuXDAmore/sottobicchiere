@@ -5,6 +5,104 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-12 — Invito al tavolo da lobby/gioco + fix race connessione realtime
+
+### Diagnosi (errore di connessione entrando in un gioco)
+- Il sintomo "errore di connessione dentro thumbs" NON dipende dall'essere da soli: è una
+  race nella navigazione lobby↔gioco. `close()` (onUnmounted) avviava `unsubscribe()` e
+  `open()` (onMounted) creava "un nuovo" channel sullo stesso topic — ma realtime-js
+  (`RealtimeClient.channel()`, v2.106) restituisce l'istanza ESISTENTE finché il leave non è
+  completato. Risultato: subscribe no-op su channel in leaving (status bloccato su
+  CONNECTING) oppure throw di `.on('presence')` su channel ancora joined, e banner
+  "Connessione persa" appena entrati nel gioco. Gli e2e live non lo beccavano perché non
+  navigano tra pagine.
+
+### Fix & feature
+- `app/composables/useTableSocket.ts`:
+  - `close()` ora è "morbida": schedula lo smaltimento con finestra di grazia (250ms);
+    l'`open()` della pagina successiva la annulla → la connessione resta viva tra lobby e
+    giochi (stesso topic), niente flash del banner né race sul riuso del channel.
+  - Smaltimento reale in `disposeChannels()`: serializzato via `disposalPromise` (open()
+    la attende prima di creare un nuovo channel), azzera lo stato condiviso (players,
+    gameState, gameSelection, dating, lobbyVersion) così un rientro/cambio tavolo riparte pulito.
+  - `open()` ricrea il channel se lo status è CLOSED (channel chiuso dal server): prima il
+    bottone "Riconnetti" poteva essere un no-op.
+  - Toast `error.connection_lost` solo dopo 3 errori consecutivi di subscribe: i retry
+    automatici (rejoin con backoff, cold start realtime) restano attesa soft.
+- `server/utils/table-resolver.ts` + `GET /api/[venue]/table/[token]`: esposto `shortCode`
+  (null per i tavoli fisici dei locali) — serve all'invito da qualunque membro del tavolo.
+- `app/components/table-invite.vue` (nuovo): bottom sheet d'invito riusabile (USlideover
+  side=bottom) con QR, codice breve (fetch pigro alla prima apertura), link localizzato e
+  Web Share nativo. Trigger: icona `user-plus` negli header di lobby/thumbs/word-blitz e
+  CTA "Invita amici al tavolo" nello stato di attesa di thumbs (<2 giocatori) — da soli
+  l'attesa diventa un invito invece di un vicolo cieco.
+- i18n: nuova sezione `invite` (IT/EN); riusate le chiavi `room.share_*`/`room.copy_*`.
+- Test: `table-resolver.test.ts` aggiornato + caso `shortCode: null` per tavoli fisici.
+
+### Agenti e workflow Claude Code di progetto
+- `.claude/agents/` (5 agenti verticali): `docs-curator` (Documentation Rule),
+  `design-system-guardian` (componenti Nuxt UI al posto di HTML grezzo — UTabs/UTable/
+  USelect/UModal/… — palette "Notte Italiana", i18n nei template, a11y),
+  `code-reviewer` (bug, race realtime, boundary RLS/service-role, convenzioni SpecDD),
+  `test-author` (Vitest secondo i pattern di `test/unit/`), `supabase-guardian`
+  (migrations idempotenti, RLS, policy realtime.messages, anti-spoofing, TTL).
+- `.claude/commands/` (3 workflow): `/verifica` (lint+typecheck+test+parità i18n+build),
+  `/pre-pr` (verifica + review parallele degli agenti + docs + PR draft),
+  `/nuovo-gioco` (scaffolding guidato di un minigioco: spec SpecDD → DB → API → pagina →
+  i18n → test, sul modello di thumbs).
+- `Agents.md` §6: indice di agenti e workflow per le sessioni future.
+
+### Secondo giro (feedback dal campo)
+- **Fix "Connection lost" al primo ingresso nel tavolo creato**: una chiusura voluta del
+  channel passa da `disposeChannels()` (filtrata dalla guardia), quindi un `CLOSED` che
+  raggiunge il callback di subscribe è il server che chiude inaspettatamente — tipico al
+  primo join su un tavolo appena creato (autorizzazione realtime non ancora visibile,
+  cold start già osservato nei log). Ora `scheduleReopen()` riapre in automatico con
+  backoff lineare (3 tentativi, budget azzerato da open() esplicito/"Riconnetti"),
+  conservando lo stato della sessione (`disposeChannels(keepState)`).
+- Lobby: avviso `UAlert` "Sei solo al tavolo" + CTA invito quando la presence conta 1.
+- `shared/utils/games.ts`: `maxPlayers?` in `GameDefinition`, helper `getGameDefinition()`;
+  `word-blitz` → `minPlayers: 1` (prototipo locale, allineato alla descrizione "1+").
+  Card lobby: "Min. {n}" o "{min}–{max} giocatori". Il minimo di thumbs è data-driven
+  (pagina + `game/start.post.ts`, che ora applica anche l'eventuale massimo con 422
+  `TOO_MANY_PLAYERS`). `docs/game-modes.md` aggiornato (catalogo = fonte unica dei vincoli).
+
+### Terzo giro (feedback dal campo: flussi rotti) + verifica live
+- **Root cause "Connection lost" dopo "back to lobby"**: in Vue il `mounted` della pagina
+  nuova scatta PRIMA dell'`unmounted` della vecchia → il close differito della vecchia non
+  veniva mai annullato e smontava il channel appena riusato. Fix: reference counting dei
+  consumatori in `useTableSocket` (open/close per pagina) + grazia per l'ordine inverso;
+  `reconnect()` dedicato per il bottone "Riconnetti".
+- **Niente più "ributtato in partita"**: rimossa la navigazione forzata della lobby su
+  `gameState` recuperato; il watcher su `lockedAt` naviga solo su lock freschi (<15s) o
+  propri; banner "Partita in corso" con Rientra + Termina (host).
+- `POST /game/end` (host) e `POST /leave` (vedi `docs/api-contracts.md`): prima nessun
+  endpoint azzerava `locked_at`/`selected_game` (sessione bloccata fino al TTL) e il leave
+  era solo client-side (conteggi gonfiati, tavoli fantasma).
+- Lobby: spinner solo sulla card selezionata; filtro "siamo in N"; descrizioni giochi sulle
+  card + modale regole (`game-rules-modal`) riusata dentro thumbs/word-blitz; back-to-lobby
+  fisso nell'header di thumbs.
+- **Verifica live contro la preview del PR** (bypass Vercel via share link):
+  `scripts/e2e-live-flows.mjs` (nuovo) 22/22 step; regressione `e2e-live-game.mjs` 15/15.
+
+### Quarto giro (hardening da review full-stack)
+- **Navigazione al gioco a prova di clock**: rimossa l'euristica `|Date.now() - locked_at| < 15s`
+  in `lobby.vue` (poteva non far entrare in partita i guest con clock sfasato, e ri-trascinare
+  dentro chi faceva refresh entro 15s). Introdotto `gameLaunch` in `useTableSocket`: un segnale
+  valorizzato SOLO da `mapSession` (broadcast live di `table_sessions`), mai dall'hydration REST
+  di `loadInitialState`. Lobby e pagine di gioco lo osservano: l'auto-join scatta solo su una
+  selezione realmente avvenuta dal vivo; refresh/rientro in lobby non ri-navigano (resta il
+  banner "Rientra in partita").
+- **Cross-navigazione tra giochi**: thumbs e word-blitz seguono `gameLaunch` se viene lanciato
+  un gioco diverso da quello corrente (chiude l'edge: l'host termina e ne lancia un altro mentre
+  un guest è ancora nella vecchia pagina).
+- **`disposalPromise` riazzerato nel `finally`**: senza, restava valorizzato per sempre e, se
+  rigettasse, propagava come unhandled rejection sugli `open()` successivi (chiamati senza await
+  in `onMounted`/`@click`).
+- `game/start.post.ts`: commento sul gioco cablato `'thumbs'` (MVP, unico engine server-side).
+
+Verificato: lint (0 errori), typecheck, 41 unit test, build di produzione.
+
 ## 2026-06-11 — Review prontezza MVP + diagnosi "errore generico" creazione tavolo
 
 ### Diagnosi (root cause della creazione tavolo che fallisce)

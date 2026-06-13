@@ -81,3 +81,21 @@ After implementing a feature, fix or refactor:
 4. **`README.md`**: update only if the public-facing setup instructions, stack list or key workflows have changed.
 
 Do not leave `TODO.md` with stale `[ ]` items that were actually implemented in the same session. Documentation updates must be committed in the same PR as the code changes they describe.
+
+## 6. Project Agents & Workflows (Claude Code)
+
+Il repo definisce agenti verticali in `.claude/agents/` e workflow in `.claude/commands/`. Usali invece di rifare il lavoro a mano:
+
+| Agente | Quando |
+|---|---|
+| `docs-curator` | fine sessione: allinea TODO.md, agents-changelog, spec `.sdd`, docs/ |
+| `design-system-guardian` | dopo modifiche `.vue`: componenti Nuxt UI (UTabs/UTable/USelect/…), palette "Notte Italiana", i18n nei template, a11y |
+| `code-reviewer` | review del diff: bug, race realtime, boundary RLS/service-role, convenzioni |
+| `test-author` | scrivere/estendere test Vitest secondo i pattern di `test/unit/` |
+| `supabase-guardian` | migrations, policy RLS/realtime, accesso dati server |
+
+| Workflow | Cosa fa |
+|---|---|
+| `/verifica` | lint + typecheck + unit test + parità i18n IT/EN + build |
+| `/pre-pr` | `/verifica` + review parallele degli agenti + docs-curator + PR draft |
+| `/nuovo-gioco` | scaffolding guidato di un nuovo minigioco (spec → DB → API → pagina → i18n → test) |

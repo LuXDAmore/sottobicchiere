@@ -28,6 +28,7 @@ Creazione al volo di un tavolo fuori dal bar (venue `kind='adhoc'` + tavolo gene
 | POST | `/session/create` | Crea una nuova sessione di tavolo. |
 | POST | `/session/mode` | (host) Cambia `session_mode` (`board`/`dating`/`preserata`). |
 | POST | `/session/claim-host` | Rivendica l'host quando quello corrente è offline. Body `{ playerId, online[], session? }` → `{ ok, hostPlayerId }`. |
+| POST | `/leave` | Uscita esplicita: rimuove la riga del giocatore (solo la propria), fa scadere la sessione se resta vuota e azzera `host_player_id` se esce l'host. Body `{ playerId }`. |
 
 ### Gioco
 
@@ -40,6 +41,7 @@ Creazione al volo di un tavolo fuori dal bar (venue `kind='adhoc'` + tavolo gene
 | POST | `/game/vote` | Invia il voto del round. Body `{ playerId, vote: 'up'\|'down' }` (upsert idempotente). |
 | POST | `/game/next` | (host) Avanza al round successivo. |
 | POST | `/game/presence` | (host) Riporta i giocatori online → quorum per l'auto-reveal. Body `{ playerId, online[] }`. |
+| POST | `/game/end` | (host) Termina la partita corrente (`phase='finished'`) e sblocca la selezione (`selected_game`/`locked_at` → null). Body `{ playerId }`. |
 
 ### Dating
 

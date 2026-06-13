@@ -101,6 +101,11 @@ Tasks:
   [ ] Scheduled task: cleanup sessioni scadute.
   [ ] Test unit e integration per schema e composables.
   [x] Resilienza: la homepage renderizza anche senza Supabase configurato (no 500).
+  [x] Resilienza realtime: channel del tavolo condiviso tra lobby e giochi (close differito
+      con grazia + smaltimento serializzato in useTableSocket); toast d'errore solo dopo
+      ripetuti fallimenti di subscribe.
+  [x] Invito al tavolo da lobby/gioco: componente table-invite (QR + codice + link + share
+      nativo), shortCode esposto da GET /api/[venue]/table/[token].
   [x] Pianificazione feature "Dynamic Game Areas" — vedi docs/specs/dynamic-game-areas.feature.sdd.
   [ ] Implementare la feature "Dynamic Game Areas" dopo conferma della spec e delle decisioni [?].
 

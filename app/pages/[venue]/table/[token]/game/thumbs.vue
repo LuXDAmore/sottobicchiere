@@ -3,16 +3,45 @@
 
         <!-- Header -->
         <header class="border-[var(--ui-border)] border-b flex items-center justify-between px-4 py-3 shrink-0">
-            <div class="flex gap-2 items-center">
+            <div class="flex gap-2 items-center min-w-0">
+                <!-- Uscita sempre disponibile: si torna in lobby in ogni fase -->
+                <u-button
+                    :aria-label="$t('game.thumbs.back_lobby')"
+                    color="neutral"
+                    :disabled="isGoingBack"
+                    icon="i-lucide-arrow-left"
+                    size="sm"
+                    variant="ghost"
+                    @click="goToLobby"
+                />
                 <span class="text-2xl">
                     👍
                 </span>
-                <p class="font-bold font-display text-highlighted">
+                <p class="font-bold font-display text-highlighted truncate">
                     {{ $t('game.thumbs.title') }}
                 </p>
             </div>
 
-            <div class="flex gap-3 items-center">
+            <div class="flex gap-2 items-center shrink-0">
+                <!-- Regole sempre consultabili -->
+                <u-button
+                    :aria-label="$t('lobby.game_rules_aria')"
+                    color="neutral"
+                    icon="i-lucide-circle-help"
+                    size="sm"
+                    variant="ghost"
+                    @click="rulesOpen = true"
+                />
+                <!-- Invita al tavolo (QR/link/codice per chi arriva dopo) -->
+                <table-invite>
+                    <u-button
+                        :aria-label="$t('invite.trigger_label')"
+                        color="neutral"
+                        icon="i-lucide-user-plus"
+                        size="sm"
+                        variant="ghost"
+                    />
+                </table-invite>
                 <span
                     v-if="gameState"
                     class="font-mono text-muted text-sm"
@@ -53,7 +82,7 @@
                 :label="$t('lobby.reconnect')"
                 size="xs"
                 variant="ghost"
-                @click="open()"
+                @click="reconnect()"
             />
         </div>
 
@@ -89,7 +118,7 @@
                     </div>
 
                     <u-button
-                        v-if="players.length >= 2"
+                        v-if="players.length >= thumbsMinPlayers"
                         :disabled="isStartingGame || status !== 'OPEN'"
                         icon="i-lucide-play"
                         :label="$t('game.thumbs.start_button')"
@@ -97,12 +126,25 @@
                         size="xl"
                         @click="handleStartGame"
                     />
-                    <p
+
+                    <!-- Da soli l'attesa È l'invito: niente errore, CTA di condivisione -->
+                    <div
                         v-else
-                        class="text-center text-muted text-sm"
+                        class="flex flex-col gap-3 items-center"
                     >
-                        {{ $t('game.thumbs.need_players') }}
-                    </p>
+                        <p class="text-center text-muted text-sm">
+                            {{ $t('game.thumbs.need_players', { n: thumbsMinPlayers }) }}
+                        </p>
+                        <table-invite>
+                            <u-button
+                                color="primary"
+                                icon="i-lucide-user-plus"
+                                :label="$t('invite.waiting_cta')"
+                                size="lg"
+                                variant="soft"
+                            />
+                        </table-invite>
+                    </div>
                 </div>
             </template>
 
@@ -364,6 +406,9 @@
 
         </main>
 
+        <!-- Regole del gioco, consultabili in ogni fase -->
+        <game-rules-modal v-model:open="rulesOpen" :game="thumbsDefinition" />
+
     </div>
 </template>
 
@@ -382,14 +427,20 @@
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
 
+          // Definizione dal catalogo condiviso (stessa fonte del server e della lobby):
+          // vincoli giocatori + descrizione/regole per la modale.
+          , thumbsDefinition = getGameDefinition( 'thumbs' )
+          , thumbsMinPlayers = thumbsDefinition?.minPlayers ?? 2
+
           , {
-              players, gameState, status, open, close, isHost, startGame, vote, nextRound, wsError,
+              players, gameState, gameLaunch, status, open, close, reconnect, isHost, startGame, vote, nextRound, wsError,
           } = useTableSocket()
 
           , isStartingGame = ref( false )
           , isSubmittingVote = ref( false )
           , isAdvancingRound = ref( false )
           , isGoingBack = ref( false )
+          , rulesOpen = ref( false )
 
           // Squadre della sessione + mappa giocatore→squadra, per la classifica per squadra.
           , groups = ref<GroupInfo[]>( [] )
@@ -484,6 +535,15 @@
             isAdvancingRound.value = false;
 
         }
+
+    } );
+
+    // L'host ha terminato e lanciato un gioco DIVERSO mentre eravamo ancora qui:
+    // seguilo invece di restare bloccati su una pagina di gioco non più attiva.
+    watch( () => gameLaunch.value, signal => {
+
+        if( signal && signal.game !== 'thumbs' )
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ signal.game }` ) );
 
     } );
 

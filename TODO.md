@@ -1,6 +1,56 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-11
+Aggiornato: 2026-06-12
+
+## Condivisione tavolo & resilienza realtime (2026-06-12)
+
+- [x] **Fix race connessione lobby↔gioco**: `useTableSocket` non smonta più il channel a ogni
+      navigazione (close differito con finestra di grazia + smaltimento serializzato).
+      Root cause: realtime-js riusa l'istanza per topic finché il leave non è completato →
+      il channel "nuovo" era quello morente (subscribe no-op o throw su `.on('presence')`),
+      da cui i banner "Connessione persa" entrando in un gioco.
+- [x] Toast "Connessione interrotta" solo dopo 3 errori consecutivi di subscribe (prima era
+      immediato): i retry transitori (es. cold start realtime) restano un'attesa soft (banner ambra)
+- [x] Bottone "Riconnetti" ora ricrea il channel anche se il vecchio è stato chiuso dal server
+- [x] `GET /api/[venue]/table/[token]` espone `shortCode` (null per i tavoli fisici)
+- [x] Componente `table-invite`: bottom sheet d'invito (QR + codice + link + share nativo),
+      trigger negli header di lobby/thumbs/word-blitz e CTA nell'attesa "servono 2 giocatori"
+- [ ] Estrarre un `GameHeader` condiviso (header oggi duplicato in lobby/thumbs/word-blitz)
+- [ ] Mostrare il pannello invito anche nella pagina di join (`index.vue`) per chi non è ancora entrato
+- [x] **Fix "Connection lost" dopo "back to lobby"**: reference counting dei consumatori in
+      `useTableSocket` (Vue monta la pagina nuova PRIMA di smontare la vecchia: il close
+      della vecchia non deve smontare il channel appena riusato) + `reconnect()` dedicato
+- [x] Lobby: spinner solo sulla card del gioco selezionato (prima giravano tutte)
+- [x] Niente navigazione forzata su stato recuperato: refresh/riconnessione/broadcast non
+      ributtano in partita; banner "Partita in corso" con **Rientra** + **Termina** (host)
+- [x] `POST /game/end` (host): termina la partita e sblocca la selezione → si può cambiare gioco
+- [x] `POST /leave`: rimuove il giocatore (conteggi sessioni veritieri), fa scadere la sessione
+      vuota e azzera `host_player_id` se esce l'host
+- [x] Regole giochi: descrizione breve sulle card + modale "Come si gioca" (`game-rules-modal`)
+      in lobby e dentro thumbs/word-blitz; back-to-lobby sempre presente nell'header di thumbs
+- [x] Filtro "siamo in N" nella tab Giochi (min/max dal catalogo)
+- [x] **Verifica live sui flussi** (`scripts/e2e-live-flows.mjs`, contro la preview del PR):
+      22/22 step — min giocatori, end/sblocco, ri-selezione, guardie host/impersonificazione,
+      leave singolo/doppio, sessione svuotata scaduta. Regressione gioco completo 15/15 ✓
+- [x] **Hardening da review full-stack**: navigazione al gioco guidata da un segnale di
+      "lancio" (`gameLaunch`) emesso solo dai broadcast live, al posto dell'euristica sul
+      clock (`Date.now()` vs `locked_at`) che poteva non far entrare i guest con clock
+      sfasato; le pagine di gioco seguono un eventuale cambio gioco (chiude l'edge: host
+      termina e lancia un gioco diverso mentre un guest è ancora nel vecchio);
+      `disposalPromise` riazzerato nel `finally` (niente unhandled rejection su open futuri);
+      commento MVP sul gioco cablato in `game/start`
+- [x] Agenti Claude Code verticali (`.claude/agents/`): docs-curator, design-system-guardian,
+      code-reviewer, test-author, supabase-guardian; workflow (`.claude/commands/`):
+      `/verifica`, `/pre-pr`, `/nuovo-gioco` (vedi Agents.md §6)
+- [x] **Fix "Connection lost" al primo ingresso nel tavolo appena creato**: riapertura
+      automatica con backoff (3 tentativi) quando il server chiude il channel inaspettatamente
+      (autorizzazione realtime non ancora visibile al cold start) — equivale al "Riconnetti"
+      manuale che già funzionava
+- [x] Avviso "Sei solo al tavolo" in lobby (UAlert + CTA invito) quando presence = 1
+- [x] `GameDefinition.maxPlayers` opzionale + min/max mostrati sulle card della lobby
+      ("Min. {n}" o "{min}–{max}"); min/max applicati anche server-side in `game/start`;
+      `word-blitz` ora `minPlayers: 1` (allineato alla descrizione "1+"); il minimo di
+      thumbs è data-driven dal catalogo (UI + API)
 
 ## Review MVP & go-live (2026-06-11)
 

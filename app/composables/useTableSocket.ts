@@ -50,13 +50,43 @@ const _useTableSocket = createGlobalState( () => {
         // Contatore bumpato quando aree o iscrizioni cambiano (trigger DB `lobby:changed`):
         // la lobby lo osserva per rifare il fetch di aree/membri senza esporre righe.
         , lobbyVersion = ref<number>( 0 )
+        // Segnale di "lancio gioco" dal vivo: valorizzato SOLO da mapSession (broadcast
+        // di table_sessions), mai dall'hydration REST in loadInitialState. La lobby e le
+        // pagine di gioco lo osservano per portare tutti sul gioco selezionato, senza
+        // euristiche sul clock e senza ri-trascinare in partita chi ha fatto refresh o è
+        // tornato in lobby di proposito. Il `nonce` garantisce che il watcher scatti anche
+        // su un re-lancio dello stesso gioco (es. fine partita → riseleziona lo stesso).
+        , gameLaunch = ref<{ game: string; nonce: number } | null>( null )
         , status = ref<ConnectionStatus>( 'CLOSED' );
 
     let tableChannel: RealtimeChannel | null = null
         , lobbyChannel: RealtimeChannel | null = null
         , presenceSyncTimer: ReturnType<typeof setTimeout> | null = null
         , hostClaimTimer: ReturnType<typeof setTimeout> | null = null
-        , lastRoundIndex = - 1;
+        , lastRoundIndex = - 1
+        // Sessione a cui è agganciato tableChannel: open() la confronta con lo store
+        // per riusare la connessione (stessa sessione) o ricrearla (sessione cambiata).
+        , connectedSessionId: string | null = null
+        // Smaltimento differito (vedi close()): il timer è la finestra di grazia tra
+        // l'unmount di una pagina e il mount della successiva.
+        , disposeTimer: ReturnType<typeof setTimeout> | null = null
+        // Promise dello smaltimento in corso: open() la attende prima di creare un
+        // nuovo channel, perché realtime-js riusa l'istanza per topic finché il
+        // leave non è completato (un channel morente non è più sottoscrivibile).
+        , disposalPromise: Promise<void> | null = null
+        // Errori consecutivi di subscribe: il toast d'errore appare solo oltre la
+        // soglia, prima è una normale attesa di riconnessione (rejoin con backoff).
+        , consecutiveChannelErrors = 0
+        // Riapertura automatica dopo una chiusura inattesa del channel (es. al primo
+        // ingresso su un tavolo appena creato l'autorizzazione realtime può non essere
+        // ancora visibile e il server chiude il join). Equivale a premere "Riconnetti".
+        , reopenTimer: ReturnType<typeof setTimeout> | null = null
+        , reopenAttempts = 0
+        // Pagine che stanno usando la connessione (open() in onMounted / close() in
+        // onUnmounted). Vue monta la pagina nuova PRIMA di smontare la vecchia:
+        // senza questo contatore il close() della vecchia pagina (che arriva DOPO
+        // l'open() della nuova) smonterebbe il channel appena riusato.
+        , openConsumers = 0;
 
     const apiBase = () => `/api/${ playerStore.venueSlug }/table/${ playerStore.qrToken }`;
 
@@ -122,6 +152,11 @@ const _useTableSocket = createGlobalState( () => {
      */
     function mapSession( record: Database['public']['Tables']['table_sessions']['Row'] ) {
 
+        // mapSession è chiamata SOLO dai broadcast live (handleDatabaseBroadcast),
+        // mai dall'hydration REST: un passaggio a "bloccato su un gioco" qui è quindi
+        // sempre una selezione appena avvenuta → emetti il segnale di lancio.
+        const previousLockedAt = gameSelection.value.lockedAt;
+
         gameSelection.value = {
             gameMode: record.game_mode,
             hostPlayerId: record.host_player_id,
@@ -130,6 +165,12 @@ const _useTableSocket = createGlobalState( () => {
         };
         sessionMode.value = record.session_mode as SessionMode;
         datingEnabled.value = record.dating_enabled;
+
+        if( record.locked_at && record.selected_game && record.locked_at !== previousLockedAt )
+            gameLaunch.value = {
+                game: record.selected_game,
+                nonce: ( gameLaunch.value?.nonce ?? 0 ) + 1,
+            };
 
     }
 
@@ -330,10 +371,72 @@ const _useTableSocket = createGlobalState( () => {
 
     /**
      *
+     * @param isRetry - true quando chiamata da scheduleReopen: non azzera il budget dei retry.
      */
-    async function open() {
+    async function open( isRetry = false ) {
 
-        if( ! playerStore.tableSessionId || ! playerStore.playerId ) return;
+        // Cattura subito sessione e giocatore: gli await qui sotto lasciano spazio
+        // a un leave/join concorrente e il channel deve restare coerente con i
+        // valori per cui open() è stata chiamata.
+        const sessionId = playerStore.tableSessionId
+            , playerId = playerStore.playerId;
+
+        if( ! sessionId || ! playerId ) return;
+
+        // Solo l'open() di una pagina (onMounted) conta come consumatore e azzera
+        // il budget dei retry: le riaperture interne (scheduleReopen/reconnect)
+        // passano isRetry=true e non alterano il conteggio.
+        if( ! isRetry ) {
+
+            openConsumers += 1;
+            reopenAttempts = 0;
+
+            if( reopenTimer ) {
+
+                clearTimeout( reopenTimer );
+                reopenTimer = null;
+
+            }
+
+        }
+
+        // Navigazione lobby↔gioco: il close() della pagina precedente ha solo
+        // schedulato lo smaltimento. Annullarlo qui mantiene viva la connessione
+        // (il topic è lo stesso), senza flash di "disconnesso" né race sul channel.
+        if( disposeTimer ) {
+
+            clearTimeout( disposeTimer );
+            disposeTimer = null;
+
+        }
+
+        if( tableChannel ) {
+
+            // Channel vivo sulla stessa sessione: nulla da fare. Se invece lo status
+            // è CLOSED il channel è morto (es. chiuso dal server): va ricreato,
+            // altrimenti il bottone "Riconnetti" non avrebbe effetto.
+            if( connectedSessionId === sessionId && status.value !== 'CLOSED' ) return;
+
+            // Sessione cambiata (leave + join di un altro tavolo) o channel morto:
+            // smaltisci il vecchio prima di crearne uno nuovo.
+            disposalPromise = disposeChannels();
+
+        }
+
+        // realtime-js restituisce l'istanza ESISTENTE per lo stesso topic finché il
+        // leave non è completato: creare il channel durante lo smaltimento darebbe
+        // l'istanza morente (subscribe no-op, o throw su .on('presence')). Attendere
+        // qui serializza chiusura e riapertura. Il finally azzera la promise: senza,
+        // resterebbe valorizzata per sempre (e se rigettasse propagherebbe come
+        // unhandled rejection su ogni open() successiva, chiamata senza await).
+        if( disposalPromise ) {
+
+            try { await disposalPromise; }
+            finally { disposalPromise = null; }
+
+        }
+
+        // Un open() concorrente potrebbe aver già ricreato il channel durante l'await.
         if( tableChannel ) return;
 
         status.value = 'CONNECTING';
@@ -342,17 +445,19 @@ const _useTableSocket = createGlobalState( () => {
         await supabase.auth.getSession();
         await supabase.realtime.setAuth();
 
+        if( tableChannel ) return;
+
         const meta: PresenceMeta = {
             color: ( playerStore.playerColor ?? '#6366F1' ) as PlayerColor,
-            id: playerStore.playerId,
+            id: playerId,
             nickname: playerStore.playerNickname ?? '',
         }
 
             , channel = supabase
-                .channel( `table:${ playerStore.tableSessionId }`, {
+                .channel( `table:${ sessionId }`, {
                     config: {
                         private: true,
-                        presence: { key: playerStore.playerId },
+                        presence: { key: playerId },
                     },
                 } )
                 .on( 'broadcast', { event: 'INSERT' }, handleDatabaseBroadcast )
@@ -367,6 +472,8 @@ const _useTableSocket = createGlobalState( () => {
                 .on( 'presence', { event: 'sync' }, syncPresence );
 
         tableChannel = channel;
+        // eslint-disable-next-line require-atomic-updates -- falso positivo: gli early-return su `tableChannel` sopra impediscono open() concorrenti di arrivare qui
+        connectedSessionId = sessionId;
 
         channel
             .subscribe( async statusValue => {
@@ -381,6 +488,8 @@ const _useTableSocket = createGlobalState( () => {
                 switch( statusValue ) {
                     case 'SUBSCRIBED': {
 
+                        consecutiveChannelErrors = 0;
+                        reopenAttempts = 0;
                         status.value = 'OPEN';
                         await channel.track( meta );
                         await loadInitialState();
@@ -390,15 +499,27 @@ const _useTableSocket = createGlobalState( () => {
                     }
                     case 'CLOSED': {
 
-                        status.value = 'CLOSED';
+                        // Una chiusura voluta passa da disposeChannels() (che azzera
+                        // tableChannel PRIMA dell'unsubscribe, quindi viene filtrata
+                        // dalla guardia sopra). Se arriviamo qui il server ha chiuso
+                        // il channel inaspettatamente — tipico al primo ingresso su un
+                        // tavolo appena creato (autorizzazione realtime non ancora
+                        // visibile): riapri in automatico invece di mostrare l'errore.
+                        scheduleReopen();
                         break;
 
                     }
                     case 'CHANNEL_ERROR':
                     case 'TIMED_OUT': {
 
+                        // realtime-js rientra da solo con backoff: finché i tentativi
+                        // sono pochi è una normale attesa (banner ambra), il toast
+                        // d'errore scatta solo su fallimenti ripetuti.
                         status.value = 'CONNECTING';
-                        wsError.value = translateError( 'error.connection_lost', 'Connessione interrotta, riprovo…' );
+                        consecutiveChannelErrors += 1;
+
+                        if( consecutiveChannelErrors >= 3 )
+                            wsError.value = translateError( 'error.connection_lost', 'Connessione interrotta, riprovo…' );
 
                         break;
 
@@ -421,13 +542,93 @@ const _useTableSocket = createGlobalState( () => {
     }
 
     /**
-     *
+     * Riapre la connessione dopo una chiusura inattesa del channel, con backoff
+     * lineare e budget limitato (3 tentativi). Esaurito il budget, lo status resta
+     * CLOSED e la UI mostra il bottone "Riconnetti" (che azzera il budget).
      */
-    async function close() {
+    function scheduleReopen() {
 
-        // Solo disconnessione dal realtime: il record del giocatore resta nel DB
-        // (come con il vecchio WS), così navigare tra lobby e gioco o ricaricare
-        // la pagina non distrugge la sessione. La pulizia avviene a scadenza.
+        // Già pianificata, o chiusura volontaria in corso (navigazione/leave).
+        if( reopenTimer || disposeTimer ) return;
+
+        if( reopenAttempts >= 3 ) {
+
+            status.value = 'CLOSED';
+            return;
+
+        }
+
+        reopenAttempts += 1;
+        status.value = 'CONNECTING';
+
+        reopenTimer = setTimeout( () => {
+
+            reopenTimer = null;
+            // Stessa sessione: smaltisci il channel morto ma conserva lo stato
+            // (players/gameState) per non far "sfarfallare" la UI durante il retry.
+            disposalPromise = disposeChannels( true );
+            // Sovrascrive nello stesso tick il CLOSED impostato dal dispose.
+            status.value = 'CONNECTING';
+            open( true );
+
+        }, 600 * reopenAttempts );
+
+    }
+
+    /**
+     * Riconnessione manuale (bottone "Riconnetti"): azzera il budget dei retry
+     * e riapre senza contare un nuovo consumatore di pagina.
+     */
+    function reconnect() {
+
+        reopenAttempts = 0;
+
+        if( reopenTimer ) {
+
+            clearTimeout( reopenTimer );
+            reopenTimer = null;
+
+        }
+
+        return open( true );
+
+    }
+
+    /**
+     * Chiusura "morbida": decrementa i consumatori e, solo quando nessuna pagina
+     * usa più la connessione, schedula lo smaltimento con una finestra di grazia.
+     * Navigando tra le pagine del tavolo (lobby ↔ gioco) Vue monta la pagina nuova
+     * (open) PRIMA di smontare la vecchia (close): il conteggio resta ≥ 1 e la
+     * connessione sopravvive senza flash né race sul riuso del channel. La grazia
+     * copre anche l'ordine inverso (close prima di open). Solo un close() "vero"
+     * (leave, uscita dal tavolo) arriva fino a disposeChannels().
+     */
+    function close() {
+
+        openConsumers = Math.max( 0, openConsumers - 1 );
+
+        if( openConsumers > 0 ) return;
+
+        if( disposeTimer ) clearTimeout( disposeTimer );
+
+        disposeTimer = setTimeout( () => {
+
+            disposeTimer = null;
+            disposalPromise = disposeChannels();
+
+        }, 250 );
+
+    }
+
+    /**
+     * Disconnette davvero dal realtime e azzera lo stato condiviso. Il record del
+     * giocatore resta nel DB (la pulizia avviene a scadenza), così un rientro o
+     * un refresh non distruggono la sessione.
+     * @param keepState - true durante una riapertura sulla STESSA sessione:
+     * smaltisce solo i channel, conservando players/gameState/dating per la UI.
+     */
+    async function disposeChannels( keepState = false ) {
+
         if( presenceSyncTimer ) {
 
             clearTimeout( presenceSyncTimer );
@@ -442,19 +643,49 @@ const _useTableSocket = createGlobalState( () => {
 
         }
 
-        // Azzera i riferimenti in modo SINCRONO prima di awaitare l'unsubscribe.
-        // Navigando tra pagine (lobby → gioco) l'onUnmounted chiama close() e
-        // l'onMounted della nuova pagina chiama open(): se i ref fossero ancora
-        // valorizzati durante l'await, open() farebbe early-return su `if(tableChannel)`
-        // e la connessione resterebbe morta (banner "disconnesso"). Catturando i
-        // channel in locali e azzerando subito i ref, un open() concorrente ricrea
-        // sempre un channel pulito mentre il vecchio viene smaltito qui sotto.
+        if( reopenTimer ) {
+
+            clearTimeout( reopenTimer );
+            reopenTimer = null;
+
+        }
+
+        // Azzera i riferimenti in modo SINCRONO prima di awaitare l'unsubscribe:
+        // un open() concorrente (rientro immediato) trova i ref puliti e attende
+        // disposalPromise prima di ricreare il channel.
         const closingTable = tableChannel
             , closingLobby = lobbyChannel;
 
         tableChannel = null;
         lobbyChannel = null;
+        connectedSessionId = null;
+        consecutiveChannelErrors = 0;
         status.value = 'CLOSED';
+
+        // Stato di sessione azzerato: chi rientra (anche su un altro tavolo)
+        // riparte pulito invece di vedere giocatori/partita del tavolo precedente.
+        if( ! keepState ) {
+
+            players.value = [];
+            gameState.value = null;
+            lastRoundIndex = - 1;
+            lobbyVersion.value = 0;
+            gameLaunch.value = null;
+            gameSelection.value = {
+                selectedGame: null,
+                gameMode: null,
+                lockedAt: null,
+                hostPlayerId: null,
+            };
+            datingEnabled.value = false;
+            datingUnreadCount.value = 0;
+            datingInbox.value = [];
+            datingRoomStatus.value = {
+                availableTableSessionIds: [],
+                unavailableTableSessionIds: [],
+            };
+
+        }
 
         if( closingTable ) {
 
@@ -590,6 +821,7 @@ const _useTableSocket = createGlobalState( () => {
         datingUnreadCount,
         disableDating,
         enableDating,
+        gameLaunch,
         gameSelection,
         gameState,
         isHost,
@@ -597,6 +829,7 @@ const _useTableSocket = createGlobalState( () => {
         nextRound,
         open,
         players,
+        reconnect,
         sendDatingMessage,
         sessionMode,
         setSessionMode,

@@ -15,6 +15,17 @@
 
             <div class="flex gap-2 items-center shrink-0">
 
+                <!-- Invita al tavolo (QR/link/codice per chi arriva dopo) -->
+                <table-invite>
+                    <u-button
+                        :aria-label="$t('invite.trigger_label')"
+                        color="neutral"
+                        icon="i-lucide-user-plus"
+                        size="sm"
+                        variant="ghost"
+                    />
+                </table-invite>
+
                 <!-- Dating toggle -->
                 <button
                     :aria-label="$t('lobby.dating_toggle_label')"
@@ -85,7 +96,7 @@
                 :label="$t('lobby.reconnect')"
                 size="xs"
                 variant="ghost"
-                @click="open()"
+                @click="reconnect()"
             />
         </div>
 
@@ -173,6 +184,27 @@
 
             <!-- Players tab -->
             <section v-show="activeTab === 'players'" class="p-4 space-y-4">
+
+                <!-- Da soli al tavolo: avviso soft + invito (la maggior parte dei giochi richiede 2+) -->
+                <div v-if="isAloneAtTable" class="space-y-3">
+                    <u-alert
+                        color="warning"
+                        :description="$t('lobby.alone_description')"
+                        icon="i-lucide-user-round-plus"
+                        :title="$t('lobby.alone_title')"
+                        variant="soft"
+                    />
+                    <table-invite>
+                        <u-button
+                            block
+                            color="warning"
+                            icon="i-lucide-user-plus"
+                            :label="$t('invite.waiting_cta')"
+                            size="lg"
+                            variant="soft"
+                        />
+                    </table-invite>
+                </div>
 
                 <div class="flex gap-2 items-center">
                     <span v-if="status === 'OPEN'" class="live-dot" />
@@ -325,7 +357,7 @@
             <!-- Games tab -->
             <section v-show="activeTab === 'games'" class="p-4 space-y-4">
 
-                <!-- Active game banner -->
+                <!-- Active game banner: niente navigazione forzata, si rientra (o si termina) da qui -->
                 <div v-if="gameSelection.selectedGame" class="bg-primary-500/10 border border-primary-500/20 p-4 rounded-xl">
                     <div class="flex gap-3 items-center">
                         <div class="bg-primary-500/20 flex items-center justify-center rounded-full size-10">
@@ -339,6 +371,26 @@
                                 {{ gameSelection.selectedGame }}
                             </p>
                         </div>
+                    </div>
+                    <div class="flex gap-2 mt-3">
+                        <u-button
+                            color="primary"
+                            icon="i-lucide-play"
+                            :label="$t('lobby.game_resume')"
+                            size="sm"
+                            :to="localePath(`/${venueSlug}/table/${qrToken}/game/${gameSelection.selectedGame}`)"
+                        />
+                        <u-button
+                            v-if="isCurrentHost"
+                            color="error"
+                            :disabled="isEndingGame"
+                            icon="i-lucide-square"
+                            :label="$t('lobby.game_end')"
+                            :loading="isEndingGame"
+                            size="sm"
+                            variant="soft"
+                            @click="endGame"
+                        />
                     </div>
                 </div>
 
@@ -356,60 +408,96 @@
                         @update:model-value="value => ( activeGameCategory = value as typeof activeGameCategory )"
                     />
 
+                    <!-- Filtro per numero di giocatori ("siamo in N") -->
+                    <div class="flex gap-2 items-center">
+                        <u-icon class="shrink-0 size-4 text-muted" name="i-lucide-users" />
+                        <u-select
+                            v-model="playersFilter"
+                            :aria-label="$t('lobby.players_filter_label')"
+                            class="flex-1"
+                            :items="playersFilterItems"
+                            size="sm"
+                        />
+                    </div>
+
+                    <p v-if="filteredGames.length === 0" class="py-6 text-center text-muted text-sm">
+                        {{ $t('lobby.games_filter_empty') }}
+                    </p>
+
                     <!-- Game cards -->
                     <div class="space-y-3">
-                        <button
+                        <div
                             v-for="game in filteredGames"
                             :key="game.id"
-                            class="bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] p-4 rounded-xl text-left transition-all w-full"
-                            :class="isHostSelector
-                                ? 'hover:border-primary-500/50 hover:bg-primary-500/5 cursor-pointer active:scale-[0.98]'
-                                : 'opacity-60 cursor-not-allowed'"
-                            :disabled="! isHostSelector || isSelectingGame"
-                            @click="isHostSelector && selectGame(game.id)"
+                            class="relative"
                         >
-                            <div class="flex gap-4 items-center">
-                                <span class="text-3xl">
-                                    {{ game.icon }}
-                                </span>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-highlighted">
-                                        {{ $t(game.labelKey) }}
-                                    </p>
-                                    <div class="flex gap-3 items-center mt-1">
-                                        <span class="flex gap-1 items-center text-muted text-xs">
-                                            <u-icon class="size-3" name="i-lucide-users" />
-                                            {{ $t('lobby.game_min_players', { n: game.minPlayers }) }}
-                                        </span>
-                                        <span class="flex gap-1 items-center text-muted text-xs">
-                                            <u-icon class="size-3" name="i-lucide-clock" />
-                                            {{ $t('lobby.game_duration', { n: game.avgDurationMinutes }) }}
-                                        </span>
-                                        <span
-                                            class="font-medium px-2 py-0.5 rounded-full text-xs"
-                                            :class="game.category === 'preserata'
-                                                ? 'bg-accent-500/15 text-accent-500'
-                                                : game.category === 'board'
-                                                    ? 'bg-primary-500/15 text-primary-500'
-                                                    : 'bg-success-500/15 text-success-500'"
-                                        >
-                                            {{ game.category === 'preserata' ? '🍹' : game.category === 'board' ? '🎲' : '✨' }}
-                                            {{ $t(`lobby.game_category_${ game.category === 'both' ? 'both' : game.category }`) }}
-                                        </span>
+                            <button
+                                class="bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] p-4 rounded-xl text-left transition-all w-full"
+                                :class="isHostSelector
+                                    ? 'hover:border-primary-500/50 hover:bg-primary-500/5 cursor-pointer active:scale-[0.98]'
+                                    : 'opacity-60 cursor-not-allowed'"
+                                :disabled="! isHostSelector || isSelectingGame"
+                                @click="isHostSelector && selectGame(game.id)"
+                            >
+                                <div class="flex gap-4 items-center">
+                                    <span class="text-3xl">
+                                        {{ game.icon }}
+                                    </span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-semibold pr-8 text-highlighted">
+                                            {{ $t(game.labelKey) }}
+                                        </p>
+                                        <p class="mt-0.5 pr-8 text-muted text-xs">
+                                            {{ $t(game.descriptionKey) }}
+                                        </p>
+                                        <div class="flex flex-wrap gap-3 items-center mt-2">
+                                            <span class="flex gap-1 items-center text-muted text-xs">
+                                                <u-icon class="size-3" name="i-lucide-users" />
+                                                {{ game.maxPlayers
+                                                    ? $t('lobby.game_players_range', { min: game.minPlayers, max: game.maxPlayers })
+                                                    : $t('lobby.game_min_players', { n: game.minPlayers }) }}
+                                            </span>
+                                            <span class="flex gap-1 items-center text-muted text-xs">
+                                                <u-icon class="size-3" name="i-lucide-clock" />
+                                                {{ $t('lobby.game_duration', { n: game.avgDurationMinutes }) }}
+                                            </span>
+                                            <span
+                                                class="font-medium px-2 py-0.5 rounded-full text-xs"
+                                                :class="game.category === 'preserata'
+                                                    ? 'bg-accent-500/15 text-accent-500'
+                                                    : game.category === 'board'
+                                                        ? 'bg-primary-500/15 text-primary-500'
+                                                        : 'bg-success-500/15 text-success-500'"
+                                            >
+                                                {{ game.category === 'preserata' ? '🍹' : game.category === 'board' ? '🎲' : '✨' }}
+                                                {{ $t(`lobby.game_category_${ game.category === 'both' ? 'both' : game.category }`) }}
+                                            </span>
+                                        </div>
                                     </div>
+                                    <u-icon
+                                        v-if="isSelectingGame && pendingSelectedGame === game.id"
+                                        class="animate-spin size-5 text-muted"
+                                        name="i-lucide-loader-2"
+                                    />
+                                    <u-icon
+                                        v-else-if="isHostSelector"
+                                        class="size-5 text-muted"
+                                        name="i-lucide-chevron-right"
+                                    />
                                 </div>
-                                <u-icon
-                                    v-if="isSelectingGame"
-                                    class="animate-spin size-5 text-muted"
-                                    name="i-lucide-loader-2"
-                                />
-                                <u-icon
-                                    v-else-if="isHostSelector"
-                                    class="size-5 text-muted"
-                                    name="i-lucide-chevron-right"
-                                />
-                            </div>
-                        </button>
+                            </button>
+
+                            <!-- Info regole: fuori dal button della card (niente bottoni annidati) -->
+                            <u-button
+                                :aria-label="$t('lobby.game_rules_aria')"
+                                class="absolute right-2 top-2"
+                                color="neutral"
+                                icon="i-lucide-circle-help"
+                                size="xs"
+                                variant="ghost"
+                                @click="rulesGame = game"
+                            />
+                        </div>
                     </div>
 
                     <p v-if="! isHostSelector" class="py-2 text-center text-muted text-xs">
@@ -422,6 +510,13 @@
             </section>
 
         </main>
+
+        <!-- Modale regole del gioco (aperta dal tasto info sulle card) -->
+        <game-rules-modal
+            :game="rulesGame"
+            :open="rulesGame !== null"
+            @update:open="value => { if (! value) rulesGame = null }"
+        />
 
     </div>
 </template>
@@ -440,10 +535,11 @@
           , {
               players,
               gameSelection,
-              gameState,
+              gameLaunch,
               status,
               open,
               close,
+              reconnect,
               wsError,
               lobbyVersion,
               datingEnabled,
@@ -458,8 +554,11 @@
 
           , isLeaving = ref( false )
           , isSelectingGame = ref( false )
+          , isEndingGame = ref( false )
           , activeTab = ref<'areas' | 'games' | 'players'>( 'players' )
           , activeGameCategory = ref<GameCategory | 'all'>( 'all' )
+          , playersFilter = ref<number | 'all'>( 'all' )
+          , rulesGame = ref<GameDefinition | null>( null )
           , datingTarget = ref( '' )
           , datingBody = ref( '' )
           , isSendingDating = ref( false )
@@ -513,7 +612,29 @@
               value: tid,
           } ) ) )
 
-          , filteredGames = computed( () => getGamesByCategory( activeGameCategory.value ) )
+          // Opzioni filtro "siamo in N" (1–8 copre i tavoli reali; 'all' = nessun filtro).
+          , playersFilterItems = computed( () => [
+              {
+                  label: t( 'lobby.players_filter_all' ),
+                  value: 'all' as const,
+              },
+              ... Array.from( { length: 8 }, ( _, index ) => ( {
+                  label: t( 'lobby.players_filter_n', { n: index + 1 } ),
+                  value: index + 1,
+              } ) ),
+          ] )
+
+          // Categoria + numero giocatori: un gioco è fattibile in N se N >= min e
+          // (nessun massimo, oppure N <= max).
+          , filteredGames = computed( () => getGamesByCategory( activeGameCategory.value ).filter( game => {
+
+              if( playersFilter.value === 'all' ) return true;
+
+              const n = playersFilter.value;
+
+              return game.minPlayers <= n && ( ! game.maxPlayers || game.maxPlayers >= n );
+
+          } ) )
 
           , isHostSelector = computed( () => ! gameSelection.value.hostPlayerId || gameSelection.value.hostPlayerId === playerStore.playerId )
           // Host "reale", allineato al server (requireHostSession): l'host corrente, o —
@@ -523,6 +644,10 @@
               ? gameSelection.value.hostPlayerId === playerStore.playerId
               : playerStore.isHost ) )
           , isWsBootstrapping = computed( () => status.value === 'CONNECTING' && players.value.length === 0 )
+
+          // Da soli al tavolo (connessione viva e presence sincronizzata): mostra
+          // l'avviso che quasi tutti i giochi richiedono almeno 2 giocatori.
+          , isAloneAtTable = computed( () => status.value === 'OPEN' && players.value.length === 1 )
 
           , tabs = computed( () => [
               {
@@ -687,18 +812,16 @@
 
     } );
 
-    watch( gameState, state => {
+    // Lancio gioco dal vivo (segnale emesso solo dai broadcast di sessione, mai
+    // dall'hydration REST): porta tutti — host e non — sul gioco selezionato.
+    // Un refresh o un rientro in lobby ricarica lo stato via REST senza emettere
+    // il segnale, quindi non ri-trascina in partita: per quello c'è il banner
+    // "Rientra in partita". Niente dipendenza dal clock del client.
+    watch( () => gameLaunch.value, signal => {
 
-        if( state && ( state.phase === 'voting' || state.phase === 'reveal' ) )
-            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/thumbs` ) );
+        if( ! signal ) return;
 
-    } );
-
-    watch( () => gameSelection.value.lockedAt, ( lockedAt, previousLockedAt ) => {
-
-        if( ! lockedAt || lockedAt === previousLockedAt ) return;
-
-        // Clean up host-specific loading state
+        // Pulisci lo stato di loading dell'host che aveva appena selezionato.
         if( pendingSelectedGame.value ) {
 
             toast.remove( 'lobby-select-game-loading' );
@@ -707,10 +830,7 @@
 
         }
 
-        // Navigate all players (host and non-host) to the selected game page
-        const game = gameSelection.value.selectedGame;
-
-        if( game ) navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ game }` ) );
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ signal.game }` ) );
 
     } );
 
@@ -859,6 +979,48 @@
     }
 
     /**
+     * Termina la partita in corso e sblocca la selezione (solo host). Lo stato
+     * aggiornato arriva a tutti via broadcast (games + table_sessions).
+     */
+    async function endGame() {
+
+        if( isEndingGame.value ) return;
+
+        isEndingGame.value = true;
+
+        try {
+
+            await $fetch( `/api/${ venueSlug }/table/${ qrToken }/game/end`, {
+                method: 'POST',
+                body: { playerId: playerStore.playerId },
+            } );
+            toast.add( {
+                color: 'success',
+                description: t( 'lobby.game_end_success_toast' ),
+                duration: 2500,
+                icon: 'i-lucide-check-circle-2',
+            } );
+
+        } catch( exception: unknown ) {
+
+            const fetchError = exception as { data?: { message?: string } };
+
+            toast.add( {
+                color: 'error',
+                description: fetchError.data?.message ?? t( 'lobby.game_end_error_toast' ),
+                duration: 4500,
+                icon: 'i-lucide-circle-alert',
+            } );
+
+        } finally {
+
+            isEndingGame.value = false;
+
+        }
+
+    }
+
+    /**
      *
      */
     async function handleLeave() {
@@ -876,6 +1038,13 @@
         } );
 
         try {
+
+            // Rimuove la riga del giocatore (e fa scadere la sessione se resta
+            // vuota): best-effort, in caso di errore resta la pulizia a TTL.
+            await $fetch( `/api/${ venueSlug }/table/${ qrToken }/leave`, {
+                method: 'POST',
+                body: { playerId: playerStore.playerId },
+            } ).catch( () => null );
 
             close();
             playerStore.leave();

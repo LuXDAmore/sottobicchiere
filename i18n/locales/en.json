@@ -83,11 +83,22 @@
         "join_pending_toast": "Joining your table…",
         "join_success_toast": "All set {name}, you're in."
     },
+    "invite": {
+        "trigger_label": "Invite to the table",
+        "title": "Invite to the table",
+        "description": "Latecomers can join in seconds: show the QR or share the link and code.",
+        "qr_hint": "Have whoever wants to join scan this QR.",
+        "share_native": "Share invite",
+        "share_text": "Join our game table “{venue}” on Sottobicchiere! 🎲",
+        "waiting_cta": "Invite friends to the table"
+    },
     "lobby": {
         "page_title": "Lobby — {venue}",
         "players_title": "Players",
         "you": "you",
         "no_players": "No players yet. You're the first!",
+        "alone_title": "You're alone at the table",
+        "alone_description": "Most games need at least 2 players: invite someone to play together.",
         "games_title": "Games",
         "games_tab_all": "All",
         "games_tab_board": "Board games",
@@ -95,8 +106,18 @@
         "games_coming_soon": "Games coming soon",
         "games_description": "Multiplayer mini-games will be available soon.",
         "game_min_players": "Min. {n} players",
+        "game_players_range": "{min}–{max} players",
+        "players_filter_label": "Filter by number of players",
+        "players_filter_all": "Any number of players",
+        "players_filter_n": "We're {n}",
+        "games_filter_empty": "No games match this number of players.",
+        "game_rules_aria": "Game rules",
         "game_duration": "~{n} min",
         "game_in_progress": "Game in progress",
+        "game_resume": "Rejoin game",
+        "game_end": "End game",
+        "game_end_success_toast": "Game ended: you can pick another game.",
+        "game_end_error_toast": "Could not end the game. Please try again.",
         "game_host_only": "Only the host can select a game.",
         "leave": "Leave",
         "connecting": "Connecting…",
@@ -142,6 +163,7 @@
         "dating_message_timeout_toast": "No confirmation received: your message may not have been delivered. Try again."
     },
     "game": {
+        "rules_heading": "How to play",
         "thumbs": {
             "title": "Thumbs Up",
             "description": "Vote 👍 or 👎 on opinion questions and challenge your friends!",
@@ -149,7 +171,7 @@
             "waiting_title": "Ready to play?",
             "waiting_description": "Wait for everyone to connect, then start the game.",
             "start_button": "Start game",
-            "need_players": "You need at least 2 players to start.",
+            "need_players": "You need at least {n} players to start.",
             "round": "Round {n} of {total}",
             "yes": "Yes",
             "no": "No",
@@ -168,7 +190,8 @@
             "start_success_toast": "Game started.",
             "vote_pending_toast": "Submitting vote…",
             "vote_success_toast": "Vote submitted.",
-            "next_round_pending_toast": "Moving to next round…"
+            "next_round_pending_toast": "Moving to next round…",
+            "rules": "Each round shows an opinion question: vote 👍 (yes) or 👎 (no).\nOnce everyone present has voted, the votes are revealed.\nYou earn 1 point whenever your vote is in the majority: you win by siding with the group, you stay at zero by going against it.\nThe player with the most points after the last round wins (there's a team leaderboard too, if you created teams).\nThe host advances the rounds, can replay at the end or end the game early from the lobby."
         },
         "word_blitz": {
             "title": "Word Blitz",
@@ -178,7 +201,8 @@
             "input_placeholder": "Ex: Boat",
             "submit": "Submit word",
             "history": "Word history",
-            "local_note": "Local prototype mode: next step will make this realtime for the table."
+            "local_note": "Local prototype mode: next step will make this realtime for the table.",
+            "rules": "A letter appears: quickly type a word starting with that letter and press Enter.\nThe word joins the history and a new letter shows up right away: the goal is speed — saying it out loud counts double.\nLocal prototype mode: words stay on your device and there are no points or winners yet — practice while waiting for the realtime version."
         }
     },
     "layout": {

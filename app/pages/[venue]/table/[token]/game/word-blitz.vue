@@ -8,14 +8,35 @@
                 </p>
             </div>
 
-            <u-button
-                color="neutral"
-                icon="i-lucide-arrow-left"
-                :label="$t('game.thumbs.back_lobby')"
-                size="sm"
-                variant="ghost"
-                @click="goBack"
-            />
+            <div class="flex gap-2 items-center">
+                <!-- Regole sempre consultabili -->
+                <u-button
+                    :aria-label="$t('lobby.game_rules_aria')"
+                    color="neutral"
+                    icon="i-lucide-circle-help"
+                    size="sm"
+                    variant="ghost"
+                    @click="rulesOpen = true"
+                />
+                <!-- Invita al tavolo (QR/link/codice per chi arriva dopo) -->
+                <table-invite>
+                    <u-button
+                        :aria-label="$t('invite.trigger_label')"
+                        color="neutral"
+                        icon="i-lucide-user-plus"
+                        size="sm"
+                        variant="ghost"
+                    />
+                </table-invite>
+                <u-button
+                    color="neutral"
+                    icon="i-lucide-arrow-left"
+                    :label="$t('game.thumbs.back_lobby')"
+                    size="sm"
+                    variant="ghost"
+                    @click="goBack"
+                />
+            </div>
         </header>
 
         <main class="flex flex-1 flex-col gap-6 items-center justify-center p-4">
@@ -68,6 +89,9 @@
                 </ul>
             </u-card>
         </main>
+
+        <!-- Regole del gioco, consultabili in ogni fase -->
+        <game-rules-modal v-model:open="rulesOpen" :game="wordBlitzDefinition" />
     </div>
 </template>
 
@@ -79,10 +103,13 @@
           , localePath = useLocalePath()
           , playerStore = usePlayerStore()
 
-          , { open, close } = useTableSocket()
+          , { open, close, gameLaunch } = useTableSocket()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
+
+          , wordBlitzDefinition = getGameDefinition( 'word-blitz' )
+          , rulesOpen = ref( false )
 
           , letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split( '' )
           , currentLetter = useState<string>(
@@ -110,6 +137,14 @@
     } );
 
     onUnmounted( () => close() );
+
+    // L'host ha lanciato un gioco DIVERSO mentre eravamo qui: seguilo.
+    watch( () => gameLaunch.value, signal => {
+
+        if( signal && signal.game !== 'word-blitz' )
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ signal.game }` ) );
+
+    } );
 
     function submitWord() {
 
