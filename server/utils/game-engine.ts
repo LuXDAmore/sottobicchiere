@@ -14,7 +14,11 @@ export async function getActiveGame( client: ServiceClient, tableSessionId: stri
     const { data } = await client
         .from( 'games' )
         .select( '*' )
+        // C'è al più una partita per sessione (upsert onConflict 'table_session_id'):
+        // .limit(1) è cintura+bretelle perché un'eventuale riga duplicata non faccia
+        // lanciare maybeSingle (degrada alla prima riga invece di rompere il flusso).
         .eq( 'table_session_id', tableSessionId )
+        .limit( 1 )
         .maybeSingle();
 
     return data;

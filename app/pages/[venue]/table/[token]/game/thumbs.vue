@@ -187,11 +187,12 @@
                         class="flex gap-4 w-full"
                     >
                         <button
+                            :aria-label="$t('game.thumbs.yes')"
                             class="active:scale-95 bg-emerald-500/10 border-2 border-emerald-500/30 flex flex-1 flex-col gap-2 hover:bg-emerald-500/20 hover:border-emerald-500 items-center justify-center min-h-[140px] rounded-3xl text-emerald-500 transition-all"
                             :disabled="isSubmittingVote || status !== 'OPEN'"
                             @click="handleVote('up')"
                         >
-                            <span class="text-5xl">
+                            <span aria-hidden="true" class="text-5xl">
                                 👍
                             </span>
                             <span class="font-bold font-display text-lg">
@@ -199,11 +200,12 @@
                             </span>
                         </button>
                         <button
+                            :aria-label="$t('game.thumbs.no')"
                             class="active:scale-95 bg-error-500/10 border-2 border-error-500/30 flex flex-1 flex-col gap-2 hover:bg-error-500/20 hover:border-error-500 items-center justify-center min-h-[140px] rounded-3xl text-error-500 transition-all"
                             :disabled="isSubmittingVote || status !== 'OPEN'"
                             @click="handleVote('down')"
                         >
-                            <span class="text-5xl">
+                            <span aria-hidden="true" class="text-5xl">
                                 👎
                             </span>
                             <span class="font-bold font-display text-lg">
@@ -590,7 +592,7 @@
 
         }
 
-    }, { deep: true } );
+    } );
 
     const sortedPlayers = computed( () => {
 

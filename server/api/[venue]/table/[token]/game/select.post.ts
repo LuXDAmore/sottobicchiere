@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { GameId } from '../../../../../../shared/utils/games';
 
 import { GAME_DEFINITIONS, getGameDefinition } from '../../../../../../shared/utils/games';
-import { requirePlayer, requireTable } from '../../../../../utils/request';
+import { isSessionHost, requirePlayer, requireTable } from '../../../../../utils/request';
 
 // Solo i giochi del catalogo (che hanno una pagina reale): evita che venga
 // persistito uno slug arbitrario che porterebbe gli altri giocatori su
@@ -79,11 +79,7 @@ export default defineEventHandler( async event => {
     // Stessa semantica di requireHostSession: se host_player_id non è ancora
     // valorizzato (race subito dopo la creazione), può procedere solo chi ha
     // creato la sessione (is_host) — non il primo guest che seleziona un gioco.
-    const isAuthorized = session.host_player_id === null
-        ? player.is_host
-        : session.host_player_id === body.playerId;
-
-    if( ! isAuthorized ) {
+    if( ! isSessionHost( session, player ) ) {
 
         throw createError( {
             statusCode: 403,

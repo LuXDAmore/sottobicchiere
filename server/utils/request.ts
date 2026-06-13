@@ -93,6 +93,26 @@ export async function requirePlayer( event: H3Event, client: ReturnType<typeof s
 }
 
 /**
+ * Decide se un giocatore è l'host della sessione. Se `host_player_id` non è
+ * ancora valorizzato (subito dopo la creazione o in una race di riassegnazione)
+ * NON si usa il playerId come fallback — renderebbe host chiunque: può procedere
+ * solo chi ha creato la sessione (`is_host`). Fonte unica condivisa tra
+ * `requireHostSession` e l'API di selezione gioco.
+ * @param session - sessione con il campo `host_player_id`.
+ * @param session.host_player_id
+ * @param player - giocatore con `id` e `is_host`.
+ * @param player.id
+ * @param player.is_host
+ */
+export function isSessionHost( session: { host_player_id: string | null }, player: { id: string; is_host: boolean } ): boolean {
+
+    return session.host_player_id === null
+        ? player.is_host
+        : session.host_player_id === player.id;
+
+}
+
+/**
  * Verifica che un giocatore (di cui l'utente corrente è proprietario) sia l'host
  * della propria sessione, o lancia 401/403/404.
  * @param event - evento H3 della request.
@@ -131,15 +151,7 @@ export async function requireHostSession( event: H3Event, client: ReturnType<typ
 
     }
 
-    // Se host_player_id non è ancora valorizzato (subito dopo la creazione della
-    // sessione o in una race di riassegnazione), NON usare playerId come fallback:
-    // renderebbe host chiunque. Consenti solo a chi ha creato la sessione
-    // (player.is_host), altrimenti nega.
-    const isAuthorized = session.host_player_id === null
-        ? player.is_host
-        : session.host_player_id === playerId;
-
-    if( ! isAuthorized ) {
+    if( ! isSessionHost( session, player ) ) {
 
         throw createError( {
             statusCode: 403,
@@ -219,9 +231,16 @@ export async function resolveSessionId( client: ReturnType<typeof serviceClient>
 
     }
 
-    const latest = await findLatestActiveSession( client, tableId );
+    const latest = await client
+        .from( 'table_sessions' )
+        .select( 'id' )
+        .eq( 'table_id', tableId )
+        .gt( 'expires_at', new Date().toISOString() )
+        .order( 'started_at', { ascending: false } )
+        .limit( 1 )
+        .maybeSingle();
 
-    return latest?.id ?? null;
+    return latest.data?.id ?? null;
 
 }
 

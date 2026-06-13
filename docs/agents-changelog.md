@@ -5,6 +5,40 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-13 — Pass di ottimizzazione (quick win da audit logica/dati/UI)
+
+Tre audit read-only sull'intera codebase (logica/perf, data layer Supabase, design
+system). Applicati i **quick win sicuri** (ottimizzazioni pure, nessun cambio di
+comportamento); le migliorie strutturali sono tracciate in TODO come decisioni.
+
+### Server / dati
+- `server/utils/game-engine.ts`: `getActiveGame` ora con `.limit(1)` (robustezza
+  contro righe duplicate accidentali su `maybeSingle`).
+- `server/utils/request.ts`: `resolveSessionId` usa una query snella `select('id')`
+  invece della versione "fat" a 8 colonne; estratto l'helper condiviso
+  `isSessionHost(session, player)` (fonte unica della logica di autorizzazione host,
+  prima duplicata tra `requireHostSession` e `game/select.post.ts`).
+- `server/api/.../game/select.post.ts`: usa `isSessionHost`.
+- `supabase/migrations/20260613120000_indexes_and_votes_fk.sql` (nuova, additiva e
+  idempotente): FK `votes.player_id → player_sessions(id) on delete cascade` (con
+  cleanup preventivo degli orfani: prevenivano la distorsione del quorum in
+  `recomputeAndMaybeReveal`) + indici su FK non indicizzate (`dating_messages.from_*`,
+  `venues/tables.created_by_user_id` parziali, `table_sessions(table_id, started_at)`,
+  `votes.player_id`). **Da applicare con `pnpm db:push` previa audit supabase-guardian.**
+
+### Client
+- `app/composables/useTableSocket.ts`: `syncPresence` non riassegna più `players` se
+  l'insieme di id online è invariato (i `presence sync` periodici a tavolo stabile non
+  ritriggerano più computed/liste). Confronto via `Set`.
+- `app/pages/.../game/thumbs.vue`: rimosso `{ deep: true }` dal watch su `gameState`
+  (l'oggetto è già riassegnato per intero da `mapGame`: il deep era puro costo); aggiunti
+  `aria-label` ai bottoni voto e `aria-hidden` agli emoji 👍/👎.
+
+Verifica: lint + stylelint + typecheck + 53 unit test + build verdi; SSR 200 sulle 7
+rotte tavolo/gioco; guardia `solo` su `select` ancora 422.
+
+---
+
 ## 2026-06-13 — Quattro nuovi giochi locali + categoria "solo" nel catalogo
 
 ### Nuovi giochi (client-side, pass-the-phone / solitari)
