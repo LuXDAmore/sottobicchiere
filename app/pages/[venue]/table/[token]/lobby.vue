@@ -76,29 +76,7 @@
         </header>
 
         <!-- Connection status banner -->
-        <div
-            v-if="status !== 'OPEN'"
-            class="flex gap-2 items-center justify-between px-4 py-2 shrink-0 text-sm"
-            :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-error-500/10 text-error-500'"
-        >
-            <div class="flex gap-2 items-center">
-                <u-icon
-                    class="size-4"
-                    :class="status !== 'CLOSED' ? 'animate-spin' : ''"
-                    name="i-lucide-loader-2"
-                />
-                {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
-            </div>
-            <u-button
-                v-if="status === 'CLOSED'"
-                color="neutral"
-                icon="i-lucide-refresh-cw"
-                :label="$t('lobby.reconnect')"
-                size="xs"
-                variant="ghost"
-                @click="reconnect()"
-            />
-        </div>
+        <connection-status-banner :status="status" @reconnect="reconnect()" />
 
         <!-- Dating panel -->
         <transition name="slide-down">
@@ -222,21 +200,14 @@
                 </div>
 
                 <div v-else class="flex flex-wrap gap-2">
-                    <div
+                    <player-pill
                         v-for="player in players"
                         :key="player.id"
-                        class="flex gap-2 items-center px-3 py-2 rounded-full text-sm transition-all"
-                        :class="player.id === playerStore.playerId ? 'ring-2' : ''"
-                        :style="{ backgroundColor: player.color + '22', color: player.color }"
-                    >
-                        <span class="block rounded-full shrink-0 size-2.5" :style="{ backgroundColor: player.color }" />
-                        <span class="font-semibold">
-                            {{ player.nickname }}
-                        </span>
-                        <span v-if="player.id === playerStore.playerId" class="opacity-60 text-xs">
-                            {{ $t('lobby.you') }}
-                        </span>
-                    </div>
+                        :color="player.color"
+                        :nickname="player.nickname"
+                        :ring="player.id === playerStore.playerId"
+                        :you="player.id === playerStore.playerId"
+                    />
 
                     <div v-if="players.length === 0" class="py-6 text-center text-muted text-sm w-full">
                         {{ $t('lobby.no_players') }}
@@ -318,15 +289,13 @@
                         </div>
 
                         <div v-if="area.members.length > 0" class="flex flex-wrap gap-2">
-                            <span
+                            <player-pill
                                 v-for="member in area.members"
                                 :key="member.id"
-                                class="flex gap-1.5 items-center px-2.5 py-1 rounded-full text-xs"
-                                :style="{ backgroundColor: member.color + '22', color: member.color }"
-                            >
-                                <span class="block rounded-full shrink-0 size-2" :style="{ backgroundColor: member.color }" />
-                                {{ member.nickname }}
-                            </span>
+                                :color="member.color"
+                                :nickname="member.nickname"
+                                size="sm"
+                            />
                         </div>
                         <p v-else class="text-muted text-xs">
                             {{ $t('lobby.area_no_members') }}
@@ -340,15 +309,13 @@
                         {{ $t('lobby.areas_unassigned') }}
                     </p>
                     <div class="flex flex-wrap gap-2">
-                        <span
+                        <player-pill
                             v-for="member in unassignedMembers"
                             :key="member.id"
-                            class="flex gap-1.5 items-center px-2.5 py-1 rounded-full text-xs"
-                            :style="{ backgroundColor: member.color + '22', color: member.color }"
-                        >
-                            <span class="block rounded-full shrink-0 size-2" :style="{ backgroundColor: member.color }" />
-                            {{ member.nickname }}
-                        </span>
+                            :color="member.color"
+                            :nickname="member.nickname"
+                            size="sm"
+                        />
                     </div>
                 </div>
 
@@ -461,19 +428,7 @@
                                                 <u-icon class="size-3" name="i-lucide-clock" />
                                                 {{ $t('lobby.game_duration', { n: game.avgDurationMinutes }) }}
                                             </span>
-                                            <span
-                                                class="font-medium px-2 py-0.5 rounded-full text-xs"
-                                                :class="game.category === 'preserata'
-                                                    ? 'bg-accent-500/15 text-accent-500'
-                                                    : game.category === 'board'
-                                                        ? 'bg-primary-500/15 text-primary-500'
-                                                        : game.category === 'solo'
-                                                            ? 'bg-secondary-500/15 text-secondary-500'
-                                                            : 'bg-success-500/15 text-success-500'"
-                                            >
-                                                {{ game.category === 'preserata' ? '🍹' : game.category === 'board' ? '🎲' : game.category === 'solo' ? '🧍' : '✨' }}
-                                                {{ $t(`lobby.game_category_${ game.category }`) }}
-                                            </span>
+                                            <game-category-badge :category="game.category" />
                                         </div>
                                     </div>
                                     <u-icon

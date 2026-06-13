@@ -62,29 +62,7 @@
         </header>
 
         <!-- WebSocket status banner -->
-        <div
-            v-if="status !== 'OPEN'"
-            class="flex flex-col gap-2 items-center justify-center py-2 shrink-0 text-sm"
-            :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-500' : 'bg-error-500/10 text-error-500'"
-        >
-            <div class="flex gap-2 items-center">
-                <u-icon
-                    class="size-4"
-                    :class="status !== 'CLOSED' ? 'animate-spin' : ''"
-                    name="i-lucide-loader-2"
-                />
-                {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
-            </div>
-            <u-button
-                v-if="status === 'CLOSED'"
-                color="neutral"
-                icon="i-lucide-refresh-cw"
-                :label="$t('lobby.reconnect')"
-                size="xs"
-                variant="ghost"
-                @click="reconnect()"
-            />
-        </div>
+        <connection-status-banner :status="status" @reconnect="reconnect()" />
 
         <!-- Main -->
         <main class="flex flex-1 flex-col items-center justify-between overflow-y-auto px-4 py-6">
@@ -103,18 +81,12 @@
 
                     <!-- Players preview -->
                     <div class="flex flex-wrap gap-2 justify-center max-w-xs">
-                        <div
+                        <player-pill
                             v-for="player in players"
                             :key="player.id"
-                            class="flex gap-1.5 items-center px-3 py-1.5 rounded-full text-sm"
-                            :style="{ backgroundColor: player.color + '22', color: player.color }"
-                        >
-                            <span
-                                class="block rounded-full size-2"
-                                :style="{ backgroundColor: player.color }"
-                            />
-                            {{ player.nickname }}
-                        </div>
+                            :color="player.color"
+                            :nickname="player.nickname"
+                        />
                     </div>
 
                     <u-button
@@ -173,12 +145,13 @@
                         <p class="text-muted text-sm">
                             {{ $t('game.thumbs.waiting_others', { voted: gameState.votedCount, total: gameState.totalCount }) }}
                         </p>
-                        <div class="bg-[var(--ui-border)] h-1.5 overflow-hidden rounded-full w-48">
-                            <div
-                                class="bg-primary-500 duration-500 h-full rounded-full transition-all"
-                                :style="{ width: `${ (gameState.votedCount / Math.max(gameState.totalCount, 1)) * 100 }%` }"
-                            />
-                        </div>
+                        <u-progress
+                            class="w-48"
+                            color="primary"
+                            :max="Math.max(gameState.totalCount, 1)"
+                            :model-value="gameState.votedCount"
+                            size="sm"
+                        />
                     </div>
 
                     <!-- Vote buttons -->
@@ -227,23 +200,16 @@
 
                     <!-- Votes reveal -->
                     <div class="flex flex-wrap gap-2 justify-center">
-                        <div
+                        <player-pill
                             v-for="player in players"
                             :key="player.id"
-                            class="flex gap-2 items-center px-3 py-2 rounded-full text-sm"
-                            :style="{ backgroundColor: player.color + '22', color: player.color }"
+                            :color="player.color"
+                            :nickname="player.nickname"
                         >
-                            <span
-                                class="block rounded-full size-2"
-                                :style="{ backgroundColor: player.color }"
-                            />
-                            <span class="font-semibold">
-                                {{ player.nickname }}
-                            </span>
                             <span class="text-lg">
                                 {{ gameState.votes?.[player.id] === 'up' ? '👍' : gameState.votes?.[player.id] === 'down' ? '👎' : '—' }}
                             </span>
-                        </div>
+                        </player-pill>
                     </div>
 
                     <!-- Scores -->

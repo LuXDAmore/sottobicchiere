@@ -1,47 +1,18 @@
 <template>
     <div class="flex flex-col h-screen overflow-hidden">
 
-        <header class="border-[var(--ui-border)] border-b flex items-center justify-between px-4 py-3 shrink-0">
-            <div class="flex gap-2 items-center min-w-0">
-                <span class="text-2xl">
-                    🍸
-                </span>
-                <p class="font-bold font-display text-highlighted truncate">
-                    {{ $t('game.dares.title') }}
-                </p>
-            </div>
-
-            <div class="flex gap-2 items-center shrink-0">
+        <game-header
+            icon="🍸"
+            :title="$t('game.dares.title')"
+            @back="goBack"
+            @rules="rulesOpen = true"
+        >
+            <template #meta>
                 <span v-if="phase === 'card'" class="font-mono text-muted text-sm">
                     {{ $t('game.dares.card_index', { n: index + 1, total: deck.length }) }}
                 </span>
-                <u-button
-                    :aria-label="$t('lobby.game_rules_aria')"
-                    color="neutral"
-                    icon="i-lucide-circle-help"
-                    size="sm"
-                    variant="ghost"
-                    @click="rulesOpen = true"
-                />
-                <table-invite>
-                    <u-button
-                        :aria-label="$t('invite.trigger_label')"
-                        color="neutral"
-                        icon="i-lucide-user-plus"
-                        size="sm"
-                        variant="ghost"
-                    />
-                </table-invite>
-                <u-button
-                    color="neutral"
-                    icon="i-lucide-arrow-left"
-                    :label="$t('game.thumbs.back_lobby')"
-                    size="sm"
-                    variant="ghost"
-                    @click="goBack"
-                />
-            </div>
-        </header>
+            </template>
+        </game-header>
 
         <main class="flex flex-1 flex-col items-center justify-center overflow-y-auto p-6">
 

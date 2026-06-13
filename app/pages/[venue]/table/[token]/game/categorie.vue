@@ -1,44 +1,12 @@
 <template>
     <div class="flex flex-col h-screen overflow-hidden">
 
-        <header class="border-[var(--ui-border)] border-b flex items-center justify-between px-4 py-3 shrink-0">
-            <div class="flex gap-2 items-center min-w-0">
-                <span class="text-2xl">
-                    🗂️
-                </span>
-                <p class="font-bold font-display text-highlighted truncate">
-                    {{ $t('game.categorie.title') }}
-                </p>
-            </div>
-
-            <div class="flex gap-2 items-center shrink-0">
-                <u-button
-                    :aria-label="$t('lobby.game_rules_aria')"
-                    color="neutral"
-                    icon="i-lucide-circle-help"
-                    size="sm"
-                    variant="ghost"
-                    @click="rulesOpen = true"
-                />
-                <table-invite>
-                    <u-button
-                        :aria-label="$t('invite.trigger_label')"
-                        color="neutral"
-                        icon="i-lucide-user-plus"
-                        size="sm"
-                        variant="ghost"
-                    />
-                </table-invite>
-                <u-button
-                    color="neutral"
-                    icon="i-lucide-arrow-left"
-                    :label="$t('game.thumbs.back_lobby')"
-                    size="sm"
-                    variant="ghost"
-                    @click="goBack"
-                />
-            </div>
-        </header>
+        <game-header
+            icon="🗂️"
+            :title="$t('game.categorie.title')"
+            @back="goBack"
+            @rules="rulesOpen = true"
+        />
 
         <main class="flex flex-1 flex-col items-center justify-center overflow-y-auto p-6">
 
@@ -72,15 +40,14 @@
                     </p>
                 </div>
 
-                <!-- Timer -->
+                <!-- Timer (UProgress: colore dinamico in base al tempo residuo) -->
                 <div class="w-full">
-                    <div class="bg-[var(--ui-border)] h-3 overflow-hidden rounded-full w-full">
-                        <div
-                            class="duration-100 h-full rounded-full transition-all"
-                            :class="timerColor"
-                            :style="{ width: `${ timerPercent }%` }"
-                        />
-                    </div>
+                    <u-progress
+                        :color="timerColor"
+                        :max="turnDuration"
+                        :model-value="remaining"
+                        size="lg"
+                    />
                     <p class="font-mono mt-2 text-center text-muted text-sm">
                         {{ secondsLeft }}s
                     </p>
@@ -160,15 +127,15 @@
           , remaining = ref( turnDuration )
 
           , currentCategory = computed<LocalizedText | null>( () => deck.value[ deckIndex.value ] ?? null )
-          , timerPercent = computed( () => Math.max( 0, ( remaining.value / turnDuration ) * 100 ) )
           , secondsLeft = computed( () => Math.ceil( remaining.value / 1000 ) )
-          , timerColor = computed( () => {
+          // Colore token per UProgress in base al tempo residuo (verde→ambra→rosso).
+          , timerColor = computed<'error' | 'success' | 'warning'>( () => {
 
               const ratio = remaining.value / turnDuration;
 
-              if( ratio > 0.5 ) return 'bg-emerald-500';
-              if( ratio > 0.25 ) return 'bg-amber-500';
-              return 'bg-error-500';
+              if( ratio > 0.5 ) return 'success';
+              if( ratio > 0.25 ) return 'warning';
+              return 'error';
 
           } )
 

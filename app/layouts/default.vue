@@ -20,14 +20,14 @@
                 <!-- Controls -->
                 <div class="flex gap-2 items-center">
 
-                    <!-- Language switcher -->
+                    <!-- Language switcher (size md per un tap target adeguato su mobile) -->
                     <u-button
                         v-for="locale in locales"
                         :key="locale.code"
                         :aria-label="locale.name"
                         color="neutral"
                         :label="locale.code.toUpperCase()"
-                        size="xs"
+                        size="md"
                         :variant="currentLocale === locale.code ? 'soft' : 'ghost'"
                         @click="setLocale(locale.code)"
                     />
@@ -37,7 +37,7 @@
                         :aria-label="$t('layout.toggle_theme')"
                         color="neutral"
                         :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
-                        size="sm"
+                        size="md"
                         variant="ghost"
                         @click="toggleColorMode"
                     />

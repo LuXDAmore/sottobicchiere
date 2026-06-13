@@ -123,20 +123,21 @@
             </div>
         </div>
 
-        <!-- Mini header flottante (regole / invito / uscita), fuori dalle metà tattili -->
-        <div class="-translate-x-1/2 absolute flex gap-1 left-1/2 top-2 z-10">
+        <!-- Mini header flottante (regole / uscita), fuori dalle metà tattili.
+             size sm + spaziatura per un tap target adeguato in un gioco rapido. -->
+        <div class="-translate-x-1/2 absolute flex gap-2 left-1/2 top-2 z-10">
             <u-button
                 :aria-label="$t('lobby.game_rules_aria')"
                 color="neutral"
                 icon="i-lucide-circle-help"
-                size="xs"
+                size="sm"
                 @click="rulesOpen = true"
             />
             <u-button
                 :aria-label="$t('game.thumbs.back_lobby')"
                 color="neutral"
                 icon="i-lucide-arrow-left"
-                size="xs"
+                size="sm"
                 @click="goBack"
             />
         </div>

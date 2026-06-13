@@ -1,43 +1,11 @@
 <template>
     <div class="flex flex-col h-screen overflow-hidden">
-        <header class="border-[var(--ui-border)] border-b flex items-center justify-between px-4 py-3 shrink-0">
-            <div class="flex gap-2 items-center">
-                <span class="text-2xl">⚡</span>
-                <p class="font-bold font-display text-highlighted">
-                    {{ $t('game.word_blitz.title') }}
-                </p>
-            </div>
-
-            <div class="flex gap-2 items-center">
-                <!-- Regole sempre consultabili -->
-                <u-button
-                    :aria-label="$t('lobby.game_rules_aria')"
-                    color="neutral"
-                    icon="i-lucide-circle-help"
-                    size="sm"
-                    variant="ghost"
-                    @click="rulesOpen = true"
-                />
-                <!-- Invita al tavolo (QR/link/codice per chi arriva dopo) -->
-                <table-invite>
-                    <u-button
-                        :aria-label="$t('invite.trigger_label')"
-                        color="neutral"
-                        icon="i-lucide-user-plus"
-                        size="sm"
-                        variant="ghost"
-                    />
-                </table-invite>
-                <u-button
-                    color="neutral"
-                    icon="i-lucide-arrow-left"
-                    :label="$t('game.thumbs.back_lobby')"
-                    size="sm"
-                    variant="ghost"
-                    @click="goBack"
-                />
-            </div>
-        </header>
+        <game-header
+            icon="🔤"
+            :title="$t('game.word_blitz.title')"
+            @back="goBack"
+            @rules="rulesOpen = true"
+        />
 
         <main class="flex flex-1 flex-col gap-6 items-center justify-center p-4">
             <u-card
@@ -52,8 +20,8 @@
                 </p>
                 <u-input
                     v-model="myWord"
-                    :placeholder="$t('game.word_blitz.input_placeholder')"
                     maxlength="20"
+                    :placeholder="$t('game.word_blitz.input_placeholder')"
                     @keyup.enter="submitWord"
                 />
                 <u-button
@@ -111,7 +79,7 @@
           , wordBlitzDefinition = getGameDefinition( 'word-blitz' )
           , rulesOpen = ref( false )
 
-          , letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split( '' )
+          , letters = [ ... 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' ]
           , currentLetter = useState<string>(
               `word-blitz-letter:${ venueSlug }:${ qrToken }`,
               () => 'A'
@@ -146,6 +114,9 @@
 
     } );
 
+    /**
+     *
+     */
     function submitWord() {
 
         const value = myWord.value.trim();
@@ -158,6 +129,9 @@
 
     }
 
+    /**
+     *
+     */
     function goBack() {
 
         navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );

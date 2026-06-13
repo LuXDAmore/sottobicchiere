@@ -19,12 +19,7 @@
                         <u-icon class="size-4" name="i-lucide-clock" />
                         {{ $t('lobby.game_duration', { n: game.avgDurationMinutes }) }}
                     </span>
-                    <u-badge
-                        :color="game.category === 'preserata' ? 'warning' : game.category === 'board' ? 'primary' : game.category === 'solo' ? 'secondary' : 'success'"
-                        :label="$t(`lobby.game_category_${ game.category }`)"
-                        size="sm"
-                        variant="soft"
-                    />
+                    <game-category-badge :category="game.category" />
                 </div>
 
                 <!-- Descrizione breve -->
