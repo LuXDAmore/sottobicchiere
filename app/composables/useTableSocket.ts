@@ -342,32 +342,27 @@ const _useTableSocket = createGlobalState( () => {
 
         try {
 
-            const [
-                selection,
-                datingRooms,
-                game,
-            ] = await Promise.all( [
-                $fetch<LobbyGameSelection & { sessionMode: SessionMode; datingEnabled: boolean }>( `${ apiBase() }/game/current`, { query: { session: playerStore.tableSessionId } } ),
-                $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } ),
-                $fetch<Database['public']['Tables']['games']['Row'] | null>( `${ apiBase() }/game/state`, { query: { session: playerStore.tableSessionId } } ),
-            ] );
+            // Un solo endpoint (game/bootstrap) per selezione + riga partita: risolve
+            // la sessione una volta sola, dimezzando query e risoluzioni di tavolo
+            // rispetto ai due endpoint separati game/current + game/state.
+            const [ bootstrap, datingRooms ] = await Promise.all( [ $fetch<LobbyGameSelection & { sessionMode: SessionMode; datingEnabled: boolean; game: Database['public']['Tables']['games']['Row'] | null }>( `${ apiBase() }/game/bootstrap`, { query: { session: playerStore.tableSessionId } } ), $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { player: playerStore.playerId } } ) ] );
 
-            if( selection ) {
+            if( bootstrap ) {
 
                 gameSelection.value = {
-                    gameMode: selection.gameMode,
-                    hostPlayerId: selection.hostPlayerId,
-                    lockedAt: selection.lockedAt,
-                    selectedGame: selection.selectedGame,
+                    gameMode: bootstrap.gameMode,
+                    hostPlayerId: bootstrap.hostPlayerId,
+                    lockedAt: bootstrap.lockedAt,
+                    selectedGame: bootstrap.selectedGame,
                 };
-                sessionMode.value = selection.sessionMode;
-                datingEnabled.value = selection.datingEnabled;
+                sessionMode.value = bootstrap.sessionMode;
+                datingEnabled.value = bootstrap.datingEnabled;
+
+                // Allinea chi entra/ricarica a partita in corso (il realtime invia solo i cambi).
+                if( bootstrap.game ) mapGame( bootstrap.game );
 
             }
             if( datingRooms ) datingRoomStatus.value = datingRooms;
-
-            // Allinea chi entra/ricarica a partita in corso (il realtime invia solo i cambi).
-            if( game ) mapGame( game );
 
         } catch{ /* non bloccante: il realtime allineerà lo stato */ }
 
@@ -380,7 +375,7 @@ const _useTableSocket = createGlobalState( () => {
 
         try {
 
-            datingRoomStatus.value = await $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } );
+            datingRoomStatus.value = await $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { player: playerStore.playerId } } );
 
         } catch{ /* ignore */ }
 

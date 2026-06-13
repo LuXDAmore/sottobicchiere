@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getActiveGame } from '../../../../../utils/game-engine';
+import { getActiveGameLite } from '../../../../../utils/game-engine';
 import { electHost } from '../../../../../utils/host-election';
 import { requirePlayer, requireTable } from '../../../../../utils/request';
 
@@ -92,7 +92,7 @@ export default defineEventHandler( async event => {
     // potrebbero vedere host diversi tra sessione e game.
     if( currentHost === playerId ) {
 
-        const sameGame = await getActiveGame( client, sessionId );
+        const sameGame = await getActiveGameLite( client, sessionId );
 
         if( sameGame && sameGame.host_player_id !== playerId ) {
 
@@ -101,15 +101,22 @@ export default defineEventHandler( async event => {
                 .update( { host_player_id: playerId } )
                 .eq( 'id', sameGame.id );
 
-            if( sameGameError ) throw createError( {
-                statusCode: 500,
-                statusMessage: 'GAME_HOST_SYNC_FAILED',
-                message: 'Non sono riuscito a sincronizzare l\'host sulla partita. Riprova.',
-            } );
+            if( sameGameError ) {
+
+                throw createError( {
+                    statusCode: 500,
+                    statusMessage: 'GAME_HOST_SYNC_FAILED',
+                    message: 'Non sono riuscito a sincronizzare l\'host sulla partita. Riprova.',
+                } );
+
+            }
 
         }
 
-        return { ok: true, hostPlayerId: playerId };
+        return {
+            ok: true,
+            hostPlayerId: playerId,
+        };
 
     }
 
@@ -123,7 +130,14 @@ export default defineEventHandler( async event => {
         , winner = electHost( currentHost, online, memberIds );
 
     // Riassegna solo se chi rivendica è davvero l'eletto (host assente + id minore).
-    if( ! winner || winner !== playerId ) return { ok: false, hostPlayerId: currentHost };
+    if( ! winner || winner !== playerId ) {
+
+        return {
+            ok: false,
+            hostPlayerId: currentHost,
+        };
+
+    }
 
     // Update ottimistico: la guardia su host_player_id fa vincere una sola
     // richiesta; il filtro su expires_at esclude le sessioni scadute tra la SELECT
@@ -150,11 +164,18 @@ export default defineEventHandler( async event => {
 
     // Nessuna riga aggiornata: sessione scaduta o host già rivendicato da un altro
     // client nella race tra SELECT e UPDATE. Risposta coerente, niente broadcast.
-    if( ! updated || updated.length === 0 ) return { ok: false, hostPlayerId: currentHost };
+    if( ! updated || updated.length === 0 ) {
+
+        return {
+            ok: false,
+            hostPlayerId: currentHost,
+        };
+
+    }
 
     // Allinea l'host anche sulla partita attiva: il quorum/auto-reveal segue chi
     // riporta la presence, e il fallback isHost lato client legge games.host_player_id.
-    const activeGame = await getActiveGame( client, sessionId );
+    const activeGame = await getActiveGameLite( client, sessionId );
 
     if( activeGame && activeGame.host_player_id !== playerId ) {
 
@@ -163,14 +184,21 @@ export default defineEventHandler( async event => {
             .update( { host_player_id: playerId } )
             .eq( 'id', activeGame.id );
 
-        if( gameError ) throw createError( {
-            statusCode: 500,
-            statusMessage: 'GAME_HOST_SYNC_FAILED',
-            message: 'Non sono riuscito a sincronizzare l\'host sulla partita. Riprova.',
-        } );
+        if( gameError ) {
+
+            throw createError( {
+                statusCode: 500,
+                statusMessage: 'GAME_HOST_SYNC_FAILED',
+                message: 'Non sono riuscito a sincronizzare l\'host sulla partita. Riprova.',
+            } );
+
+        }
 
     }
 
-    return { ok: true, hostPlayerId: playerId };
+    return {
+        ok: true,
+        hostPlayerId: playerId,
+    };
 
 } );
