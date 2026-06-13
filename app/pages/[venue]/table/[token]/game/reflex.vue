@@ -107,7 +107,7 @@
                         {{ $t('game.reflex.best') }}
                     </p>
                     <p class="font-bold font-display text-highlighted text-xl">
-                        {{ bestTime === null ? '—' : $t('game.reflex.result_unit', { ms: bestTime }) }}
+                        {{ ! isMounted || bestTime === null ? '—' : $t('game.reflex.result_unit', { ms: bestTime }) }}
                     </p>
                 </div>
                 <div class="text-center">
@@ -154,6 +154,9 @@
           , attempts = ref( 0 )
           // Record personale persistito localmente (privacy-first: resta sul dispositivo).
           , bestTime = useLocalStorage<number | null>( 'sottobicchiere:reflex-best', null )
+          // Il valore di localStorage non esiste in SSR: finché non siamo montati sul
+          // client mostriamo il placeholder, evitando l'hydration mismatch del record.
+          , isMounted = useMounted()
 
           , arenaClass = computed( () => {
 

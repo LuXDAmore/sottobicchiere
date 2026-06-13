@@ -136,6 +136,10 @@
 
     definePageMeta( { layout: 'game' } );
 
+    // Istante di scadenza del turno corrente (performance.now() + durata): dichiarato
+    // prima del blocco reattivo perché la callback dell'intervallo lo legge.
+    let endTime = 0;
+
     const route = useRoute()
           , localePath = useLocalePath()
           , playerStore = usePlayerStore()
@@ -168,20 +172,33 @@
 
           } )
 
-          // Tick a 100ms: alla scadenza ferma il conteggio e mostra "tempo scaduto".
+          // Tick a 100ms guidato da `performance.now()`: il tempo residuo è la
+          // differenza reale dall'istante di scadenza, così non deriva quando il
+          // browser limita/sospende i timer (mobile o scheda in background).
           , { pause, resume } = useIntervalFn( () => {
 
-              remaining.value -= 100;
+              remaining.value = Math.max( 0, Math.round( endTime - performance.now() ) );
 
               if( remaining.value <= 0 ) {
 
-                  remaining.value = 0;
                   pause();
                   phase.value = 'timeUp';
 
               }
 
           }, 100, { immediate: false } );
+
+    /**
+     * Arma il timer del turno: fissa la scadenza e riempie il residuo. Idempotente
+     * su `resume()` (no-op se già attivo).
+     */
+    function armTimer() {
+
+        endTime = performance.now() + turnDuration;
+        remaining.value = turnDuration;
+        resume();
+
+    }
 
     /**
      * Pesca la prossima categoria dal mazzo mescolato; a mazzo esaurito rimescola
@@ -222,32 +239,27 @@
 
         } else pickCategory();
 
-        remaining.value = turnDuration;
         phase.value = 'play';
-        resume();
+        armTimer();
 
     }
 
     /**
-     * Passa il telefono: stessa categoria, timer ripieno per il prossimo giocatore.
-     * `resume()` è idempotente (no-op se già attivo): rende la funzione robusta
-     * anche se in futuro la si chiamasse da uno stato in cui il timer è fermo.
+     * Passa il telefono: stessa categoria, timer riarmato per il prossimo giocatore.
      */
     function pass() {
 
-        remaining.value = turnDuration;
-        resume();
+        armTimer();
 
     }
 
     /**
-     * Cambia categoria a metà giro (timer ripieno): utile se è troppo difficile.
+     * Cambia categoria a metà giro (timer riarmato): utile se è troppo difficile.
      */
     function changeCategory() {
 
         pickCategory();
-        remaining.value = turnDuration;
-        resume();
+        armTimer();
 
     }
 
