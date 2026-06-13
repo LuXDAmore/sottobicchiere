@@ -50,6 +50,13 @@ const _useTableSocket = createGlobalState( () => {
         // Contatore bumpato quando aree o iscrizioni cambiano (trigger DB `lobby:changed`):
         // la lobby lo osserva per rifare il fetch di aree/membri senza esporre righe.
         , lobbyVersion = ref<number>( 0 )
+        // Segnale di "lancio gioco" dal vivo: valorizzato SOLO da mapSession (broadcast
+        // di table_sessions), mai dall'hydration REST in loadInitialState. La lobby e le
+        // pagine di gioco lo osservano per portare tutti sul gioco selezionato, senza
+        // euristiche sul clock e senza ri-trascinare in partita chi ha fatto refresh o è
+        // tornato in lobby di proposito. Il `nonce` garantisce che il watcher scatti anche
+        // su un re-lancio dello stesso gioco (es. fine partita → riseleziona lo stesso).
+        , gameLaunch = ref<{ game: string; nonce: number } | null>( null )
         , status = ref<ConnectionStatus>( 'CLOSED' );
 
     let tableChannel: RealtimeChannel | null = null
@@ -145,6 +152,11 @@ const _useTableSocket = createGlobalState( () => {
      */
     function mapSession( record: Database['public']['Tables']['table_sessions']['Row'] ) {
 
+        // mapSession è chiamata SOLO dai broadcast live (handleDatabaseBroadcast),
+        // mai dall'hydration REST: un passaggio a "bloccato su un gioco" qui è quindi
+        // sempre una selezione appena avvenuta → emetti il segnale di lancio.
+        const previousLockedAt = gameSelection.value.lockedAt;
+
         gameSelection.value = {
             gameMode: record.game_mode,
             hostPlayerId: record.host_player_id,
@@ -153,6 +165,12 @@ const _useTableSocket = createGlobalState( () => {
         };
         sessionMode.value = record.session_mode as SessionMode;
         datingEnabled.value = record.dating_enabled;
+
+        if( record.locked_at && record.selected_game && record.locked_at !== previousLockedAt )
+            gameLaunch.value = {
+                game: record.selected_game,
+                nonce: ( gameLaunch.value?.nonce ?? 0 ) + 1,
+            };
 
     }
 
@@ -408,8 +426,15 @@ const _useTableSocket = createGlobalState( () => {
         // realtime-js restituisce l'istanza ESISTENTE per lo stesso topic finché il
         // leave non è completato: creare il channel durante lo smaltimento darebbe
         // l'istanza morente (subscribe no-op, o throw su .on('presence')). Attendere
-        // qui serializza chiusura e riapertura.
-        if( disposalPromise ) await disposalPromise;
+        // qui serializza chiusura e riapertura. Il finally azzera la promise: senza,
+        // resterebbe valorizzata per sempre (e se rigettasse propagherebbe come
+        // unhandled rejection su ogni open() successiva, chiamata senza await).
+        if( disposalPromise ) {
+
+            try { await disposalPromise; }
+            finally { disposalPromise = null; }
+
+        }
 
         // Un open() concorrente potrebbe aver già ricreato il channel durante l'await.
         if( tableChannel ) return;
@@ -645,6 +670,7 @@ const _useTableSocket = createGlobalState( () => {
             gameState.value = null;
             lastRoundIndex = - 1;
             lobbyVersion.value = 0;
+            gameLaunch.value = null;
             gameSelection.value = {
                 selectedGame: null,
                 gameMode: null,
@@ -795,6 +821,7 @@ const _useTableSocket = createGlobalState( () => {
         datingUnreadCount,
         disableDating,
         enableDating,
+        gameLaunch,
         gameSelection,
         gameState,
         isHost,

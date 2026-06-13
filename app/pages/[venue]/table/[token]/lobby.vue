@@ -535,6 +535,7 @@
           , {
               players,
               gameSelection,
+              gameLaunch,
               status,
               open,
               close,
@@ -811,14 +812,17 @@
 
     } );
 
-    watch( () => gameSelection.value.lockedAt, ( lockedAt, previousLockedAt ) => {
+    // Lancio gioco dal vivo (segnale emesso solo dai broadcast di sessione, mai
+    // dall'hydration REST): porta tutti — host e non — sul gioco selezionato.
+    // Un refresh o un rientro in lobby ricarica lo stato via REST senza emettere
+    // il segnale, quindi non ri-trascina in partita: per quello c'è il banner
+    // "Rientra in partita". Niente dipendenza dal clock del client.
+    watch( () => gameLaunch.value, signal => {
 
-        if( ! lockedAt || lockedAt === previousLockedAt ) return;
+        if( ! signal ) return;
 
-        // Clean up host-specific loading state
-        const wasMySelection = pendingSelectedGame.value !== null;
-
-        if( wasMySelection ) {
+        // Pulisci lo stato di loading dell'host che aveva appena selezionato.
+        if( pendingSelectedGame.value ) {
 
             toast.remove( 'lobby-select-game-loading' );
             pendingSelectedGame.value = null;
@@ -826,16 +830,7 @@
 
         }
 
-        // Naviga tutti (host e non) verso il gioco SOLO su un lock "fresco"
-        // (selezione appena avvenuta, broadcast in tempo reale). Uno stato
-        // recuperato — refresh, riconnessione, broadcast di sessione (es. toggle
-        // dating) dopo un reset — non deve ributtare in partita chi è tornato in
-        // lobby di proposito: per quello c'è il banner con "Rientra in partita".
-        const isFreshLock = Math.abs( Date.now() - new Date( lockedAt ).getTime() ) < 15_000
-              , game = gameSelection.value.selectedGame;
-
-        if( game && ( wasMySelection || isFreshLock ) )
-            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ game }` ) );
+        navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ signal.game }` ) );
 
     } );
 

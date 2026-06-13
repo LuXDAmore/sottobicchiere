@@ -32,9 +32,13 @@ Aggiornato: 2026-06-12
 - [x] **Verifica live sui flussi** (`scripts/e2e-live-flows.mjs`, contro la preview del PR):
       22/22 step — min giocatori, end/sblocco, ri-selezione, guardie host/impersonificazione,
       leave singolo/doppio, sessione svuotata scaduta. Regressione gioco completo 15/15 ✓
-- [ ] Game page: se l'host termina e seleziona un ALTRO gioco mentre un guest è ancora nella
-      pagina del vecchio, il guest rientra passando dalla lobby (banner) — valutare un watcher
-      di cambio gioco nelle pagine di gioco
+- [x] **Hardening da review full-stack**: navigazione al gioco guidata da un segnale di
+      "lancio" (`gameLaunch`) emesso solo dai broadcast live, al posto dell'euristica sul
+      clock (`Date.now()` vs `locked_at`) che poteva non far entrare i guest con clock
+      sfasato; le pagine di gioco seguono un eventuale cambio gioco (chiude l'edge: host
+      termina e lancia un gioco diverso mentre un guest è ancora nel vecchio);
+      `disposalPromise` riazzerato nel `finally` (niente unhandled rejection su open futuri);
+      commento MVP sul gioco cablato in `game/start`
 - [x] Agenti Claude Code verticali (`.claude/agents/`): docs-curator, design-system-guardian,
       code-reviewer, test-author, supabase-guardian; workflow (`.claude/commands/`):
       `/verifica`, `/pre-pr`, `/nuovo-gioco` (vedi Agents.md §6)

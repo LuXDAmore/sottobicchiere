@@ -103,7 +103,7 @@
           , localePath = useLocalePath()
           , playerStore = usePlayerStore()
 
-          , { open, close } = useTableSocket()
+          , { open, close, gameLaunch } = useTableSocket()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
@@ -137,6 +137,14 @@
     } );
 
     onUnmounted( () => close() );
+
+    // L'host ha lanciato un gioco DIVERSO mentre eravamo qui: seguilo.
+    watch( () => gameLaunch.value, signal => {
+
+        if( signal && signal.game !== 'word-blitz' )
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ signal.game }` ) );
+
+    } );
 
     function submitWord() {
 

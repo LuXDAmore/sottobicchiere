@@ -52,6 +52,8 @@ export default defineEventHandler( async event => {
         , playerIds = ( players ?? [] ).map( p => p.id )
 
         // Vincoli giocatori dal catalogo condiviso (fonte unica con la UI della lobby).
+        // MVP: l'unico gioco con engine server-side è "thumbs"; quando ne arriveranno
+        // altri, leggere il gioco dalla sessione (session.selected_game) invece dell'id fisso.
         , definition = getGameDefinition( 'thumbs' )
         , minPlayers = definition?.minPlayers ?? 2;
 

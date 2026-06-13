@@ -85,6 +85,22 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 - **Verifica live contro la preview del PR** (bypass Vercel via share link):
   `scripts/e2e-live-flows.mjs` (nuovo) 22/22 step; regressione `e2e-live-game.mjs` 15/15.
 
+### Quarto giro (hardening da review full-stack)
+- **Navigazione al gioco a prova di clock**: rimossa l'euristica `|Date.now() - locked_at| < 15s`
+  in `lobby.vue` (poteva non far entrare in partita i guest con clock sfasato, e ri-trascinare
+  dentro chi faceva refresh entro 15s). Introdotto `gameLaunch` in `useTableSocket`: un segnale
+  valorizzato SOLO da `mapSession` (broadcast live di `table_sessions`), mai dall'hydration REST
+  di `loadInitialState`. Lobby e pagine di gioco lo osservano: l'auto-join scatta solo su una
+  selezione realmente avvenuta dal vivo; refresh/rientro in lobby non ri-navigano (resta il
+  banner "Rientra in partita").
+- **Cross-navigazione tra giochi**: thumbs e word-blitz seguono `gameLaunch` se viene lanciato
+  un gioco diverso da quello corrente (chiude l'edge: l'host termina e ne lancia un altro mentre
+  un guest è ancora nella vecchia pagina).
+- **`disposalPromise` riazzerato nel `finally`**: senza, restava valorizzato per sempre e, se
+  rigettasse, propagava come unhandled rejection sugli `open()` successivi (chiamati senza await
+  in `onMounted`/`@click`).
+- `game/start.post.ts`: commento sul gioco cablato `'thumbs'` (MVP, unico engine server-side).
+
 Verificato: lint (0 errori), typecheck, 41 unit test, build di produzione.
 
 ## 2026-06-11 — Review prontezza MVP + diagnosi "errore generico" creazione tavolo

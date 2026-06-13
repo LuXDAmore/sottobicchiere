@@ -433,7 +433,7 @@
           , thumbsMinPlayers = thumbsDefinition?.minPlayers ?? 2
 
           , {
-              players, gameState, status, open, close, reconnect, isHost, startGame, vote, nextRound, wsError,
+              players, gameState, gameLaunch, status, open, close, reconnect, isHost, startGame, vote, nextRound, wsError,
           } = useTableSocket()
 
           , isStartingGame = ref( false )
@@ -535,6 +535,15 @@
             isAdvancingRound.value = false;
 
         }
+
+    } );
+
+    // L'host ha terminato e lanciato un gioco DIVERSO mentre eravamo ancora qui:
+    // seguilo invece di restare bloccati su una pagina di gioco non più attiva.
+    watch( () => gameLaunch.value, signal => {
+
+        if( signal && signal.game !== 'thumbs' )
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ signal.game }` ) );
 
     } );
 
