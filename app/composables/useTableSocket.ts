@@ -345,7 +345,10 @@ const _useTableSocket = createGlobalState( () => {
             // Un solo endpoint (game/bootstrap) per selezione + riga partita: risolve
             // la sessione una volta sola, dimezzando query e risoluzioni di tavolo
             // rispetto ai due endpoint separati game/current + game/state.
-            const [ bootstrap, datingRooms ] = await Promise.all( [ $fetch<LobbyGameSelection & { sessionMode: SessionMode; datingEnabled: boolean; game: Database['public']['Tables']['games']['Row'] | null }>( `${ apiBase() }/game/bootstrap`, { query: { session: playerStore.tableSessionId } } ), $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { player: playerStore.playerId } } ) ] );
+            // dating/rooms ha il suo .catch: ora richiede l'auth (requirePlayerForTable)
+            // e potrebbe rifiutare (es. token non ancora pronto al primo ingresso); senza
+            // l'isolamento un suo errore farebbe perdere l'idratazione del bootstrap.
+            const [ bootstrap, datingRooms ] = await Promise.all( [ $fetch<LobbyGameSelection & { sessionMode: SessionMode; datingEnabled: boolean; game: Database['public']['Tables']['games']['Row'] | null }>( `${ apiBase() }/game/bootstrap`, { query: { session: playerStore.tableSessionId } } ), $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { player: playerStore.playerId } } ).catch( () => null ) ] );
 
             if( bootstrap ) {
 
