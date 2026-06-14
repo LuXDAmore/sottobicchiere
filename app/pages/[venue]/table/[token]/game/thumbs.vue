@@ -62,29 +62,7 @@
         </header>
 
         <!-- WebSocket status banner -->
-        <div
-            v-if="status !== 'OPEN'"
-            class="flex flex-col gap-2 items-center justify-center py-2 shrink-0 text-sm"
-            :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-500' : 'bg-error-500/10 text-error-500'"
-        >
-            <div class="flex gap-2 items-center">
-                <u-icon
-                    class="size-4"
-                    :class="status !== 'CLOSED' ? 'animate-spin' : ''"
-                    name="i-lucide-loader-2"
-                />
-                {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
-            </div>
-            <u-button
-                v-if="status === 'CLOSED'"
-                color="neutral"
-                icon="i-lucide-refresh-cw"
-                :label="$t('lobby.reconnect')"
-                size="xs"
-                variant="ghost"
-                @click="reconnect()"
-            />
-        </div>
+        <connection-status-banner :status="status" @reconnect="reconnect()" />
 
         <!-- Main -->
         <main class="flex flex-1 flex-col items-center justify-between overflow-y-auto px-4 py-6">
@@ -103,18 +81,12 @@
 
                     <!-- Players preview -->
                     <div class="flex flex-wrap gap-2 justify-center max-w-xs">
-                        <div
+                        <player-pill
                             v-for="player in players"
                             :key="player.id"
-                            class="flex gap-1.5 items-center px-3 py-1.5 rounded-full text-sm"
-                            :style="{ backgroundColor: player.color + '22', color: player.color }"
-                        >
-                            <span
-                                class="block rounded-full size-2"
-                                :style="{ backgroundColor: player.color }"
-                            />
-                            {{ player.nickname }}
-                        </div>
+                            :color="player.color"
+                            :nickname="player.nickname"
+                        />
                     </div>
 
                     <u-button
@@ -173,12 +145,13 @@
                         <p class="text-muted text-sm">
                             {{ $t('game.thumbs.waiting_others', { voted: gameState.votedCount, total: gameState.totalCount }) }}
                         </p>
-                        <div class="bg-[var(--ui-border)] h-1.5 overflow-hidden rounded-full w-48">
-                            <div
-                                class="bg-primary-500 duration-500 h-full rounded-full transition-all"
-                                :style="{ width: `${ (gameState.votedCount / Math.max(gameState.totalCount, 1)) * 100 }%` }"
-                            />
-                        </div>
+                        <u-progress
+                            class="w-48"
+                            color="primary"
+                            :max="Math.max(gameState.totalCount, 1)"
+                            :model-value="gameState.votedCount"
+                            size="sm"
+                        />
                     </div>
 
                     <!-- Vote buttons -->
@@ -187,11 +160,12 @@
                         class="flex gap-4 w-full"
                     >
                         <button
+                            :aria-label="$t('game.thumbs.yes')"
                             class="active:scale-95 bg-emerald-500/10 border-2 border-emerald-500/30 flex flex-1 flex-col gap-2 hover:bg-emerald-500/20 hover:border-emerald-500 items-center justify-center min-h-[140px] rounded-3xl text-emerald-500 transition-all"
                             :disabled="isSubmittingVote || status !== 'OPEN'"
                             @click="handleVote('up')"
                         >
-                            <span class="text-5xl">
+                            <span aria-hidden="true" class="text-5xl">
                                 👍
                             </span>
                             <span class="font-bold font-display text-lg">
@@ -199,11 +173,12 @@
                             </span>
                         </button>
                         <button
+                            :aria-label="$t('game.thumbs.no')"
                             class="active:scale-95 bg-error-500/10 border-2 border-error-500/30 flex flex-1 flex-col gap-2 hover:bg-error-500/20 hover:border-error-500 items-center justify-center min-h-[140px] rounded-3xl text-error-500 transition-all"
                             :disabled="isSubmittingVote || status !== 'OPEN'"
                             @click="handleVote('down')"
                         >
-                            <span class="text-5xl">
+                            <span aria-hidden="true" class="text-5xl">
                                 👎
                             </span>
                             <span class="font-bold font-display text-lg">
@@ -225,23 +200,16 @@
 
                     <!-- Votes reveal -->
                     <div class="flex flex-wrap gap-2 justify-center">
-                        <div
+                        <player-pill
                             v-for="player in players"
                             :key="player.id"
-                            class="flex gap-2 items-center px-3 py-2 rounded-full text-sm"
-                            :style="{ backgroundColor: player.color + '22', color: player.color }"
+                            :color="player.color"
+                            :nickname="player.nickname"
                         >
-                            <span
-                                class="block rounded-full size-2"
-                                :style="{ backgroundColor: player.color }"
-                            />
-                            <span class="font-semibold">
-                                {{ player.nickname }}
-                            </span>
                             <span class="text-lg">
                                 {{ gameState.votes?.[player.id] === 'up' ? '👍' : gameState.votes?.[player.id] === 'down' ? '👎' : '—' }}
                             </span>
-                        </div>
+                        </player-pill>
                     </div>
 
                     <!-- Scores -->
@@ -423,6 +391,7 @@
           , playerStore = usePlayerStore()
           , localePath = useLocalePath()
           , toast = useToast()
+          , { errorToast } = useActionToast()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
@@ -590,7 +559,7 @@
 
         }
 
-    }, { deep: true } );
+    } );
 
     const sortedPlayers = computed( () => {
 
@@ -627,14 +596,7 @@
         } catch( exception: unknown ) {
 
             toast.remove( leavingGameToastId );
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'game.thumbs.back_lobby_error_toast' ),
-                duration: 4500,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'game.thumbs.back_lobby_error_toast' );
 
         } finally {
 

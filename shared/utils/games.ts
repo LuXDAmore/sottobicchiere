@@ -1,7 +1,14 @@
-export type GameCategory = 'board' | 'preserata' | 'both';
+// Categorie di gioco:
+//  • board     → da tavolo, in compagnia (es. quiz, opinioni)
+//  • preserata → pre-serata / festa, ritmo veloce e leggero (stile Picolo)
+//  • solo      → giocabile anche da soli mentre si aspetta il gruppo
+//  • both      → adatto sia da tavolo sia in pre-serata
+export type GameCategory = 'board' | 'both' | 'preserata' | 'solo';
+
+export type GameId = 'categorie' | 'dares' | 'duello' | 'reflex' | 'thumbs' | 'word-blitz';
 
 export interface GameDefinition {
-    id: 'thumbs' | 'word-blitz';
+    id: GameId;
     category: GameCategory;
     minPlayers: number;
     // Limite superiore di giocatori; undefined = nessun limite (la UI mostra "Min. {n}").
@@ -26,21 +33,78 @@ export const GAME_DEFINITIONS: GameDefinition[] = [
         rulesKey: 'game.thumbs.rules',
     },
     {
+        id: 'dares',
+        category: 'preserata',
+        // Mazzo di carte (obblighi, verità, sfide, regole): si passa il telefono.
+        minPlayers: 2,
+        avgDurationMinutes: 15,
+        icon: '🍸',
+        labelKey: 'game.dares.title',
+        descriptionKey: 'game.dares.description',
+        rulesKey: 'game.dares.rules',
+    },
+    {
+        id: 'categorie',
+        category: 'both',
+        // Si passa il telefono: dici una parola della categoria prima dello scadere.
+        minPlayers: 2,
+        avgDurationMinutes: 6,
+        icon: '🗂️',
+        labelKey: 'game.categorie.title',
+        descriptionKey: 'game.categorie.description',
+        rulesKey: 'game.categorie.rules',
+    },
+    {
+        id: 'duello',
+        category: 'both',
+        // Duello di riflessi su un solo telefono: schermo diviso, vince il più rapido.
+        // Nessun tetto di giocatori: si gioca a coppie su un device, il tavolo può
+        // essere di qualsiasi dimensione (più coppie possono sfidarsi a turno).
+        minPlayers: 2,
+        avgDurationMinutes: 3,
+        icon: '⚔️',
+        labelKey: 'game.duello.title',
+        descriptionKey: 'game.duello.description',
+        rulesKey: 'game.duello.rules',
+    },
+    {
+        id: 'reflex',
+        category: 'solo',
+        // Allenamento riflessi in solitaria mentre si aspetta il gruppo.
+        minPlayers: 1,
+        maxPlayers: 1,
+        avgDurationMinutes: 2,
+        icon: '⚡',
+        labelKey: 'game.reflex.title',
+        descriptionKey: 'game.reflex.description',
+        rulesKey: 'game.reflex.rules',
+    },
+    {
         id: 'word-blitz',
         category: 'preserata',
         // Prototipo locale: giocabile anche da soli (allineato alla descrizione i18n "1+").
         minPlayers: 1,
         avgDurationMinutes: 5,
-        icon: '⚡',
+        icon: '🔤',
         labelKey: 'game.word_blitz.title',
         descriptionKey: 'game.word_blitz.description',
         rulesKey: 'game.word_blitz.rules',
     },
 ];
 
+/**
+ * Giochi di una categoria. I giochi `both` compaiono sia in "board" sia in
+ * "preserata" (sono universali), ma NON tra i "solo": un'attività di gruppo non
+ * è un passatempo da soli. Viceversa i giochi `solo` non inquinano board/preserata.
+ * @param category - categoria richiesta, o 'all' per l'intero catalogo.
+ */
 export function getGamesByCategory( category: GameCategory | 'all' ): GameDefinition[] {
+
     if( category === 'all' ) return GAME_DEFINITIONS;
-    return GAME_DEFINITIONS.filter( g => g.category === category || g.category === 'both' );
+    return GAME_DEFINITIONS.filter( g =>
+        g.category === category
+        || ( g.category === 'both' && ( category === 'board' || category === 'preserata' ) ) );
+
 }
 
 /**
@@ -48,6 +112,8 @@ export function getGamesByCategory( category: GameCategory | 'all' ): GameDefini
  * Fonte unica per i vincoli sui giocatori (min/max): usata da UI e API di start.
  * @param id - identificatore del gioco.
  */
-export function getGameDefinition( id: GameDefinition['id'] ): GameDefinition | null {
+export function getGameDefinition( id: GameId ): GameDefinition | null {
+
     return GAME_DEFINITIONS.find( g => g.id === id ) ?? null;
+
 }

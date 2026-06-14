@@ -76,29 +76,7 @@
         </header>
 
         <!-- Connection status banner -->
-        <div
-            v-if="status !== 'OPEN'"
-            class="flex gap-2 items-center justify-between px-4 py-2 shrink-0 text-sm"
-            :class="status === 'CONNECTING' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-error-500/10 text-error-500'"
-        >
-            <div class="flex gap-2 items-center">
-                <u-icon
-                    class="size-4"
-                    :class="status !== 'CLOSED' ? 'animate-spin' : ''"
-                    name="i-lucide-loader-2"
-                />
-                {{ status === 'CONNECTING' ? $t('lobby.connecting') : $t('lobby.disconnected') }}
-            </div>
-            <u-button
-                v-if="status === 'CLOSED'"
-                color="neutral"
-                icon="i-lucide-refresh-cw"
-                :label="$t('lobby.reconnect')"
-                size="xs"
-                variant="ghost"
-                @click="reconnect()"
-            />
-        </div>
+        <connection-status-banner :status="status" @reconnect="reconnect()" />
 
         <!-- Dating panel -->
         <transition name="slide-down">
@@ -222,21 +200,14 @@
                 </div>
 
                 <div v-else class="flex flex-wrap gap-2">
-                    <div
+                    <player-pill
                         v-for="player in players"
                         :key="player.id"
-                        class="flex gap-2 items-center px-3 py-2 rounded-full text-sm transition-all"
-                        :class="player.id === playerStore.playerId ? 'ring-2' : ''"
-                        :style="{ backgroundColor: player.color + '22', color: player.color }"
-                    >
-                        <span class="block rounded-full shrink-0 size-2.5" :style="{ backgroundColor: player.color }" />
-                        <span class="font-semibold">
-                            {{ player.nickname }}
-                        </span>
-                        <span v-if="player.id === playerStore.playerId" class="opacity-60 text-xs">
-                            {{ $t('lobby.you') }}
-                        </span>
-                    </div>
+                        :color="player.color"
+                        :nickname="player.nickname"
+                        :ring="player.id === playerStore.playerId"
+                        :you="player.id === playerStore.playerId"
+                    />
 
                     <div v-if="players.length === 0" class="py-6 text-center text-muted text-sm w-full">
                         {{ $t('lobby.no_players') }}
@@ -318,15 +289,13 @@
                         </div>
 
                         <div v-if="area.members.length > 0" class="flex flex-wrap gap-2">
-                            <span
+                            <player-pill
                                 v-for="member in area.members"
                                 :key="member.id"
-                                class="flex gap-1.5 items-center px-2.5 py-1 rounded-full text-xs"
-                                :style="{ backgroundColor: member.color + '22', color: member.color }"
-                            >
-                                <span class="block rounded-full shrink-0 size-2" :style="{ backgroundColor: member.color }" />
-                                {{ member.nickname }}
-                            </span>
+                                :color="member.color"
+                                :nickname="member.nickname"
+                                size="sm"
+                            />
                         </div>
                         <p v-else class="text-muted text-xs">
                             {{ $t('lobby.area_no_members') }}
@@ -340,15 +309,13 @@
                         {{ $t('lobby.areas_unassigned') }}
                     </p>
                     <div class="flex flex-wrap gap-2">
-                        <span
+                        <player-pill
                             v-for="member in unassignedMembers"
                             :key="member.id"
-                            class="flex gap-1.5 items-center px-2.5 py-1 rounded-full text-xs"
-                            :style="{ backgroundColor: member.color + '22', color: member.color }"
-                        >
-                            <span class="block rounded-full shrink-0 size-2" :style="{ backgroundColor: member.color }" />
-                            {{ member.nickname }}
-                        </span>
+                            :color="member.color"
+                            :nickname="member.nickname"
+                            size="sm"
+                        />
                     </div>
                 </div>
 
@@ -433,11 +400,11 @@
                         >
                             <button
                                 class="bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] p-4 rounded-xl text-left transition-all w-full"
-                                :class="isHostSelector
+                                :class="isGameClickable(game)
                                     ? 'hover:border-primary-500/50 hover:bg-primary-500/5 cursor-pointer active:scale-[0.98]'
                                     : 'opacity-60 cursor-not-allowed'"
-                                :disabled="! isHostSelector || isSelectingGame"
-                                @click="isHostSelector && selectGame(game.id)"
+                                :disabled="! isGameClickable(game) || isSelectingGame"
+                                @click="handleGameClick(game)"
                             >
                                 <div class="flex gap-4 items-center">
                                     <span class="text-3xl">
@@ -461,17 +428,7 @@
                                                 <u-icon class="size-3" name="i-lucide-clock" />
                                                 {{ $t('lobby.game_duration', { n: game.avgDurationMinutes }) }}
                                             </span>
-                                            <span
-                                                class="font-medium px-2 py-0.5 rounded-full text-xs"
-                                                :class="game.category === 'preserata'
-                                                    ? 'bg-accent-500/15 text-accent-500'
-                                                    : game.category === 'board'
-                                                        ? 'bg-primary-500/15 text-primary-500'
-                                                        : 'bg-success-500/15 text-success-500'"
-                                            >
-                                                {{ game.category === 'preserata' ? '🍹' : game.category === 'board' ? '🎲' : '✨' }}
-                                                {{ $t(`lobby.game_category_${ game.category === 'both' ? 'both' : game.category }`) }}
-                                            </span>
+                                            <game-category-badge :category="game.category" />
                                         </div>
                                     </div>
                                     <u-icon
@@ -500,7 +457,7 @@
                         </div>
                     </div>
 
-                    <p v-if="! isHostSelector" class="py-2 text-center text-muted text-xs">
+                    <p v-if="! isHostSelector && activeGameCategory !== 'solo'" class="py-2 text-center text-muted text-xs">
                         <u-icon class="inline-block mr-1 size-3" name="i-lucide-lock" />
                         {{ $t('lobby.game_host_only') }}
                     </p>
@@ -529,6 +486,7 @@
           , playerStore = usePlayerStore()
           , localePath = useLocalePath()
           , toast = useToast()
+          , { errorToast } = useActionToast()
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
 
@@ -603,6 +561,10 @@
               {
                   value: 'preserata' as const,
                   label: t( 'lobby.games_tab_preserata' ),
+              },
+              {
+                  value: 'solo' as const,
+                  label: t( 'lobby.games_tab_solo' ),
               },
           ] )
 
@@ -733,14 +695,7 @@
 
         } catch( exception: unknown ) {
 
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.area_create_error_toast' ),
-                duration: 4000,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.area_create_error_toast' );
 
         } finally {
 
@@ -773,14 +728,7 @@
 
         } catch( exception: unknown ) {
 
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.area_join_error_toast' ),
-                duration: 4000,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.area_join_error_toast' );
 
         } finally {
 
@@ -930,10 +878,45 @@
     }
 
     /**
+     * I giochi in solitaria (categoria `solo`) sono cliccabili da chiunque: si
+     * avviano localmente senza bloccare la sessione. Gli altri restano riservati
+     * all'host (selezione + lock + broadcast a tutto il tavolo).
+     * @param game - definizione del gioco dalla card.
+     */
+    function isGameClickable( game: GameDefinition ): boolean {
+
+        return game.category === 'solo' || isHostSelector.value;
+
+    }
+
+    /**
+     * Click su una card gioco. I giochi `solo` navigano localmente (nessun lock
+     * di sessione né broadcast: restano un passatempo individuale, coerente con
+     * la semantica `solo`/`maxPlayers`). Gli altri passano dal flusso host.
+     * @param game - definizione del gioco dalla card.
+     */
+    function handleGameClick( game: GameDefinition ) {
+
+        if( isSelectingGame.value ) return;
+
+        if( game.category === 'solo' ) {
+
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ game.id }` ) );
+            return;
+
+        }
+
+        if( ! isHostSelector.value ) return;
+
+        selectGame( game.id );
+
+    }
+
+    /**
      *
      * @param selectedGame
      */
-    async function selectGame( selectedGame: 'thumbs' | 'word-blitz' ) {
+    async function selectGame( selectedGame: GameId ) {
 
         if( ! isHostSelector.value || gameSelection.value.lockedAt || isSelectingGame.value ) return;
 
@@ -965,14 +948,7 @@
             pendingSelectedGame.value = null;
             isSelectingGame.value = false;
             toast.remove( selectingToastId );
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.game_select_error_toast' ),
-                duration: 4500,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.game_select_error_toast' );
 
         }
 
@@ -1003,14 +979,7 @@
 
         } catch( exception: unknown ) {
 
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.game_end_error_toast' ),
-                duration: 4500,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.game_end_error_toast' );
 
         } finally {
 
@@ -1054,14 +1023,7 @@
         } catch( exception: unknown ) {
 
             toast.remove( leavingToastId );
-            const fetchError = exception as { data?: { message?: string } };
-
-            toast.add( {
-                color: 'error',
-                description: fetchError.data?.message ?? t( 'lobby.leave_error_toast' ),
-                duration: 4500,
-                icon: 'i-lucide-circle-alert',
-            } );
+            errorToast( exception, 'lobby.leave_error_toast' );
 
         } finally {
 

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getActiveGame, recomputeAndMaybeReveal } from '../../../../../utils/game-engine';
+import { getActiveGameLite, recomputeAndMaybeReveal } from '../../../../../utils/game-engine';
 import { requireHostSession, requireTable } from '../../../../../utils/request';
 
 // Il client host comunica i giocatori online (dalla presence del channel): è il
@@ -20,7 +20,7 @@ export default defineEventHandler( async event => {
     const { client, table } = await requireTable( event )
         , { playerId, online } = parsed.data
         , { session } = await requireHostSession( event, client, playerId, table.tableId )
-        , game = await getActiveGame( client, session.id );
+        , game = await getActiveGameLite( client, session.id );
 
     if( ! game || game.phase !== 'voting' ) return { ok: true };
 

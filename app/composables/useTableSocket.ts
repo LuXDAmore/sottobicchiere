@@ -64,6 +64,8 @@ const _useTableSocket = createGlobalState( () => {
         , presenceSyncTimer: ReturnType<typeof setTimeout> | null = null
         , hostClaimTimer: ReturnType<typeof setTimeout> | null = null
         , lastRoundIndex = - 1
+        // Ultimo insieme di id online: evita riassegnazioni identiche di `players`.
+        , lastPresenceIds = new Set<string>()
         // Sessione a cui è agganciato tableChannel: open() la confronta con lo store
         // per riusare la connessione (stessa sessione) o ricrearla (sessione cambiata).
         , connectedSessionId: string | null = null
@@ -166,11 +168,14 @@ const _useTableSocket = createGlobalState( () => {
         sessionMode.value = record.session_mode as SessionMode;
         datingEnabled.value = record.dating_enabled;
 
-        if( record.locked_at && record.selected_game && record.locked_at !== previousLockedAt )
+        if( record.locked_at && record.selected_game && record.locked_at !== previousLockedAt ) {
+
             gameLaunch.value = {
                 game: record.selected_game,
                 nonce: ( gameLaunch.value?.nonce ?? 0 ) + 1,
             };
+
+        }
 
     }
 
@@ -287,7 +292,21 @@ const _useTableSocket = createGlobalState( () => {
 
         }
 
-        players.value = [ ... seen.values() ];
+        // Riassegna `players` solo se l'insieme online è davvero cambiato: realtime
+        // emette `presence sync` periodici anche a tavolo stabile, e una riassegnazione
+        // identica ritriggererebbe inutilmente tutti i computed/liste che dipendono da
+        // `players` (sortedPlayers, isAloneAtTable, render). nickname/color sono fissi
+        // per sessione, quindi il confronto del set di id basta come firma.
+        const onlineIds = new Set( seen.keys() )
+            , changed = onlineIds.size !== lastPresenceIds.size
+                || [ ... onlineIds ].some( id => ! lastPresenceIds.has( id ) );
+
+        if( changed ) {
+
+            lastPresenceIds = onlineIds;
+            players.value = [ ... seen.values() ];
+
+        }
 
         // Se l'host è uscito, i superstiti eleggono un successore (solo l'eletto chiama).
         maybeClaimHost();
@@ -323,32 +342,30 @@ const _useTableSocket = createGlobalState( () => {
 
         try {
 
-            const [
-                selection,
-                datingRooms,
-                game,
-            ] = await Promise.all( [
-                $fetch<LobbyGameSelection & { sessionMode: SessionMode; datingEnabled: boolean }>( `${ apiBase() }/game/current`, { query: { session: playerStore.tableSessionId } } ),
-                $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } ),
-                $fetch<Database['public']['Tables']['games']['Row'] | null>( `${ apiBase() }/game/state`, { query: { session: playerStore.tableSessionId } } ),
-            ] );
+            // Un solo endpoint (game/bootstrap) per selezione + riga partita: risolve
+            // la sessione una volta sola, dimezzando query e risoluzioni di tavolo
+            // rispetto ai due endpoint separati game/current + game/state.
+            // dating/rooms ha il suo .catch: ora richiede l'auth (requirePlayerForTable)
+            // e potrebbe rifiutare (es. token non ancora pronto al primo ingresso); senza
+            // l'isolamento un suo errore farebbe perdere l'idratazione del bootstrap.
+            const [ bootstrap, datingRooms ] = await Promise.all( [ $fetch<LobbyGameSelection & { sessionMode: SessionMode; datingEnabled: boolean; game: Database['public']['Tables']['games']['Row'] | null }>( `${ apiBase() }/game/bootstrap`, { query: { session: playerStore.tableSessionId } } ), $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { player: playerStore.playerId } } ).catch( () => null ) ] );
 
-            if( selection ) {
+            if( bootstrap ) {
 
                 gameSelection.value = {
-                    gameMode: selection.gameMode,
-                    hostPlayerId: selection.hostPlayerId,
-                    lockedAt: selection.lockedAt,
-                    selectedGame: selection.selectedGame,
+                    gameMode: bootstrap.gameMode,
+                    hostPlayerId: bootstrap.hostPlayerId,
+                    lockedAt: bootstrap.lockedAt,
+                    selectedGame: bootstrap.selectedGame,
                 };
-                sessionMode.value = selection.sessionMode;
-                datingEnabled.value = selection.datingEnabled;
+                sessionMode.value = bootstrap.sessionMode;
+                datingEnabled.value = bootstrap.datingEnabled;
+
+                // Allinea chi entra/ricarica a partita in corso (il realtime invia solo i cambi).
+                if( bootstrap.game ) mapGame( bootstrap.game );
 
             }
             if( datingRooms ) datingRoomStatus.value = datingRooms;
-
-            // Allinea chi entra/ricarica a partita in corso (il realtime invia solo i cambi).
-            if( game ) mapGame( game );
 
         } catch{ /* non bloccante: il realtime allineerà lo stato */ }
 
@@ -361,7 +378,7 @@ const _useTableSocket = createGlobalState( () => {
 
         try {
 
-            datingRoomStatus.value = await $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { self: playerStore.tableSessionId } } );
+            datingRoomStatus.value = await $fetch<DatingRoomStatus>( `${ apiBase() }/dating/rooms`, { query: { player: playerStore.playerId } } );
 
         } catch{ /* ignore */ }
 
@@ -431,8 +448,15 @@ const _useTableSocket = createGlobalState( () => {
         // unhandled rejection su ogni open() successiva, chiamata senza await).
         if( disposalPromise ) {
 
-            try { await disposalPromise; }
-            finally { disposalPromise = null; }
+            try {
+
+                await disposalPromise;
+
+            } finally {
+
+                disposalPromise = null;
+
+            }
 
         }
 
@@ -669,6 +693,7 @@ const _useTableSocket = createGlobalState( () => {
             players.value = [];
             gameState.value = null;
             lastRoundIndex = - 1;
+            lastPresenceIds = new Set();
             lobbyVersion.value = 0;
             gameLaunch.value = null;
             gameSelection.value = {

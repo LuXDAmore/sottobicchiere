@@ -1,23 +1,34 @@
 import { z } from 'zod';
 
-import { requireTable } from '../../../../../utils/request';
+import { requirePlayerForTable, requireTable } from '../../../../../utils/request';
 
 /**
  * Stato della lobby dating relativo alla sessione corrente:
  *  • available   → altri tavoli con dating attivo a cui si può scrivere.
  *  • unavailable → tavoli con cui si è già in conversazione ma ora offline/spenti.
  *
- * Query: ?self=<tableSessionId>
+ * `self` è derivato dal giocatore autenticato (param ?player=<playerId>), NON da
+ * un id di sessione passato dal client: senza questo vincolo chiunque conosca un
+ * UUID di sessione potrebbe enumerare la rete di contatti di un tavolo terzo.
  */
 export default defineEventHandler( async event => {
 
-    const { client } = await requireTable( event )
-        // Valida `self` come UUID: viene interpolato in .or(...), quindi va sanificato.
-        , selfParsed = z.string().uuid().safeParse( getQuery( event ).self )
-        , self = selfParsed.success ? selfParsed.data : undefined
-        , nowIso = new Date().toISOString()
+    const { client, table } = await requireTable( event )
+        , playerParsed = z.string().uuid().safeParse( getQuery( event ).player )
+        , nowIso = new Date().toISOString();
 
-        , { data: enabled } = await client
+    // `self` = sessione del giocatore autenticato proprietario di ?player.
+    let self: string | undefined;
+
+    if( playerParsed.success ) {
+
+        const { session } = await requirePlayerForTable( event, client, playerParsed.data, table.tableId );
+
+        self = session.id;
+
+    }
+
+    const { data: enabled } = await client
             .from( 'table_sessions' )
             .select( 'id' )
             .eq( 'dating_enabled', true )

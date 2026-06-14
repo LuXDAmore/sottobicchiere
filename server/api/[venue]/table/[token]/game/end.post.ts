@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getActiveGame } from '../../../../../utils/game-engine';
+import { getActiveGameLite } from '../../../../../utils/game-engine';
 import { requireHostSession, requireTable } from '../../../../../utils/request';
 
 const payloadSchema = z.object( { playerId: z.string().uuid() } );
@@ -25,7 +25,7 @@ export default defineEventHandler( async event => {
     const { client, table } = await requireTable( event )
         , { session } = await requireHostSession( event, client, parsed.data.playerId, table.tableId )
 
-        , game = await getActiveGame( client, session.id );
+        , game = await getActiveGameLite( client, session.id );
 
     // Partita in corso → segnala la fine ai client (podio/risultati correnti).
     if( game && game.phase !== 'finished' ) {

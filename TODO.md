@@ -1,6 +1,44 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-12
+Aggiornato: 2026-06-13
+
+## Ottimizzazioni da audit codebase (2026-06-13)
+
+Quick win applicati (ottimizzazioni pure, nessun cambio di comportamento):
+- [x] `getActiveGame` con `.limit(1)`; `resolveSessionId` query snella `select('id')`
+- [x] Helper condiviso `isSessionHost(session, player)` (dedup autorizzazione host)
+- [x] `syncPresence`: niente riassegnazione di `players` se l'insieme online è invariato
+- [x] `thumbs.vue`: rimosso `{ deep: true }` ridondante; a11y bottoni voto (aria-label/aria-hidden)
+- [x] Migration indici su FK + FK `votes.player_id` (cleanup orfani) — **da `db:push` + audit**
+
+Migliorie strutturali (applicate 2026-06-13, batch server + UI + toast):
+- [x] Endpoint unico `game/bootstrap` al posto di `game/current` + `game/state` in
+      `loadInitialState` (da 3 a 2 fetch, una sola risoluzione tavolo/sessione)
+- [x] `recomputeAndMaybeReveal`: `COUNT` leggero (head:true), voteMap solo al quorum
+- [x] `getActiveGameLite`: colonne mirate per vote/end/presence/claim-host
+- [x] Componenti condivisi `<game-header>`, `<connection-status-banner>`, `<player-pill>`,
+      `<game-category-badge>` (de-duplicate lobby + 6 pagine di gioco)
+- [x] A11y/DS: tap target language/theme switch → md; `u-progress` (timer `categorie`,
+      voted_count `thumbs`); tap target mini-header `duello` → sm
+- [x] Sicurezza dating: `dating/rooms.get` deriva `self` dal giocatore autenticato (?player)
+- [x] `useActionToast`: estratto il toast d'errore (cast + fallback i18n) ripetuto ~8 volte;
+      i toast pending/success accoppiati agli ACK realtime sono lasciati invariati (fragili)
+- [ ] Debito (rimandato, niente 2° engine ancora): `start.post.ts`/`game-engine` dispatch
+      per-gioco quando arriverà un secondo gioco realtime con engine server
+- [ ] Valutare confine per-venue del dating (oggi cross-locale by-design)
+
+## Giochi: nuovo set + categoria "solo" (2026-06-13)
+
+- [x] **Riflessi** (`reflex`, solo): reaction game client-side, record in localStorage
+- [x] **Duello** (`duello`, 2 giocatori 1 device): duello di riflessi a schermo diviso, al meglio dei 3
+- [x] **Pre-Serata** (`dares`, preserata): mazzo Picolo-like (Verità/Obbligo/Regola/Sorso/Tutti), bilingue
+- [x] **Categorie** (`categorie`, both): pass-the-phone con timer per turno
+- [x] Categoria `solo` nel catalogo + tab/badge in lobby; `getGamesByCategory` isola i solo dai both
+- [x] Contenuti in `shared/utils/party.ts` (mazzi + `shuffle`) con unit test; catalogo testato (`games.test.ts`)
+- [x] `select.post.ts`: enum giochi derivato dal catalogo (single source of truth)
+- [x] i18n IT/EN per i 4 giochi (parità 250/250); docs (`game-modes.md`) e changelog allineati
+- [ ] Terzo gioco realtime competitivo (trivia/quiz multiplayer con stato su DB) — vedi "Giochi (fase 2)"
+- [ ] Estrarre un `GameHeader` condiviso (header ora duplicato in lobby + 6 pagine di gioco)
 
 ## Condivisione tavolo & resilienza realtime (2026-06-12)
 
@@ -223,12 +261,13 @@ Aggiornato: 2026-06-12
 
 - [x] Implementare "Pollice Su" (Thumbs) con WebSocket realtime
 - [x] Implementare "Word Blitz" (prototipo locale)
+- [x] Giochi locali pass-the-phone/solitari: Riflessi, Duello, Pre-Serata, Categorie (2026-06-13)
 - [x] WebSocket handler Nitro per sync real-time
 - [x] Game state in-memory con `game-state.ts`
 - [x] Host handover automatico se host disconnette (elezione deterministica + `POST /session/claim-host`)
 - [ ] Lock join durante partita attiva (messaggio "partita in corso")
-- [ ] Terzo gioco MVP: trivia/quiz a scelta multipla
-- [ ] Replay/rematch senza tornare alla join page
+- [ ] Gioco realtime competitivo MVP: trivia/quiz multiplayer a scelta multipla (stato su DB)
+- [x] Replay/rematch senza tornare alla join page (thumbs "Gioca ancora", duello "Rivincita")
 
 ## Venue Admin (fase 2)
 

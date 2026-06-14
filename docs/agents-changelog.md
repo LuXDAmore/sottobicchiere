@@ -5,6 +5,123 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-13 — Applicazione completa delle migliorie da audit (server + UI + toast)
+
+Dopo i quick win, applicate tutte le migliorie strutturali emerse dai tre audit.
+
+### Server / dati
+- `server/api/.../game/bootstrap.get.ts` (nuovo): unisce game/current + game/state,
+  risolve la sessione una volta; `loadInitialState` passa da 3 a 2 fetch. Rimossi
+  `game/current.get.ts` e `game/state.get.ts` (usati solo dal composable).
+- `server/utils/game-engine.ts`: `getActiveGameLite` (colonne mirate, niente JSON
+  `questions`) per vote/end/presence/claim-host; `recomputeAndMaybeReveal` ora fa un
+  COUNT leggero (`head:true`) e legge le righe dei voti solo al raggiungimento del quorum.
+- `server/api/.../dating/rooms.get.ts`: `self` derivato dal giocatore autenticato
+  (`?player=<id>` + `requirePlayerForTable`) invece che da un id sessione passato dal
+  client — chiude l'enumerazione della rete contatti di un tavolo terzo.
+
+### UI — componenti condivisi (riduzione duplicazione)
+- `app/components/game-header.vue`: header delle pagine di gioco locali (reflex/duello/
+  dares/categorie/word-blitz), slot `meta` per extra (contatore carte).
+- `app/components/player-pill.vue`: pill giocatore (prima duplicata ~7 volte), size + slot.
+- `app/components/connection-status-banner.vue`: banner stato realtime (lobby + thumbs).
+- `app/components/game-category-badge.vue`: badge categoria (lobby + game-rules-modal).
+- `app/composables/useActionToast.ts`: estrae il toast d'errore (cast + fallback i18n)
+  ripetuto in lobby/thumbs; i toast pending/success accoppiati agli ACK realtime restano.
+
+### A11y / design system
+- `u-progress` al posto delle barre a mano (timer `categorie`, voted_count `thumbs`).
+- Tap target: language/theme switch (`default.vue`) → md; mini-header `duello` → sm.
+- `thumbs`: `aria-label`/`aria-hidden` sui bottoni voto (dal batch precedente).
+
+Verifica: lint + stylelint + typecheck + 53 unit test + build verdi; SSR 200 su tutte
+le pagine (IT/EN), nessun warning Vue/componente irrisolto; `game/current` e `game/state`
+ora 404 (rimossi), `game/bootstrap` registrato.
+
+---
+
+## 2026-06-13 — Pass di ottimizzazione (quick win da audit logica/dati/UI)
+
+Tre audit read-only sull'intera codebase (logica/perf, data layer Supabase, design
+system). Applicati i **quick win sicuri** (ottimizzazioni pure, nessun cambio di
+comportamento); le migliorie strutturali sono tracciate in TODO come decisioni.
+
+### Server / dati
+- `server/utils/game-engine.ts`: `getActiveGame` ora con `.limit(1)` (robustezza
+  contro righe duplicate accidentali su `maybeSingle`).
+- `server/utils/request.ts`: `resolveSessionId` usa una query snella `select('id')`
+  invece della versione "fat" a 8 colonne; estratto l'helper condiviso
+  `isSessionHost(session, player)` (fonte unica della logica di autorizzazione host,
+  prima duplicata tra `requireHostSession` e `game/select.post.ts`).
+- `server/api/.../game/select.post.ts`: usa `isSessionHost`.
+- `supabase/migrations/20260613120000_indexes_and_votes_fk.sql` (nuova, additiva e
+  idempotente): FK `votes.player_id → player_sessions(id) on delete cascade` (con
+  cleanup preventivo degli orfani: prevenivano la distorsione del quorum in
+  `recomputeAndMaybeReveal`) + indici su FK non indicizzate (`dating_messages.from_*`,
+  `venues/tables.created_by_user_id` parziali, `table_sessions(table_id, started_at)`,
+  `votes.player_id`). **Da applicare con `pnpm db:push` previa audit supabase-guardian.**
+
+### Client
+- `app/composables/useTableSocket.ts`: `syncPresence` non riassegna più `players` se
+  l'insieme di id online è invariato (i `presence sync` periodici a tavolo stabile non
+  ritriggerano più computed/liste). Confronto via `Set`.
+- `app/pages/.../game/thumbs.vue`: rimosso `{ deep: true }` dal watch su `gameState`
+  (l'oggetto è già riassegnato per intero da `mapGame`: il deep era puro costo); aggiunti
+  `aria-label` ai bottoni voto e `aria-hidden` agli emoji 👍/👎.
+
+Verifica: lint + stylelint + typecheck + 53 unit test + build verdi; SSR 200 sulle 7
+rotte tavolo/gioco; guardia `solo` su `select` ancora 422.
+
+---
+
+## 2026-06-13 — Quattro nuovi giochi locali + categoria "solo" nel catalogo
+
+### Nuovi giochi (client-side, pass-the-phone / solitari)
+Aggiunti seguendo il precedente di `word-blitz` (nessuno stato server né riga in
+`games`): la pagina è completamente locale ma resta connessa al tavolo via
+`useTableSocket` (`open()/close()`) e segue il cambio gioco dell'host (`gameLaunch`).
+
+- `app/pages/[venue]/table/[token]/game/reflex.vue` — **Riflessi** (solo): reaction
+  time, macchina a stati idle→waiting→go→result, anticipo = fallo; record personale
+  in `localStorage` (`useLocalStorage`, privacy-first).
+- `app/pages/[venue]/table/[token]/game/duello.vue` — **Duello** (2 giocatori, 1
+  device): schermo diviso, metà in alto ruotata 180°; al verde vince il primo a
+  toccare la propria metà, anticipo = round all'avversario, al meglio dei 3 round.
+- `app/pages/[venue]/table/[token]/game/dares.vue` — **Pre-Serata** (stile Picolo):
+  mazzo di carte Verità/Obbligo/Regola/Sorso/Tutti, bilingue, si passa il telefono.
+- `app/pages/[venue]/table/[token]/game/categorie.vue` — **Categorie**: timer per
+  turno (8s), si dice una parola della categoria e si passa il telefono; allo scadere
+  chi ha il telefono fa un pegno.
+
+### Catalogo & contenuti
+- `shared/utils/games.ts`: nuovo tipo `GameId`, categoria `solo` aggiunta a
+  `GameCategory`; 4 nuove `GAME_DEFINITIONS`; `getGamesByCategory` rivisto perché i
+  giochi `both` compaiano in board/preserata ma **non** in solo (e viceversa).
+- `shared/utils/party.ts` (nuovo): mazzo `PARTY_DARES` (30 carte IT/EN), elenco
+  `CATEGORY_PROMPTS` (24 categorie IT/EN), helper puro `shuffle<T>` (Fisher-Yates,
+  non muta l'input).
+- `server/api/[venue]/table/[token]/game/select.post.ts`: l'enum dei giochi
+  selezionabili è ora **derivato dal catalogo** (`GAME_DEFINITIONS`), così aggiungere
+  un gioco lo abilita ovunque senza dimenticanze.
+
+### UI lobby
+- Tab categoria "Da soli" (`solo`) + badge/icona/colore dedicati nelle card e nella
+  modale regole (`lobby.vue`, `game-rules-modal.vue`). `selectGame` tipizzato su `GameId`.
+
+### i18n
+- Sezioni `game.reflex`, `game.duello`, `game.dares`, `game.categorie` in IT ed EN +
+  `lobby.games_tab_solo` / `lobby.game_category_solo`. Parità chiavi 250/250.
+
+### Test
+- `test/unit/party.test.ts`: `shuffle` (no mutazione, conservazione insieme, edge
+  case) + integrità mazzi (IT/EN non vuoti, tipi validi).
+- `test/unit/games.test.ts`: id unici, vincoli min/max coerenti, filtro categorie e
+  isolamento dei giochi `solo`.
+- Verifica: lint + stylelint + typecheck + 53 unit test verdi + build + SSR 200 sulle
+  6 rotte di gioco (IT/EN).
+
+---
+
 ## 2026-06-12 — Invito al tavolo da lobby/gioco + fix race connessione realtime
 
 ### Diagnosi (errore di connessione entrando in un gioco)
