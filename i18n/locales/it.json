@@ -55,6 +55,7 @@
     "table": {
         "page_title": "Tavolo {n} — {venue}",
         "table_number": "Tavolo {n}",
+        "room_label": "Stanza privata",
         "qr_page_title": "QR Code — Tavolo {n}",
         "qr_instruction": "Scansiona il QR code con il tuo telefono, oppure clicca il link qui sotto.",
         "qr_open_link": "Apri il link direttamente",

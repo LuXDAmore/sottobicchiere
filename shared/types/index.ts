@@ -50,6 +50,8 @@ export interface TableInfo {
     tableNumber: number;
     venueName: string;
     venueSlug: string;
+    // 'adhoc' = stanza creata da /new (mostra il nome, non "Tavolo N").
+    venueKind: 'adhoc' | 'venue';
 }
 
 export interface JoinResponse extends TableInfo {

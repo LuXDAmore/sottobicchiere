@@ -5,6 +5,25 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-14 — Fix join via link/QR e nome stanza ad-hoc
+
+Bug report dell'Operatore su link condiviso, nome del tavolo e interattività.
+
+### Bug 1 — Link/QR non univa il giocatore alla stessa sessione
+- `app/pages/[venue]/table/[token]/index.vue`: chi arriva da un link/QR condiviso ora
+  trova preselezionato il gruppo attivo più recente (watch su `sessions`), così la POST
+  di join entra nella sessione dell'host invece di crearne una nuova. Il default cede
+  appena l'utente sceglie esplicitamente (`pickSession` + flag `hasManualSelection`).
+
+### Bug 2 — Stanze ad-hoc mostravano "Tavolo 1" invece del nome
+- `server/utils/table-resolver.ts`: `resolveTableRow` espone `venueKind` ('venue'|'adhoc')
+  leggendo `venues.kind`.
+- `server/api/.../index.get.ts`, `join.post.ts`, `shared/types/index.ts` (`TableInfo`),
+  `app/stores/player.ts`: propagano `venueKind` fino allo store persistito.
+- `index.vue` e `lobby.vue`: per le stanze ad-hoc il titolo è il nome scelto e l'etichetta
+  è "Stanza privata" (`table.room_label`), niente più "Tavolo 1" fuorviante.
+- `test/unit/table-resolver.test.ts`: aggiornati gli stub + test per `venueKind`.
+
 ## 2026-06-13 — Applicazione completa delle migliorie da audit (server + UI + toast)
 
 Dopo i quick win, applicate tutte le migliorie strutturali emerse dai tre audit.

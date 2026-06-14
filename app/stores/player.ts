@@ -8,6 +8,7 @@ interface PlayerState {
     tableNumber: number | null;
     venueName: string | null;
     venueSlug: string | null;
+    venueKind: 'adhoc' | 'venue' | null;
     qrToken: string | null;
     groupId: string | null;
     expiresAt: string | null;
@@ -27,6 +28,7 @@ export const usePlayerStore = defineStore( 'player', {
         tableSessionId: null,
         venueName: null,
         venueSlug: null,
+        venueKind: null,
     } ),
 
     getters: {
@@ -49,6 +51,7 @@ export const usePlayerStore = defineStore( 'player', {
             this.tableNumber = data.tableNumber;
             this.venueName = data.venueName;
             this.venueSlug = data.venueSlug;
+            this.venueKind = data.venueKind;
             this.qrToken = data.qrToken;
             this.groupId = data.groupId;
             this.expiresAt = data.expiresAt;

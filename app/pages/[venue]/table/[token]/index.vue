@@ -43,10 +43,10 @@
                     <u-icon class="size-8 text-white" name="i-lucide-dice-6" />
                 </div>
                 <p class="font-semibold text-muted text-sm tracking-wide uppercase">
-                    {{ tableInfo.venueName }}
+                    {{ tableInfo.venueKind === 'adhoc' ? $t('table.room_label') : tableInfo.venueName }}
                 </p>
                 <h1 class="font-bold font-display text-4xl text-highlighted">
-                    {{ $t('table.table_number', { n: tableInfo.tableNumber }) }}
+                    {{ tableInfo.venueKind === 'adhoc' ? tableInfo.venueName : $t('table.table_number', { n: tableInfo.tableNumber }) }}
                 </h1>
             </div>
 
@@ -64,7 +64,7 @@
                                 :key="session.sessionId"
                                 class="bg-[var(--ui-bg-elevated)] border border-[var(--ui-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 hover:bg-primary-500/5 hover:border-primary-500/50 px-4 py-3 rounded-xl text-left transition-all w-full"
                                 :class="selectedSessionId === session.sessionId ? 'border-primary-500/70 bg-primary-500/8 ring-1 ring-primary-500/30' : ''"
-                                @click="selectedSessionId = session.sessionId"
+                                @click="pickSession(session.sessionId)"
                             >
                                 <div class="flex gap-3 items-center justify-between">
                                     <div class="min-w-0">
@@ -104,7 +104,7 @@
                     <button
                         class="border border-[var(--ui-border)] border-dashed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 hover:bg-primary-500/5 hover:border-primary-500/50 px-4 py-3 rounded-xl text-left transition-all w-full"
                         :class="selectedSessionId === null ? 'border-primary-500/50 bg-primary-500/5' : ''"
-                        @click="selectedSessionId = null"
+                        @click="pickSession(null)"
                     >
                         <div class="flex gap-3 items-center">
                             <div class="bg-primary-500/10 flex items-center justify-center rounded-full size-8">
@@ -233,7 +233,34 @@
               { default: () => ( { sessions: [] } ) },
           )
 
-          , sessions = computed( () => sessionsData.value?.sessions ?? [] );
+          , sessions = computed( () => sessionsData.value?.sessions ?? [] )
+
+          // Diventa true appena l'utente sceglie esplicitamente (un gruppo o "crea nuovo"):
+          // da quel momento non sovrascriviamo più la sua scelta con il default.
+          , hasManualSelection = ref( false );
+
+    // Default: chi arriva da un link/QR condiviso vuole entrare nel gruppo già al
+    // tavolo, non crearne uno nuovo. Quando i gruppi attivi si caricano preselezioniamo
+    // il più recente (primo in lista, ordinata per started_at desc). Resta possibile
+    // creare un nuovo gruppo, ma l'azione prominente diventa "Unisciti".
+    watch( sessions, list => {
+
+        if( hasManualSelection.value ) return;
+        selectedSessionId.value = list.length > 0 ? list[ 0 ]!.sessionId : null;
+
+    }, { immediate: true } );
+
+    /**
+     * Selezione esplicita di un gruppo (o "crea nuovo" con null): blocca il default
+     * automatico così la scelta dell'utente non viene più sovrascritta.
+     * @param sessionId - id della sessione scelta, o null per crearne una nuova.
+     */
+    function pickSession( sessionId: string | null ) {
+
+        hasManualSelection.value = true;
+        selectedSessionId.value = sessionId;
+
+    }
 
     onMounted( () => {
 
@@ -329,11 +356,18 @@
                 name: 'description',
             },
         ],
-        title: computed( () => ( tableInfo.value
-            ? t( 'table.page_title', {
-                n: tableInfo.value.tableNumber,
-                venue: tableInfo.value.venueName,
-            } )
-            : t( 'app.name' ) ) ),
+        title: computed( () => {
+
+            if( ! tableInfo.value ) return t( 'app.name' );
+
+            // Stanza ad-hoc: il nome è l'identità (niente "Tavolo 1" fuorviante).
+            return tableInfo.value.venueKind === 'adhoc'
+                ? tableInfo.value.venueName
+                : t( 'table.page_title', {
+                    n: tableInfo.value.tableNumber,
+                    venue: tableInfo.value.venueName,
+                } );
+
+        } ),
     } );
 </script>

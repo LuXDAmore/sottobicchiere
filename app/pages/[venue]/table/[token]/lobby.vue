@@ -9,7 +9,7 @@
                     {{ playerStore.venueName }}
                 </p>
                 <p class="text-muted text-xs">
-                    {{ $t('table.table_number', { n: playerStore.tableNumber }) }}
+                    {{ playerStore.venueKind === 'adhoc' ? $t('table.room_label') : $t('table.table_number', { n: playerStore.tableNumber }) }}
                 </p>
             </div>
 

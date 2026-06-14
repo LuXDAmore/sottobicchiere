@@ -55,6 +55,7 @@
     "table": {
         "page_title": "Table {n} — {venue}",
         "table_number": "Table {n}",
+        "room_label": "Private room",
         "qr_page_title": "QR Code — Table {n}",
         "qr_instruction": "Scan the QR code with your phone, or tap the link below.",
         "qr_open_link": "Open the link directly",
