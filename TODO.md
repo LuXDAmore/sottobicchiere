@@ -1,6 +1,18 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-13
+Aggiornato: 2026-06-14
+
+## Bug report tavolo & interattività (2026-06-14)
+
+- [x] **Bug 1** — Join via link/QR entra nella sessione esistente: preselezione del
+      gruppo attivo più recente nella pagina di join (cede alla scelta esplicita)
+- [x] **Bug 2** — Stanze ad-hoc mostrano il nome scelto (non "Tavolo 1"): `venueKind`
+      propagato da resolver → API → store; titolo/etichetta condizionali in index/lobby
+- [x] **Bug 3** — Giochi a turni interattivi multi-dispositivo (`categorie`, `dares`):
+      stato autoritativo su `games.turn_state`, API `game/turn/{start,advance}`, engine
+      puro `game-turns.ts` + test, pagine riscritte, i18n `game.turn.*` (vedi
+      `docs/specs/turn-based-games.feature.sdd`)
+- [ ] `duello` come sfida dispositivo-vs-dispositivo (modello head-to-head, rinviato — Decisione #1)
 
 ## Ottimizzazioni da audit codebase (2026-06-13)
 

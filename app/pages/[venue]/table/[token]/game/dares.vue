@@ -6,79 +6,133 @@
             :title="$t('game.dares.title')"
             @back="goBack"
             @rules="rulesOpen = true"
-        >
-            <template #meta>
-                <span v-if="phase === 'card'" class="font-mono text-muted text-sm">
-                    {{ $t('game.dares.card_index', { n: index + 1, total: deck.length }) }}
-                </span>
-            </template>
-        </game-header>
+        />
+
+        <connection-status-banner :status="status" @reconnect="reconnect()" />
 
         <main class="flex flex-1 flex-col items-center justify-center overflow-y-auto p-6">
 
-            <!-- Intro -->
-            <div v-if="phase === 'intro'" class="flex flex-col gap-5 items-center max-w-sm text-center">
-                <span class="text-6xl">
-                    🍸
-                </span>
-                <p class="font-bold font-display text-2xl text-highlighted">
-                    {{ $t('game.dares.title') }}
-                </p>
-                <p class="text-muted">
-                    {{ $t('game.dares.intro') }}
-                </p>
-                <u-button
-                    icon="i-lucide-shuffle"
-                    :label="$t('game.dares.start')"
-                    size="xl"
-                    @click="start"
-                />
-                <p class="text-muted text-xs">
-                    {{ $t('game.dares.sip_disclaimer') }}
-                </p>
-            </div>
-
-            <!-- Carta -->
-            <div v-else-if="phase === 'card' && currentCard" class="flex flex-col gap-6 items-center max-w-sm w-full">
-                <div
-                    class="border flex flex-col gap-5 items-center justify-center min-h-[260px] p-6 rounded-3xl text-center w-full"
-                    :style="{ borderColor: kindColor(currentCard.kind) + '66', backgroundColor: kindColor(currentCard.kind) + '14' }"
-                >
-                    <span
-                        class="font-bold px-3 py-1 rounded-full text-xs tracking-wide uppercase"
-                        :style="{ backgroundColor: kindColor(currentCard.kind) + '22', color: kindColor(currentCard.kind) }"
-                    >
-                        {{ kindIcon(currentCard.kind) }} {{ $t(`game.dares.kind_${ currentCard.kind }`) }}
+            <!-- In attesa che l'host avvii il gioco a turni -->
+            <template v-if="! turnState">
+                <div class="flex flex-col gap-6 items-center max-w-sm text-center">
+                    <span class="text-6xl">
+                        🍸
                     </span>
-                    <p class="font-display font-semibold leading-snug text-2xl text-highlighted">
-                        {{ locale === 'it' ? currentCard.text.it : currentCard.text.en }}
+                    <p class="font-bold font-display text-2xl text-highlighted">
+                        {{ $t('game.dares.title') }}
+                    </p>
+
+                    <div v-if="players.length > 0" class="flex flex-wrap gap-2 justify-center">
+                        <player-pill
+                            v-for="player in players"
+                            :key="player.id"
+                            :color="player.color"
+                            :nickname="player.nickname"
+                            :you="player.id === playerStore.playerId"
+                        />
+                    </div>
+
+                    <template v-if="isHost">
+                        <u-button
+                            v-if="players.length >= minPlayers"
+                            :disabled="isStarting || status !== 'OPEN'"
+                            icon="i-lucide-play"
+                            :label="$t('game.turn.start_button')"
+                            :loading="isStarting"
+                            size="xl"
+                            @click="handleStart"
+                        />
+                        <div v-else class="flex flex-col gap-3 items-center">
+                            <p class="text-muted text-sm">
+                                {{ $t('game.turn.need_players', { n: minPlayers }) }}
+                            </p>
+                            <table-invite>
+                                <u-button
+                                    color="primary"
+                                    icon="i-lucide-user-plus"
+                                    :label="$t('invite.waiting_cta')"
+                                    size="lg"
+                                    variant="soft"
+                                />
+                            </table-invite>
+                        </div>
+                    </template>
+                    <p v-else class="text-muted">
+                        {{ $t('game.turn.waiting_host') }}
+                    </p>
+                    <p class="text-muted text-xs">
+                        {{ $t('game.dares.sip_disclaimer') }}
                     </p>
                 </div>
-                <u-button
-                    block
-                    icon="i-lucide-arrow-right"
-                    :label="$t('game.dares.next')"
-                    size="xl"
-                    trailing
-                    @click="next"
-                />
-            </div>
+            </template>
 
-            <!-- Mazzo finito -->
-            <div v-else class="flex flex-col gap-5 items-center max-w-sm text-center">
-                <span class="text-6xl">
-                    🎉
-                </span>
-                <p class="font-bold font-display text-highlighted text-xl">
-                    {{ $t('game.dares.deck_done') }}
-                </p>
-                <u-button
-                    icon="i-lucide-rotate-ccw"
-                    :label="$t('game.dares.restart')"
-                    size="xl"
-                    @click="start"
-                />
-            </div>
+            <!-- Gioco a turni in corso -->
+            <template v-else>
+                <div class="flex flex-col gap-6 items-center max-w-sm w-full">
+
+                    <!-- Di chi è il turno -->
+                    <div
+                        class="flex gap-2 items-center px-4 py-2 rounded-full"
+                        :style="{ backgroundColor: currentColor + '22' }"
+                    >
+                        <span class="block rounded-full size-2.5" :style="{ backgroundColor: currentColor }" />
+                        <span class="font-semibold" :style="{ color: currentColor }">
+                            {{ isMyTurn ? $t('game.turn.your_turn') : $t('game.turn.others_turn', { name: currentNickname }) }}
+                        </span>
+                    </div>
+
+                    <!-- Carta condivisa -->
+                    <div
+                        v-if="card"
+                        class="border flex flex-col gap-5 items-center justify-center min-h-[260px] p-6 rounded-3xl text-center w-full"
+                        :style="{ borderColor: kindColor(card.kind) + '66', backgroundColor: kindColor(card.kind) + '14' }"
+                    >
+                        <span
+                            class="font-bold px-3 py-1 rounded-full text-xs tracking-wide uppercase"
+                            :style="{ backgroundColor: kindColor(card.kind) + '22', color: kindColor(card.kind) }"
+                        >
+                            {{ kindIcon(card.kind) }} {{ $t(`game.dares.kind_${ card.kind }`) }}
+                        </span>
+                        <p class="font-display font-semibold leading-snug text-2xl text-highlighted">
+                            {{ locale === 'it' ? card.text.it : card.text.en }}
+                        </p>
+                    </div>
+
+                    <!-- È il mio turno: eseguo e passo -->
+                    <template v-if="isMyTurn">
+                        <p class="text-center text-muted text-sm">
+                            {{ $t('game.dares.your_turn_hint') }}
+                        </p>
+                        <u-button
+                            block
+                            :disabled="isAdvancing || status !== 'OPEN'"
+                            icon="i-lucide-arrow-right"
+                            :label="$t('game.dares.done_button')"
+                            :loading="isAdvancing"
+                            size="xl"
+                            trailing
+                            @click="pass"
+                        />
+                    </template>
+
+                    <!-- Non è il mio turno: guardo e aspetto -->
+                    <template v-else>
+                        <p class="text-center text-muted">
+                            {{ $t('game.dares.waiting_hint') }}
+                        </p>
+                        <u-button
+                            v-if="isHost"
+                            color="neutral"
+                            :disabled="isAdvancing"
+                            :label="$t('game.dares.done_button')"
+                            size="sm"
+                            variant="soft"
+                            @click="pass"
+                        />
+                    </template>
+
+                </div>
+            </template>
         </main>
 
         <game-rules-modal v-model:open="rulesOpen" :game="daresDefinition" />
@@ -89,31 +143,35 @@
 
     import type { DareCard, DareKind } from '#shared/utils/party';
 
-    import { PARTY_DARES, shuffle } from '#shared/utils/party';
-
     definePageMeta( { layout: 'game' } );
 
     const route = useRoute()
           , localePath = useLocalePath()
           , playerStore = usePlayerStore()
+          , toast = useToast()
           , { t, locale } = useI18n()
 
-          , { open, close, gameLaunch } = useTableSocket()
+          , {
+              players, turnState, gameLaunch, status, open, close, reconnect, isHost, startTurnGame, advanceTurn, wsError,
+          } = useTableSocket()
 
           , venueSlug = route.params.venue as string
           , qrToken = route.params.token as string
 
           , daresDefinition = getGameDefinition( 'dares' )
+          , minPlayers = daresDefinition?.minPlayers ?? 2
           , rulesOpen = ref( false )
 
-          , phase = ref<'card' | 'done' | 'intro'>( 'intro' )
-          , deck = ref<DareCard[]>( [] )
-          , index = ref( 0 )
+          , isStarting = ref( false )
+          , isAdvancing = ref( false )
 
-          , currentCard = computed<DareCard | null>( () => deck.value[ index.value ] ?? null )
+          , isMyTurn = computed( () => turnState.value?.currentPlayerId === playerStore.playerId )
+          , currentPlayer = computed( () => players.value.find( p => p.id === turnState.value?.currentPlayerId ) ?? null )
+          , currentNickname = computed( () => currentPlayer.value?.nickname ?? '…' )
+          , currentColor = computed( () => currentPlayer.value?.color ?? '#6366F1' )
+          , card = computed<DareCard | null>( () => ( turnState.value?.prompt as DareCard | null ) ?? null )
 
-          // Colori per tipo carta, allineati alla palette "Notte Italiana".
-          // Colori dei token "Notte Italiana" (indigo/amber/violet/pink/emerald).
+          // Colori e icone per tipo carta, allineati alla palette "Notte Italiana".
           , kindColors: Record<DareKind, string> = {
               truth: '#6366F1',
               dare: '#F59E0B',
@@ -148,29 +206,26 @@
     }
 
     /**
-     * (Ri)mescola il mazzo e mostra la prima carta.
+     * Avvia il gioco a turni (solo host).
      */
-    function start() {
+    async function handleStart() {
 
-        deck.value = shuffle( PARTY_DARES );
-        index.value = 0;
-        phase.value = 'card';
+        if( isStarting.value || status.value !== 'OPEN' ) return;
+        isStarting.value = true;
+        await startTurnGame();
+        isStarting.value = false;
 
     }
 
     /**
-     * Avanza alla carta successiva; a mazzo esaurito passa alla schermata finale.
+     * Esegui la carta e passa al giocatore successivo (nuova carta).
      */
-    function next() {
+    async function pass() {
 
-        if( index.value + 1 >= deck.value.length ) {
-
-            phase.value = 'done';
-            return;
-
-        }
-
-        index.value += 1;
+        if( isAdvancing.value || status.value !== 'OPEN' ) return;
+        isAdvancing.value = true;
+        await advanceTurn( 'next' );
+        isAdvancing.value = false;
 
     }
 
@@ -182,12 +237,28 @@
             return;
 
         }
-
         open();
 
     } );
 
     onUnmounted( () => close() );
+
+    watch( wsError, error => {
+
+        if( error ) {
+
+            isStarting.value = false;
+            isAdvancing.value = false;
+            toast.add( {
+                color: 'error',
+                description: error,
+                duration: 4000,
+            } );
+            wsError.value = null;
+
+        }
+
+    } );
 
     // L'host ha lanciato un gioco DIVERSO mentre eravamo qui: seguilo.
     watch( () => gameLaunch.value, signal => {

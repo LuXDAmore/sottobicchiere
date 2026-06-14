@@ -5,6 +5,37 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-14 — Giochi a turni interattivi (categorie, dares) multi-dispositivo
+
+Bug 3 del report: i giochi "passa il telefono" diventano interattivi, ognuno dal
+proprio dispositivo, a turni. Riusa l'infrastruttura realtime di `thumbs` (stato
+autoritativo su `games` + broadcast da trigger + presence), nessuna dipendenza nuova.
+
+### Spec
+- `docs/specs/turn-based-games.feature.sdd` (nuovo): ownership, boundaries, scenari,
+  decisioni (#1 solo categorie/dares; duello rinviato; #2 gioco "infinito"; #3 semantica
+  next/newPrompt).
+
+### Dati / server
+- `supabase/migrations/20260614120000_turn_based_games.sql` (nuovo): colonna
+  `games.turn_state jsonb` (`order` + `turnIndex` + `deckIndex`). Inclusa automaticamente
+  nel broadcast di `games` (nessuna policy/trigger nuovi).
+- `server/utils/game-turns.ts` (nuovo): engine puro — `buildTurnDeck`, `buildTurnState`,
+  `currentTurnPlayer`, `advanceTurnState`, `promptAt`. `test/unit/game-turns.test.ts`.
+- `server/api/.../game/turn/start.post.ts` e `advance.post.ts` (nuovi): start solo host,
+  advance solo per il giocatore di turno (host come eccezione, sblocca se chi è di turno
+  esce). Stato autoritativo sul server, mai dal client.
+- `shared/utils/games.ts`: `isTurnBasedGame` + `TURN_BASED_GAMES` (fonte unica).
+- `shared/types/{database,realtime}.ts`: `turn_state` su games row; `TurnBasedClientState`.
+
+### Client
+- `app/composables/useTableSocket.ts`: `turnState` (mutuamente esclusivo con `gameState`),
+  `mapTurnGame`, `startTurnGame`, `advanceTurn`.
+- `app/pages/.../game/categorie.vue` e `dares.vue`: riscritte come multiplayer a turni —
+  schermata di attesa host, "tocca a {nickname}"/"tocca a te", azioni solo nel proprio
+  turno, timer locale per il giocatore di turno (categorie).
+- `i18n/{it,en}.json`: blocco `game.turn.*` + nuove stringhe categorie/dares, parità IT/EN.
+
 ## 2026-06-14 — Fix join via link/QR e nome stanza ad-hoc
 
 Bug report dell'Operatore su link condiviso, nome del tavolo e interattività.

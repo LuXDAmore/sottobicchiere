@@ -104,6 +104,7 @@ export interface Database {
                     host_player_id: string;
                     created_at: string;
                     updated_at: string;
+                    turn_state: Json | null;
                 };
                 Insert: {
                     id?: string;
@@ -121,6 +122,7 @@ export interface Database {
                     host_player_id: string;
                     created_at?: string;
                     updated_at?: string;
+                    turn_state?: Json | null;
                 };
                 Update: Partial<Database['public']['Tables']['games']['Insert']>;
                 Relationships: [];

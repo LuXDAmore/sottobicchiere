@@ -107,6 +107,21 @@ export function getGamesByCategory( category: GameCategory | 'all' ): GameDefini
 
 }
 
+// Giochi a turni interattivi (multi-dispositivo): lo stato vive su `games`
+// (turn_state) e ruota tra i giocatori. Sono i vecchi "passa il telefono".
+export const TURN_BASED_GAMES = [ 'categorie', 'dares' ] as const satisfies readonly GameId[];
+
+/**
+ * True se il gioco è a turni interattivi (stato autoritativo su `games`, turno che
+ * ruota tra i dispositivi). Fonte unica condivisa tra API server e client.
+ * @param id - identificatore del gioco.
+ */
+export function isTurnBasedGame( id: string ): id is ( typeof TURN_BASED_GAMES )[ number ] {
+
+    return ( TURN_BASED_GAMES as readonly string[] ).includes( id );
+
+}
+
 /**
  * Definizione di un gioco dal catalogo; null se l'id non esiste.
  * Fonte unica per i vincoli sui giocatori (min/max): usata da UI e API di start.
