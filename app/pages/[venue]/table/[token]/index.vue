@@ -246,6 +246,10 @@
     watch( sessions, list => {
 
         if( hasManualSelection.value ) return;
+        // Se l'utente sta già compilando il form, non spostargli la selezione sotto le
+        // mani: cambierebbe l'azione (Crea→Unisciti) e farebbe sparire il campo gruppo
+        // (layout shift). In quel caso resta valida la sua intenzione implicita.
+        if( state.nickname.trim() !== '' || state.groupName.trim() !== '' ) return;
         selectedSessionId.value = list.length > 0 ? list[ 0 ]!.sessionId : null;
 
     }, { immediate: true } );
