@@ -13,6 +13,8 @@ Aggiornato: 2026-06-14
       puro `game-turns.ts` + test, pagine riscritte, i18n `game.turn.*` (vedi
       `docs/specs/turn-based-games.feature.sdd`)
 - [ ] `duello` come sfida dispositivo-vs-dispositivo (modello head-to-head, rinviato — Decisione #1)
+- [ ] Dating "online" basato sulla presenza reale (oggi: dating attivo entro TTL, non
+      presenza live) — richiede un heartbeat/last_seen, da valutare come feature a sé
 
 ## Ottimizzazioni da audit codebase (2026-06-13)
 
