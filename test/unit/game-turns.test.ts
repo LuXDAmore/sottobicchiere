@@ -104,6 +104,34 @@ describe( 'advanceTurnState', () => {
 
     } );
 
+    it( 'next salta i giocatori offline fino al prossimo presente', () => {
+
+        const state: TurnState = {
+            order: [ 'a', 'b', 'c', 'd' ],
+            turnIndex: 0,
+            deckIndex: 0,
+        };
+
+        // 'b' e 'c' offline: da turno 'a' si salta a 'd' (turnIndex 3).
+        const next = advanceTurnState( state, 'categorie', 'next', [ 'a', 'd' ] );
+
+        expect( next.turnIndex ).toBe( 3 );
+
+    } );
+
+    it( 'next avanza di una posizione se la lista online è vuota o assente', () => {
+
+        const state: TurnState = {
+            order: [ 'a', 'b', 'c' ],
+            turnIndex: 0,
+            deckIndex: 0,
+        };
+
+        expect( advanceTurnState( state, 'categorie', 'next', [] ).turnIndex ).toBe( 1 );
+        expect( advanceTurnState( state, 'categorie', 'next' ).turnIndex ).toBe( 1 );
+
+    } );
+
 } );
 
 describe( 'promptAt', () => {

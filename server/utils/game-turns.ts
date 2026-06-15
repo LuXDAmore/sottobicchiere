@@ -53,12 +53,42 @@ export function currentTurnPlayer( state: TurnState ): string | null {
 }
 
 /**
+ * Prossimo indice di turno, saltando i giocatori non più online. Se `online` non è
+ * fornito (o nessuno dell'ordine è online) avanza di una sola posizione: l'host
+ * resta comunque il fallback per sbloccare. Il limite a `order.length` evita cicli
+ * infiniti quando nessun candidato è online.
+ * @param state - stato corrente.
+ * @param online - id dei giocatori attualmente online (presence).
+ */
+function nextTurnIndex( state: TurnState, online?: string[] ): number {
+
+    const base = state.turnIndex + 1;
+
+    if( ! online || online.length === 0 || state.order.length === 0 ) return base;
+
+    const onlineSet = new Set( online );
+
+    for( let step = 0; step < state.order.length; step ++ ) {
+
+        const index = base + step
+            , candidate = state.order[ index % state.order.length ];
+
+        if( candidate && onlineSet.has( candidate ) ) return index;
+
+    }
+
+    return base;
+
+}
+
+/**
  * Calcola il nuovo stato dei turni dopo un'azione. Funzione pura: non tocca il DB.
  * @param state - stato corrente.
  * @param kind - id del gioco (decide se 'next' pesca anche una nuova carta).
  * @param action - azione richiesta.
+ * @param online - id dei giocatori online: 'next' salta chi è uscito (opzionale).
  */
-export function advanceTurnState( state: TurnState, kind: string, action: TurnAction ): TurnState {
+export function advanceTurnState( state: TurnState, kind: string, action: TurnAction, online?: string[] ): TurnState {
 
     if( action === 'newPrompt' ) {
 
@@ -69,11 +99,11 @@ export function advanceTurnState( state: TurnState, kind: string, action: TurnAc
 
     }
 
-    // 'next': turno successivo. dares pesca una carta nuova a ogni turno; categorie
-    // mantiene la stessa categoria mentre il telefono "gira" tra i giocatori.
+    // 'next': turno successivo (saltando gli offline). dares pesca una carta nuova a
+    // ogni turno; categorie mantiene la stessa categoria mentre il telefono "gira".
     return {
         ... state,
-        turnIndex: state.turnIndex + 1,
+        turnIndex: nextTurnIndex( state, online ),
         deckIndex: kind === 'dares' ? state.deckIndex + 1 : state.deckIndex,
     };
 

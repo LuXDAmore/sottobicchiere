@@ -152,7 +152,7 @@
           , { t, locale } = useI18n()
 
           , {
-              players, turnState, gameLaunch, status, open, close, reconnect, isHost, startTurnGame, advanceTurn, wsError,
+              players, turnState, gameSelection, gameLaunch, status, open, close, reconnect, isHost, startTurnGame, advanceTurn, wsError,
           } = useTableSocket()
 
           , venueSlug = route.params.venue as string
@@ -265,6 +265,16 @@
 
         if( signal && signal.game !== 'dares' )
             navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ signal.game }` ) );
+
+    } );
+
+    // L'host ha terminato il gioco a turni (sessione sbloccata, selected_game → null):
+    // torna in lobby invece di restare appesi sulla schermata d'attesa. Solo sulla
+    // transizione verso null, così un refresh a gioco attivo non rimbalza.
+    watch( () => gameSelection.value.selectedGame, ( game, previous ) => {
+
+        if( ! game && previous )
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
 
     } );
 

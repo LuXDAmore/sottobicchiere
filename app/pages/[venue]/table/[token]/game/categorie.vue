@@ -170,7 +170,7 @@
           , { t, locale } = useI18n()
 
           , {
-              players, turnState, gameLaunch, status, open, close, reconnect, isHost, startTurnGame, advanceTurn, wsError,
+              players, turnState, gameSelection, gameLaunch, status, open, close, reconnect, isHost, startTurnGame, advanceTurn, wsError,
           } = useTableSocket()
 
           , venueSlug = route.params.venue as string
@@ -230,8 +230,9 @@
 
     }
 
-    // Quando tocca a me (o cambia il turno), arma il timer; altrimenti spegnilo.
-    watch( () => [ isMyTurn.value, turnState.value?.turnIndex ], () => {
+    // Quando tocca a me, o cambia il turno, o cambio categoria (deckIndex), arma il
+    // timer; altrimenti spegnilo.
+    watch( () => [ isMyTurn.value, turnState.value?.turnIndex, turnState.value?.deckIndex ], () => {
 
         if( isMyTurn.value ) armTimer();
         else {
@@ -320,6 +321,17 @@
 
         if( signal && signal.game !== 'categorie' )
             navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/game/${ signal.game }` ) );
+
+    } );
+
+    // L'host ha terminato il gioco a turni (sessione sbloccata, selected_game → null):
+    // i giochi a turni non hanno una fase "finished" con podio, quindi torniamo in
+    // lobby invece di restare appesi sulla schermata d'attesa. Solo sulla transizione
+    // verso null (non al mount iniziale), così un refresh a gioco attivo non rimbalza.
+    watch( () => gameSelection.value.selectedGame, ( game, previous ) => {
+
+        if( ! game && previous )
+            navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
 
     } );
 

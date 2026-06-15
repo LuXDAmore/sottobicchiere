@@ -846,6 +846,9 @@ const _useTableSocket = createGlobalState( () => {
         return post( '/game/turn/advance', {
             playerId: playerStore.playerId,
             action,
+            // Online dalla presence: 'next' salta al prossimo giocatore presente
+            // invece di passare a un telefono ormai uscito dal tavolo.
+            online: players.value.map( p => p.id ),
         } );
 
     }

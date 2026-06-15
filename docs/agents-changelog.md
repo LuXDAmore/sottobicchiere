@@ -36,6 +36,14 @@ autoritativo su `games` + broadcast da trigger + presence), nessuna dipendenza n
   turno, timer locale per il giocatore di turno (categorie).
 - `i18n/{it,en}.json`: blocco `game.turn.*` + nuove stringhe categorie/dares, parità IT/EN.
 
+### Fix post-review (correttezza flussi)
+- Fine gioco a turni: `categorie.vue`/`dares.vue` osservano `gameSelection.selectedGame`
+  e tornano in lobby quando la sessione viene sbloccata (prima i giocatori restavano
+  appesi sulla schermata d'attesa quando l'host terminava).
+- `advanceTurnState` salta i giocatori offline: `advanceTurn` invia gli `online` dalla
+  presence, il turno non "gira" verso un telefono uscito dal tavolo (+ test).
+- `categorie.vue`: "nuova categoria" riarma il timer del turno (watch include `deckIndex`).
+
 ## 2026-06-14 — Fix join via link/QR e nome stanza ad-hoc
 
 Bug report dell'Operatore su link condiviso, nome del tavolo e interattività.

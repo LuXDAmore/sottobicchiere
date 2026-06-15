@@ -11,6 +11,8 @@ import { isSessionHost, requirePlayer, requireTable } from '../../../../../../ut
 const payloadSchema = z.object( {
     playerId: z.string().uuid(),
     action: z.enum( [ 'newPrompt', 'next' ] ),
+    // Id online (presence) per saltare al prossimo giocatore presente; opzionale.
+    online: z.array( z.string().uuid() ).optional(),
 } );
 
 // Avanza un gioco a turni. Può farlo SOLO il giocatore di turno (o l'host, che può
@@ -31,7 +33,7 @@ export default defineEventHandler( async event => {
     }
 
     const { client, table } = await requireTable( event )
-        , { playerId, action } = parsed.data
+        , { playerId, action, online } = parsed.data
         , player = await requirePlayer( event, client, playerId )
 
         , { data: session } = await client
@@ -79,7 +81,7 @@ export default defineEventHandler( async event => {
     }
 
     const deck = ( game.questions ?? [] ) as unknown[]
-        , nextState = advanceTurnState( state, game.kind, action )
+        , nextState = advanceTurnState( state, game.kind, action, online )
         , prompt = promptAt( deck, nextState.deckIndex )
 
         , { error } = await client
