@@ -22,7 +22,7 @@ describe( 'resolveTableRow', () => {
     it( 'mappa il record trovato (join su venues)', async () => {
 
         const client = stubClient( {
-            data: { id: 'table-1', table_number: 3, short_code: 'ABC234', venues: { name: 'Bar Centrale', slug: 'bar-centrale' } },
+            data: { id: 'table-1', table_number: 3, short_code: 'ABC234', venues: { name: 'Bar Centrale', slug: 'bar-centrale', kind: 'venue' } },
             error: null,
         } );
 
@@ -31,6 +31,7 @@ describe( 'resolveTableRow', () => {
             tableNumber: 3,
             venueName: 'Bar Centrale',
             venueSlug: 'bar-centrale',
+            venueKind: 'venue',
             shortCode: 'ABC234',
         } );
 
@@ -39,11 +40,22 @@ describe( 'resolveTableRow', () => {
     it( 'mappa shortCode a null per i tavoli fisici (senza short_code)', async () => {
 
         const client = stubClient( {
-            data: { id: 'table-2', table_number: 1, short_code: null, venues: { name: 'Bar Centrale', slug: 'bar-centrale' } },
+            data: { id: 'table-2', table_number: 1, short_code: null, venues: { name: 'Bar Centrale', slug: 'bar-centrale', kind: 'venue' } },
             error: null,
         } );
 
         await expect( resolveTableRow( client, 'bar-centrale', 'qr-abc' ) ).resolves.toMatchObject( { shortCode: null } );
+
+    } );
+
+    it( 'mappa venueKind a "adhoc" per le stanze create da /new', async () => {
+
+        const client = stubClient( {
+            data: { id: 'table-3', table_number: 1, short_code: 'ROOM42', venues: { name: 'Festa di Luca', slug: 'r-abc12345', kind: 'adhoc' } },
+            error: null,
+        } );
+
+        await expect( resolveTableRow( client, 'r-abc12345', 'qr-room' ) ).resolves.toMatchObject( { venueKind: 'adhoc' } );
 
     } );
 

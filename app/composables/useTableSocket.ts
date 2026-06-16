@@ -6,10 +6,13 @@ import type {
     LobbyGameSelection,
     SessionMode,
     ThumbsClientState,
+    TurnBasedClientState,
     WsPlayer,
 } from '../../shared/types/realtime';
 import type { PlayerColor } from '../../shared/utils/colors';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+
+import { isTurnBasedGame } from '../../shared/utils/games';
 
 interface PresenceMeta { id: string; nickname: string; color: PlayerColor }
 type ConnectionStatus = 'CLOSED' | 'CONNECTING' | 'OPEN';
@@ -32,6 +35,9 @@ const _useTableSocket = createGlobalState( () => {
 
         , players = ref<WsPlayer[]>( [] )
         , gameState = ref<ThumbsClientState | null>( null )
+        // Stato dei giochi a turni (categorie/dares): valorizzato da mapGame quando la
+        // riga `games` è di un gioco a turni. Mutuamente esclusivo con gameState (thumbs).
+        , turnState = ref<TurnBasedClientState | null>( null )
         , wsError = ref<string | null>( null )
         , gameSelection = ref<LobbyGameSelection>( {
             selectedGame: null,
@@ -126,6 +132,15 @@ const _useTableSocket = createGlobalState( () => {
      */
     function mapGame( record: Database['public']['Tables']['games']['Row'] ) {
 
+        // Giochi a turni (categorie/dares): mapping dedicato, stato mutuamente
+        // esclusivo con quello di thumbs.
+        if( isTurnBasedGame( record.kind ) ) {
+
+            mapTurnGame( record );
+            return;
+
+        }
+
         const isNewRound = record.phase === 'voting' && record.round_index !== lastRoundIndex;
 
         if( isNewRound ) lastRoundIndex = record.round_index;
@@ -145,6 +160,43 @@ const _useTableSocket = createGlobalState( () => {
             votedCount: record.voted_count,
             votes: record.phase === 'reveal' ? ( record.revealed_votes as Record<string, 'down' | 'up'> | null ) : null,
         };
+
+        // Cambio di gioco sulla stessa sessione (thumbs ← turni): azzera l'altro stato.
+        turnState.value = null;
+
+    }
+
+    /**
+     *
+     * @param record
+     */
+    function mapTurnGame( record: Database['public']['Tables']['games']['Row'] ) {
+
+        const raw = record.turn_state as { order?: string[]; turnIndex?: number; deckIndex?: number } | null;
+
+        if( ! raw || record.phase === 'finished' ) {
+
+            turnState.value = null;
+            return;
+
+        }
+
+        const order = raw.order ?? []
+            , turnIndex = raw.turnIndex ?? 0
+            , currentPlayerId = order.length > 0 ? ( order[ turnIndex % order.length ] ?? null ) : null;
+
+        turnState.value = {
+            kind: record.kind,
+            order,
+            turnIndex,
+            deckIndex: raw.deckIndex ?? 0,
+            currentPlayerId,
+            prompt: record.current_question ?? null,
+            hostPlayerId: record.host_player_id,
+        };
+
+        // Gioco a turni attivo: lo stato di thumbs non è più valido.
+        gameState.value = null;
 
     }
 
@@ -692,6 +744,7 @@ const _useTableSocket = createGlobalState( () => {
 
             players.value = [];
             gameState.value = null;
+            turnState.value = null;
             lastRoundIndex = - 1;
             lastPresenceIds = new Set();
             lobbyVersion.value = 0;
@@ -775,6 +828,32 @@ const _useTableSocket = createGlobalState( () => {
     }
 
     /**
+     * Avvia un gioco a turni (categorie/dares) — solo host. Lo stato arriva via broadcast.
+     */
+    function startTurnGame() {
+
+        return post( '/game/turn/start', { playerId: playerStore.playerId } );
+
+    }
+
+    /**
+     * Avanza il gioco a turni: 'next' passa al giocatore successivo, 'newPrompt'
+     * cambia carta/categoria. Lo accetta solo chi è di turno (o l'host).
+     * @param action - tipo di avanzamento.
+     */
+    function advanceTurn( action: 'newPrompt' | 'next' ) {
+
+        return post( '/game/turn/advance', {
+            playerId: playerStore.playerId,
+            action,
+            // Online dalla presence: 'next' salta al prossimo giocatore presente
+            // invece di passare a un telefono ormai uscito dal tavolo.
+            online: players.value.map( p => p.id ),
+        } );
+
+    }
+
+    /**
      *
      * @param mode
      */
@@ -838,6 +917,7 @@ const _useTableSocket = createGlobalState( () => {
     } );
 
     return {
+        advanceTurn,
         clearDatingUnread,
         close,
         datingEnabled,
@@ -859,7 +939,9 @@ const _useTableSocket = createGlobalState( () => {
         sessionMode,
         setSessionMode,
         startGame,
+        startTurnGame,
         status,
+        turnState,
         vote,
         wsError,
     };

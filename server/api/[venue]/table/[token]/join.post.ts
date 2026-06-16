@@ -193,6 +193,7 @@ export default defineEventHandler( async event => {
             tableSessionId: session.id,
             venueName: table.venueName,
             venueSlug: table.venueSlug,
+            venueKind: table.venueKind,
         };
 
     }
@@ -260,6 +261,7 @@ export default defineEventHandler( async event => {
         tableSessionId: session.id,
         venueName: table.venueName,
         venueSlug: table.venueSlug,
+        venueKind: table.venueKind,
     };
 
 } );

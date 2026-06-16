@@ -5,6 +5,64 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-14 — Giochi a turni interattivi (categorie, dares) multi-dispositivo
+
+Bug 3 del report: i giochi "passa il telefono" diventano interattivi, ognuno dal
+proprio dispositivo, a turni. Riusa l'infrastruttura realtime di `thumbs` (stato
+autoritativo su `games` + broadcast da trigger + presence), nessuna dipendenza nuova.
+
+### Spec
+- `docs/specs/turn-based-games.feature.sdd` (nuovo): ownership, boundaries, scenari,
+  decisioni (#1 solo categorie/dares; duello rinviato; #2 gioco "infinito"; #3 semantica
+  next/newPrompt).
+
+### Dati / server
+- `supabase/migrations/20260614120000_turn_based_games.sql` (nuovo): colonna
+  `games.turn_state jsonb` (`order` + `turnIndex` + `deckIndex`). Inclusa automaticamente
+  nel broadcast di `games` (nessuna policy/trigger nuovi).
+- `server/utils/game-turns.ts` (nuovo): engine puro — `buildTurnDeck`, `buildTurnState`,
+  `currentTurnPlayer`, `advanceTurnState`, `promptAt`. `test/unit/game-turns.test.ts`.
+- `server/api/.../game/turn/start.post.ts` e `advance.post.ts` (nuovi): start solo host,
+  advance solo per il giocatore di turno (host come eccezione, sblocca se chi è di turno
+  esce). Stato autoritativo sul server, mai dal client.
+- `shared/utils/games.ts`: `isTurnBasedGame` + `TURN_BASED_GAMES` (fonte unica).
+- `shared/types/{database,realtime}.ts`: `turn_state` su games row; `TurnBasedClientState`.
+
+### Client
+- `app/composables/useTableSocket.ts`: `turnState` (mutuamente esclusivo con `gameState`),
+  `mapTurnGame`, `startTurnGame`, `advanceTurn`.
+- `app/pages/.../game/categorie.vue` e `dares.vue`: riscritte come multiplayer a turni —
+  schermata di attesa host, "tocca a {nickname}"/"tocca a te", azioni solo nel proprio
+  turno, timer locale per il giocatore di turno (categorie).
+- `i18n/{it,en}.json`: blocco `game.turn.*` + nuove stringhe categorie/dares, parità IT/EN.
+
+### Fix post-review (correttezza flussi)
+- Fine gioco a turni: `categorie.vue`/`dares.vue` osservano `gameSelection.selectedGame`
+  e tornano in lobby quando la sessione viene sbloccata (prima i giocatori restavano
+  appesi sulla schermata d'attesa quando l'host terminava).
+- `advanceTurnState` salta i giocatori offline: `advanceTurn` invia gli `online` dalla
+  presence, il turno non "gira" verso un telefono uscito dal tavolo (+ test).
+- `categorie.vue`: "nuova categoria" riarma il timer del turno (watch include `deckIndex`).
+
+## 2026-06-14 — Fix join via link/QR e nome stanza ad-hoc
+
+Bug report dell'Operatore su link condiviso, nome del tavolo e interattività.
+
+### Bug 1 — Link/QR non univa il giocatore alla stessa sessione
+- `app/pages/[venue]/table/[token]/index.vue`: chi arriva da un link/QR condiviso ora
+  trova preselezionato il gruppo attivo più recente (watch su `sessions`), così la POST
+  di join entra nella sessione dell'host invece di crearne una nuova. Il default cede
+  appena l'utente sceglie esplicitamente (`pickSession` + flag `hasManualSelection`).
+
+### Bug 2 — Stanze ad-hoc mostravano "Tavolo 1" invece del nome
+- `server/utils/table-resolver.ts`: `resolveTableRow` espone `venueKind` ('venue'|'adhoc')
+  leggendo `venues.kind`.
+- `server/api/.../index.get.ts`, `join.post.ts`, `shared/types/index.ts` (`TableInfo`),
+  `app/stores/player.ts`: propagano `venueKind` fino allo store persistito.
+- `index.vue` e `lobby.vue`: per le stanze ad-hoc il titolo è il nome scelto e l'etichetta
+  è "Stanza privata" (`table.room_label`), niente più "Tavolo 1" fuorviante.
+- `test/unit/table-resolver.test.ts`: aggiornati gli stub + test per `venueKind`.
+
 ## 2026-06-13 — Applicazione completa delle migliorie da audit (server + UI + toast)
 
 Dopo i quick win, applicate tutte le migliorie strutturali emerse dai tre audit.

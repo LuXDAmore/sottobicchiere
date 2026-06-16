@@ -11,6 +11,7 @@ export default defineEventHandler( async event => {
         tableNumber: table.tableNumber,
         venueName: table.venueName,
         venueSlug: table.venueSlug,
+        venueKind: table.venueKind,
     };
 
 } );

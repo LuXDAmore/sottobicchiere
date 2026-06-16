@@ -105,16 +105,17 @@ Partita di un mini-gioco nella sessione (i round sono incorporati, non una tabel
 |---|---|---|
 | id | uuid | PK |
 | table_session_id | uuid | FK **unique** (cascade) — una partita attiva per sessione |
-| kind | text | es. `thumbs` (default) |
-| phase | text | `voting` \| `reveal` \| `finished` |
+| kind | text | es. `thumbs` (default), `categorie`, `dares` |
+| phase | text | `voting` \| `reveal` \| `finished` (thumbs) · `turn` (giochi a turni) |
 | round_index | integer | round corrente |
 | total_rounds | integer | round totali |
-| questions | jsonb | domande della partita |
-| current_question | jsonb | domanda del round |
+| questions | jsonb | domande/mazzo della partita |
+| current_question | jsonb | domanda del round · prompt/carta corrente (giochi a turni) |
 | scores | jsonb | punteggi cumulati |
 | voted_count | integer | voti del round |
 | total_count | integer | quorum (presenti online) |
 | revealed_votes | jsonb | valorizzato solo in fase `reveal` |
+| turn_state | jsonb | giochi a turni: `{ order: uuid[], turnIndex, deckIndex }` |
 | host_player_id | uuid | host della partita |
 | created_at / updated_at | timestamptz | |
 

@@ -1,0 +1,117 @@
+Spec: Turn-Based Multiplayer Games (Giochi a turni interattivi)
+Platform: TypeScript/Nuxt 4/Nitro + Supabase
+
+Purpose:
+  Trasformare i giochi "passa il telefono" (categorie, dares) in giochi interattivi
+  multi-dispositivo: ogni giocatore gioca dal proprio telefono, vede in tempo reale
+  di chi è il turno e cosa sta succedendo, e agisce solo quando tocca a lui.
+  Riusa l'infrastruttura realtime esistente (stato autoritativo su `games` + broadcast
+  da trigger + presence) già usata da `thumbs`, senza nuove dipendenze.
+
+References:
+  ../../app.sdd
+  ../database-schema.md
+  ../realtime-supabase.md
+  dynamic-game-areas.feature.sdd
+
+Structure:
+  supabase/migrations: colonna `games.turn_state` (jsonb) per lo stato dei turni.
+  server/utils/game-turns.ts: engine puro dei turni (build + advance).
+  server/api/[venue]/table/[token]/game/turn: API start + advance.
+  app/pages/[venue]/table/[token]/game/categorie.vue, dares.vue: pagine multiplayer.
+  shared/types/realtime.ts: TurnBasedClientState.
+
+Owns:
+  Concetto di "gioco a turni" (turn_state: ordine + puntatore turno + puntatore mazzo).
+  server/utils/game-turns.ts e i suoi test.
+  game/turn/start.post.ts, game/turn/advance.post.ts.
+
+Can modify:
+  supabase/migrations/*turn_based_games*.sql
+  shared/types/database.ts (games row: +turn_state)
+  shared/types/realtime.ts
+  shared/utils/games.ts (helper isTurnBasedGame)
+  server/utils/game-turns.ts
+  server/api/[venue]/table/[token]/game/turn/*
+  app/composables/useTableSocket.ts
+  app/pages/[venue]/table/[token]/game/categorie.vue
+  app/pages/[venue]/table/[token]/game/dares.vue
+  i18n/locales/{it,en}.json
+
+Must:
+  Mantenere lo stato autoritativo su Postgres (riga `games`), propagato ai client dal
+    trigger di broadcast esistente. I client NON scrivono mai lo stato.
+  Calcolare il giocatore di turno come turn_state.order[turnIndex % order.length].
+  Permettere l'azione di avanzamento SOLO al giocatore di turno o all'host.
+  Riusare il flusso lobby → select → lock → navigate già esistente: l'host seleziona,
+    tutti navigano alla pagina, l'host avvia il gioco a turni (crea la riga `games`).
+  i18n IT/EN per ogni stringa nuova; italiano primario.
+
+Must not:
+  Aggiungere dipendenze nuove.
+  Salvare PII (i mazzi puntano a bersagli generici, già così in party.ts).
+  Rompere il gioco `thumbs` (resta a votazione/quorum) né i giochi `solo`/`word-blitz`.
+  Introdurre un secondo trasporto realtime: si riusa il channel `table:<id>`.
+
+Depends on:
+  shared/utils/party.ts (PARTY_DARES, CATEGORY_PROMPTS, shuffle)
+  server/utils/game-engine.ts (getActiveGame)
+  server/utils/request.ts (requireTable, requirePlayer, requireHostSession)
+
+Exposes:
+  POST /api/[venue]/table/[token]/game/turn/start    { playerId } → avvia il gioco a turni
+  POST /api/[venue]/table/[token]/game/turn/advance  { playerId, action } → avanza il turno
+
+Accepts:
+  start   { playerId }
+  advance { playerId, action: 'next' | 'newPrompt' }
+
+Returns:
+  { ok: true } (lo stato reale arriva via broadcast)
+
+Raises:
+  NOT_ENOUGH_PLAYERS, GAME_IN_PROGRESS (start)
+  NOT_YOUR_TURN (advance, se non sei né di turno né host)
+  GAME_NOT_FOUND, SESSION_NOT_FOUND
+
+Decisioni:
+  #1  Solo `categorie` e `dares` in questo scope (confermato dall'Operator). `duello`
+      (split-screen reflex) resta com'è: modello head-to-head diverso, rinviato.
+  #2  I giochi a turni sono "infiniti" (il mazzo cicla): nessuna fase `finished`
+      automatica; si termina dalla lobby (game/end) o uscendo.
+  #3  `next` ruota al giocatore successivo; per `dares` pesca anche la carta nuova,
+      per `categorie` mantiene la categoria. `newPrompt` cambia la categoria/carta
+      senza cambiare il turno (utile per "nuova categoria").
+
+Tasks:
+  [x] Migration: games.turn_state jsonb.
+  [x] shared/types: turn_state + TurnBasedClientState.
+  [x] Engine puro game-turns.ts + test.
+  [x] API turn/start + turn/advance.
+  [x] useTableSocket: turnState + startTurnGame + advanceTurn.
+  [x] Pagine categorie.vue e dares.vue multiplayer.
+  [x] i18n IT/EN.
+  [x] Docs + TODO + changelog.
+
+Scenario: avvio gioco a turni
+  Given una sessione con 3 giocatori e l'host ha selezionato "categorie"
+  When tutti navigano alla pagina e l'host avvia
+  Then viene creata la riga games (kind=categorie, turn_state con i 3 id mescolati)
+  And tutti vedono la stessa categoria e di chi è il turno
+
+Scenario: aspetta il tuo turno
+  Given un gioco a turni in corso e non è il mio turno
+  When apro la pagina
+  Then vedo "tocca a {nickname}" e nessun pulsante d'azione
+  And quando il giocatore di turno avanza, l'aggiornamento arriva a tutti
+
+Scenario: solo il giocatore di turno avanza
+  Given un gioco a turni e non è il mio turno
+  When provo a chiamare advance
+  Then il server risponde 403 NOT_YOUR_TURN (l'host fa eccezione)
+
+Done when:
+  Tutti gli Scenario hanno test (engine puro) o sono coperti dal flusso esistente.
+  thumbs e i giochi solo restano invariati.
+  Nessuna dipendenza nuova; nessun PII.
+  Codice, test, spec, TODO.md e docs/agents-changelog.md allineati nello stesso PR.

@@ -43,6 +43,23 @@ export interface ThumbsClientState {
     hostPlayerId: string;
 }
 
+// ── Giochi a turni (categorie, dares) ────────────────────────────────────────
+// Stato client mappato dalla riga `games` quando il gioco è a turni: ognuno gioca
+// dal proprio dispositivo, agisce solo quando è il suo turno, vede cosa fanno gli
+// altri. La fonte autoritativa resta Postgres (broadcast da trigger).
+export interface TurnBasedClientState {
+    kind: string;
+    // Ordine di turno (snapshot all'avvio) e puntatori.
+    order: string[];
+    turnIndex: number;
+    deckIndex: number;
+    // Giocatore di turno, derivato da order[turnIndex % order.length].
+    currentPlayerId: string | null;
+    // Prompt corrente: categoria { it, en } per categorie, carta per dares.
+    prompt: unknown;
+    hostPlayerId: string;
+}
+
 export interface DatingRoomStatus {
     availableTableSessionIds: string[];
     unavailableTableSessionIds: string[];
