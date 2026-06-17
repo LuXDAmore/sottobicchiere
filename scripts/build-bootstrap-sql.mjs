@@ -4,7 +4,7 @@
 //   node scripts/build-bootstrap-sql.mjs
 // (idealmente eseguito/verificato in CI per evitare drift — vedi audit B2/E8).
 
-import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,11 +21,11 @@ const here = dirname( fileURLToPath( import.meta.url ) )
 -- ║                                                                            ║
 -- ║ GENERATO — non modificare a mano: \`node scripts/build-bootstrap-sql.mjs\`.   ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
-`;
+`
 
-const files = ( await readdir( migrationsDir ) )
-    .filter( name => name.endsWith( '.sql' ) )
-    .sort();
+    , files = ( await readdir( migrationsDir ) )
+        .filter( name => name.endsWith( '.sql' ) )
+        .toSorted();
 
 let out = header;
 
@@ -39,4 +39,4 @@ for( const name of files ) {
 
 await writeFile( outFile, out );
 
-console.log( `bootstrap_all.sql rigenerato da ${ files.length } migration.` );
+console.info( `bootstrap_all.sql rigenerato da ${ files.length } migration.` );

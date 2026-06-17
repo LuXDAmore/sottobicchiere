@@ -335,7 +335,7 @@
                                 {{ $t('lobby.game_in_progress') }}
                             </p>
                             <p class="font-medium text-primary-500 text-xs">
-                                {{ gameSelection.selectedGame }}
+                                {{ selectedGameLabel }}
                             </p>
                         </div>
                     </div>
@@ -630,7 +630,17 @@
           ] )
 
           // Area in cui si trova il giocatore corrente (null = nessuna).
-          , myAreaId = computed( () => areas.value.find( a => a.members.some( m => m.id === playerStore.playerId ) )?.id ?? null );
+          , myAreaId = computed( () => areas.value.find( a => a.members.some( m => m.id === playerStore.playerId ) )?.id ?? null )
+
+          // Etichetta localizzata del gioco selezionato (non l'id grezzo) per il banner.
+          , selectedGameLabel = computed( () => {
+
+              const id = gameSelection.value.selectedGame
+                    , definition = id ? getGameDefinition( id as GameId ) : null;
+
+              return definition ? t( definition.labelKey ) : ( id ?? '' );
+
+          } );
 
     onMounted( () => {
 

@@ -220,9 +220,7 @@ export default defineNuxtConfig(
                 brotli: true,
                 gzip: true,
             },
-            experimental: {
-                openAPI: true,
-            },
+            experimental: { openAPI: true },
         },
 
         ogImage: {
@@ -238,7 +236,17 @@ export default defineNuxtConfig(
             includeManifestIcons: true,
             injectManifest: { minify: true },
             manifest: {
+                categories: [
+                    'games',
+                    'entertainment',
+                    'social',
+                ],
+                description: process.env.NUXT_SITE_DESCRIPTION || 'Sottobicchiere — Giochi da tavolo per il tuo locale',
                 display: 'standalone',
+                // Lingua primaria del manifest. NB: il manifest è unico per la PWA
+                // (anche su /en/): una localizzazione per-locale richiederebbe più
+                // manifest e non è supportata banalmente da @vite-pwa (vedi audit M7).
+                lang: 'it',
                 name: process.env.NUXT_SITE_NAME || 'Sottobicchiere',
                 short_name: 'Sottobicchiere',
                 start_url: '/',
@@ -278,6 +286,27 @@ export default defineNuxtConfig(
             },
             minify: true,
             reactive: false,
+        },
+
+        // nuxt-security: configurazione esplicita (audit B1/B3). I default del modulo
+        // abilitano un rate limiter in-memory (lruCache) globale per IP e un
+        // xssValidator con throwError su GET/POST.
+        //  • rateLimiter → nello scenario "locale" tutti i giocatori escono dallo stesso
+        //    IP pubblico (NAT del WiFi): un limite per-IP genererebbe 429 collettivi su
+        //    tutto il tavolo, ed è comunque inefficace su Vercel serverless (memoria
+        //    per-lambda, non condivisa, azzerata a cold start). Lo disabilitiamo: i
+        //    limiti che contano sono già applicati a livello applicativo con stato su DB
+        //    (rate-limit del dating in server/utils/dating.ts) e dal rate-limit anonimo
+        //    di Supabase. Una protezione anti-abuso seria va reintrodotta all'edge
+        //    (Vercel) o con un driver condiviso, non in-memory.
+        //  • xssValidator → con throwError rifiuta testo legittimo (chat dating, nickname
+        //    con `<`, `<3`, ecc.). L'app non rende mai input utente come HTML (Vue escapa
+        //    l'output) e valida gli input con Zod: lo disattiviamo per evitare 400 spuri.
+        // Header/CSP restano sui default del modulo: la CSP non-strict non definisce
+        // connect-src/default-src e quindi NON blocca il WSS realtime di Supabase.
+        security: {
+            rateLimiter: false,
+            xssValidator: false,
         },
 
         site: {

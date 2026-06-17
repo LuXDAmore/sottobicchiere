@@ -31,5 +31,9 @@ enable_signup = true
 enable_anonymous_sign_ins = true
 
 [auth.rate_limit]
-# Limita la creazione di utenti anonimi per IP (anti-abuso).
-anonymous_users = 30
+# Accessi anonimi per ORA per IP (anti-abuso). Attenzione (audit B1): in un locale
+# tutti i giocatori escono dallo stesso IP pubblico (NAT del WiFi), quindi questo è
+# di fatto un tetto PER-LOCALE, non per-utente. Alzato per reggere un locale pieno;
+# per venue ad altissimo traffico valutare un CAPTCHA invece di alzarlo ancora.
+# In produzione replicare il valore in Dashboard → Auth → Rate Limits.
+anonymous_users = 150
