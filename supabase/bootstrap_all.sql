@@ -3,6 +3,8 @@
 -- ║ NON è una migration: concatenazione (ordinata) di supabase/migrations/.     ║
 -- ║ Idempotente. SQL Editor → incolla → Run. La via canonica resta db:push.     ║
 -- ║ Dopo: Auth → Anonymous sign-ins ON; Realtime → no public access.            ║
+-- ║                                                                            ║
+-- ║ GENERATO — non modificare a mano: `node scripts/build-bootstrap-sql.mjs`.   ║
 -- ╚══════════════════════════════════════════════════════════════════════════╝
 
 
@@ -348,6 +350,7 @@ select cron.schedule(
     $$ select public.cleanup_expired_sessions(); $$
 );
 
+
 -- ════════════════════════════════════════════════════════════════════════════
 -- ▶ 20260529090100_seed_demo.sql
 -- ════════════════════════════════════════════════════════════════════════════
@@ -368,6 +371,7 @@ values (
     'demo-001'
 )
 on conflict ( qr_token ) do nothing;
+
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- ▶ 20260530120000_player_sessions_unique_user.sql
@@ -392,6 +396,7 @@ begin
     end if;
 end
 $$;
+
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- ▶ 20260602120000_dynamic_game_areas.sql
@@ -493,6 +498,7 @@ begin
 end;
 $$;
 
+
 -- ════════════════════════════════════════════════════════════════════════════
 -- ▶ 20260602130000_dynamic_areas_realtime.sql
 -- ════════════════════════════════════════════════════════════════════════════
@@ -544,6 +550,7 @@ create trigger trg_notify_lobby_players
 after insert or update on public.player_sessions
 for each row execute function public.notify_lobby_changes();
 
+
 -- ════════════════════════════════════════════════════════════════════════════
 -- ▶ 20260602140000_adhoc_cleanup_guard.sql
 -- ════════════════════════════════════════════════════════════════════════════
@@ -588,6 +595,7 @@ begin
 end;
 $$;
 
+
 -- ════════════════════════════════════════════════════════════════════════════
 -- ▶ 20260603090000_harden_function_grants.sql
 -- ════════════════════════════════════════════════════════════════════════════
@@ -630,3 +638,130 @@ from public, anon, authenticated;
 
 -- Indice di copertura sulla FK groups.table_session_id (filtrata da GET /groups e dal cascade).
 create index if not exists idx_groups_table_session_id on public.groups ( table_session_id );
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- ▶ 20260611090000_games_host_player_index.sql
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- FK senza indice segnalata in review: le query che risalgono ai giochi
+-- dell'host (e le delete a cascata su player_sessions) farebbero full scan.
+create index if not exists idx_games_host_player_id on public.games ( host_player_id );
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- ▶ 20260613120000_indexes_and_votes_fk.sql
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- Hardening allineato agli advisor Supabase + integrità referenziale dei voti.
+-- Migration additiva e idempotente: solo indici e una FK con cleanup preventivo,
+-- nessuna modifica distruttiva di dati validi.
+
+-- ── Integrità: votes.player_id deve puntare a un giocatore reale ──────────────
+-- Senza FK un voto poteva restare orfano (giocatore uscito/cleanup) e gonfiare
+-- voted_count in recomputeAndMaybeReveal, falsando/bloccando l'auto-reveal del
+-- quorum. Si ripuliscono prima eventuali orfani, poi si aggiunge la FK con cascade
+-- (un leave/cleanup del giocatore rimuove anche i suoi voti).
+delete from public.votes v
+where not exists (
+    select 1 from public.player_sessions p where p.id = v.player_id
+);
+
+do $$
+begin
+    if not exists (
+        select 1 from pg_constraint where conname = 'votes_player_id_fkey'
+    ) then
+        alter table public.votes
+            add constraint votes_player_id_fkey
+            foreign key ( player_id ) references public.player_sessions ( id ) on delete cascade;
+    end if;
+end
+$$;
+
+-- Indice di copertura sulla nuova FK (richiesto per il cascade e per i filtri per giocatore).
+create index if not exists idx_votes_player_id on public.votes ( player_id );
+
+-- ── Indici su FK non indicizzate (advisor "unindexed foreign keys") ──────────
+-- dating_messages: il rate-limit (message.post) e rooms.get filtrano anche su from_*.
+create index if not exists idx_dating_messages_from
+    on public.dating_messages ( from_table_session_id, created_at desc );
+
+-- venues/tables.created_by_user_id: FK verso auth.users con on delete set null.
+create index if not exists idx_venues_created_by
+    on public.venues ( created_by_user_id ) where created_by_user_id is not null;
+
+create index if not exists idx_tables_created_by
+    on public.tables ( created_by_user_id ) where created_by_user_id is not null;
+
+-- table_sessions: la query più calda del join risolve la sessione attiva più recente
+-- per tavolo (eq table_id + order started_at desc + limit 1).
+create index if not exists idx_table_sessions_table_started
+    on public.table_sessions ( table_id, started_at desc );
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- ▶ 20260614120000_turn_based_games.sql
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║ Sottobicchiere — giochi a turni interattivi (categorie, dares)             ║
+-- ║                                                                            ║
+-- ║ I giochi "passa il telefono" diventano multi-dispositivo: lo stato dei     ║
+-- ║ turni vive sulla riga `games` (come thumbs) e viene propagato ai client    ║
+-- ║ dal trigger di broadcast esistente. Una sola colonna nuova:                ║
+-- ║   turn_state = { order: uuid[], turnIndex: int, deckIndex: int }           ║
+-- ║     • order      → giocatori in ordine di turno (snapshot all'avvio)        ║
+-- ║     • turnIndex  → puntatore al giocatore di turno (mod order.length)       ║
+-- ║     • deckIndex  → puntatore nel mazzo `questions` (carta/categoria)        ║
+-- ║                                                                            ║
+-- ║ Nessuna nuova policy né trigger: la colonna è inclusa automaticamente nel  ║
+-- ║ broadcast di `games` (la trigger function spinge l'intera riga new/old).   ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+
+alter table public.games
+    add column if not exists turn_state jsonb;
+
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- ▶ 20260617120000_cleanup_cadence_and_phase_check.sql
+-- ════════════════════════════════════════════════════════════════════════════
+
+-- ╔══════════════════════════════════════════════════════════════════════════╗
+-- ║ Sottobicchiere — Cadenza cleanup + vincolo su games.phase                  ║
+-- ║                                                                            ║
+-- ║ Audit fix:                                                                 ║
+-- ║  • M2 — il cleanup pg_cron girava 1 volta al giorno (06:00 UTC) ma le      ║
+-- ║    sessioni durano 8h: dati scaduti (sessioni, voti, dating_messages via   ║
+-- ║    cascade) restavano fino a ~24h. Passa a cadenza ORARIA: la ritenzione   ║
+-- ║    post-scadenza scende da ~24h a ~1h (mitiga anche M4, ritenzione         ║
+-- ║    messaggi dating). La funzione di cleanup resta invariata.               ║
+-- ║  • E6 — `games.phase` non aveva CHECK: un typo non veniva intercettato.    ║
+-- ║    Si fissa l'enum reale: voting | reveal | finished | turn.               ║
+-- ╚══════════════════════════════════════════════════════════════════════════╝
+
+-- ── M2: cleanup ogni ora (idempotente) ────────────────────────────────────────
+select cron.unschedule( 'cleanup-expired-sessions' )
+where exists ( select 1 from cron.job where jobname = 'cleanup-expired-sessions' );
+
+select cron.schedule(
+    'cleanup-expired-sessions',
+    '0 * * * *',
+    $$ select public.cleanup_expired_sessions(); $$
+);
+
+-- ── E6: vincolo sulle fasi di gioco reali (idempotente) ───────────────────────
+-- 'turn' è la fase dei giochi a turni (categorie/dares), aggiunta in
+-- 20260614120000_turn_based_games; le altre sono di thumbs.
+do $$
+begin
+    if not exists (
+        select 1 from pg_constraint
+        where conname = 'games_phase_check'
+          and conrelid = 'public.games'::regclass
+    ) then
+        alter table public.games
+            add constraint games_phase_check
+            check ( phase in ( 'voting', 'reveal', 'finished', 'turn' ) );
+    end if;
+end $$;
