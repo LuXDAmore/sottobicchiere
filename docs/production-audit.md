@@ -15,7 +15,9 @@
   turni · dating · aree · elezione host (schema ↔ endpoint ↔ trigger ↔ client allineati)
 - ✅ Boundary di sicurezza solido: RLS deny-all + channel realtime privati,
   service-role solo server, anti-impersonificazione (`user_id`), anti-spoofing presence
-- ✅ `NUXT_SUPABASE_SECRET_KEY` corretto (allineato a `@nuxtjs/supabase` v2, verificato nel modulo)
+- ✅ `NUXT_SUPABASE_SECRET_KEY` corretto: `serverSupabaseServiceRole` risolve `secretKey`
+  (`NUXT_SUPABASE_SECRET_KEY`) con fallback a `serviceKey` (`NUXT_SUPABASE_SERVICE_KEY`, il cui
+  alias `SUPABASE_SERVICE_KEY` è deprecato dal modulo) — verificato nel runtime del modulo
 - ✅ CSP di default di `nuxt-security` **non** blocca il WSS realtime (nessun `connect-src`/`default-src` nel preset non-strict)
 
 ---
@@ -35,8 +37,9 @@
     a cold start). Solo `/__nuxt_hints/**` è escluso di default.
   - **Fix:** alzare/parametrizzare `anonymous_users` (valutare captcha o sign-in lato
     server per venue ad alto traffico); configurare esplicitamente `security.rateLimiter`
-    (driver condiviso es. Upstash/Redis, oppure disattivarlo affidandosi al rate-limit DB
-    del dating) con soglie consapevoli che "1 IP = 1 locale".
+    (driver condiviso es. Upstash/Redis, oppure disattivarlo affidandosi al rate-limit
+    applicativo del dating — Nitro in `server/utils/dating.ts`/`message.post.ts`, basato su
+    stato persistito a DB) con soglie consapevoli che "1 IP = 1 locale".
 
 ## 🟠 Alti
 
