@@ -1,148 +1,117 @@
 # Production Audit — Sottobicchiere (Nuxt + Supabase)
 
 > Checklist viva delle cose trovate durante l'audit di produzione (Nuxt + backend
-> Supabase). Da smarcare pian piano. Ogni voce ha un ID stabile per riferirla nei
-> commit/PR. Severità: 🔴 bloccante · 🟠 alta · 🟡 media · 🔵 edge/future-proof.
+> Supabase). Ogni voce ha un ID stabile. Legenda: `[x]` fatto · `[~]` parziale ·
+> `[ ]` da fare (azione umana/infra o rinviato per scelta). Severità: 🔴 bloccante ·
+> 🟠 alta · 🟡 media · 🔵 edge/future-proof.
 >
-> Aggiornato: 2026-06-17 · Branch: `claude/nuxt-production-audit-r9b6xw`
+> Aggiornato: 2026-06-17 · Branch: `claude/nuxt-production-audit-r9b6xw` · PR #34
 
-## Esito verifiche tecniche (questo ambiente)
+## Stato implementazione (2026-06-17)
 
-- ✅ `pnpm install` · `typecheck` (0 errori) · `test:unit` (65/65) · `build` di produzione
-- ✅ Parità i18n IT/EN (267/267)
-- ✅ Nessun `TODO/FIXME` o `console.log` residuo nel sorgente
-- ✅ Flussi Nuxt↔Supabase coerenti: join · select→launch · thumbs realtime · giochi a
-  turni · dating · aree · elezione host (schema ↔ endpoint ↔ trigger ↔ client allineati)
-- ✅ Boundary di sicurezza solido: RLS deny-all + channel realtime privati,
-  service-role solo server, anti-impersonificazione (`user_id`), anti-spoofing presence
-- ✅ `NUXT_SUPABASE_SECRET_KEY` corretto: `serverSupabaseServiceRole` risolve `secretKey`
-  (`NUXT_SUPABASE_SECRET_KEY`) con fallback a `serviceKey` (`NUXT_SUPABASE_SERVICE_KEY`, il cui
-  alias `SUPABASE_SERVICE_KEY` è deprecato dal modulo) — verificato nel runtime del modulo
-- ✅ CSP di default di `nuxt-security` **non** blocca il WSS realtime (nessun `connect-src`/`default-src` nel preset non-strict)
+Smarcati in questa sessione: **B1, B2, B3, M1, M2, M3, M5, M7, M8, E1, E6, E8**
+(M3/M6/M7 parziali). Restano azioni **umane/infra** (B4, valore prod di B1) o **scelte
+deliberate** (B5 indicizzazione pre-go-live) e **rinvii motivati** (E2, E3, E4, E5, E7).
+
+Tutto verificato verde: `typecheck` · `test:unit` (71/71, +6 sul dating) · `build` di
+produzione · `eslint` (0 errori).
 
 ---
 
 ## 🔴 Bloccanti
 
-- [ ] **B1 — Limiti per-IP incompatibili con lo scenario "locale".** In un bar tutti i
-      telefoni escono dallo stesso IP pubblico (NAT del WiFi); due limiti per-IP lo
-      penalizzano:
-  - **Supabase** `supabase/config.toml` → `anonymous_users = 30`: accessi anonimi per
-    ora per IP. >30 clienti/ora in un locale → `signInAnonymously()` fallisce (401) e il
-    nuovo utente non entra.
-  - **Nuxt** `nuxt-security` registrato senza config in `nuxt.config.ts`: rate limiter
-    globale **attivo di default** = 150 req / 5 min per IP, driver `lruCache` in-memory.
-    Falsi positivi (tutti i tavoli del locale condividono il budget → `429` collettivi) e
-    protezione inefficace su Vercel serverless (memoria per-lambda, non condivisa, azzerata
-    a cold start). Solo `/__nuxt_hints/**` è escluso di default.
-  - **Fix:** alzare/parametrizzare `anonymous_users` (valutare captcha o sign-in lato
-    server per venue ad alto traffico); configurare esplicitamente `security.rateLimiter`
-    (driver condiviso es. Upstash/Redis, oppure disattivarlo affidandosi al rate-limit
-    applicativo del dating — Nitro in `server/utils/dating.ts`/`message.post.ts`, basato su
-    stato persistito a DB) con soglie consapevoli che "1 IP = 1 locale".
+- [x] **B1 — Limiti per-IP incompatibili con lo scenario "locale".**
+  - **Fatto (Nuxt):** `nuxt-security.rateLimiter: false` in `nuxt.config.ts` — eliminato il
+    rate limiter in-memory globale per-IP (generava 429 collettivi a un intero locale dietro
+    NAT, ed era inefficace su Vercel serverless). I limiti che contano restano applicativi (DB)
+    sul dating + rate-limit anonimo di Supabase.
+  - **Fatto (Supabase):** `config.toml` → `anonymous_users` 30 → **150** (con nota: è un tetto
+    per-locale, non per-utente).
+  - **[ ] Resta umano/infra:** replicare `anonymous_users` in Dashboard → Auth → Rate Limits;
+    per venue ad altissimo traffico valutare CAPTCHA e/o un rate limiter all'edge con driver
+    condiviso (non in-memory).
 
 ## 🟠 Alti
 
-- [ ] **B2 — `supabase/bootstrap_all.sql` incompleto (drift di schema).** Lo snapshot
-      "incolla in SQL Editor → Run" è fermo a `20260603090000_harden_function_grants.sql`:
-      **mancano** `20260611090000_games_host_player_index`, `20260613120000_indexes_and_votes_fk`
-      e **`20260614120000_turn_based_games` (colonna `games.turn_state`)**. Un DB inizializzato
-      con questo file **non ha `turn_state`** → `game/turn/start` e `game/turn/advance`
-      (categorie/dares) falliscono a runtime; mancano anche la FK `votes.player_id` e gli indici.
-      **Fix:** rigenerare `bootstrap_all.sql` dalle migration (preferibilmente in CI) o rimuoverlo
-      e lasciare `db:push` come unica via. Vedi anche E8.
+- [x] **B2 — `bootstrap_all.sql` incompleto.** Aggiunto `scripts/build-bootstrap-sql.mjs`
+  (generatore deterministico) e rigenerato il file da **tutte** le 11 migration (ora include
+  `games.turn_state`, FK `votes.player_id`, indici). Non più editabile a mano → niente drift.
 
-- [ ] **B3 — `nuxt-security` ereditato dai default, non configurato.** `xssValidator` è
-      attivo su GET e POST con `throwError`: i body delle POST (nickname, **messaggi dating**,
-      nomi gruppo/area) possono ricevere `400` su input legittimi con caratteri "sospetti".
-      Anche CSP/headers/CORS/COEP sono ereditati senza verifica esplicita.
-      **Fix:** dichiarare un blocco `security: {…}` esplicito (xssValidator mirato/whitelist sulle
-      route di testo, CSP rivista, rateLimiter di B1) e testare end-to-end con input reali.
+- [x] **B3 — `nuxt-security` ereditato dai default.** Aggiunto blocco `security: {}` esplicito:
+  `rateLimiter: false` (B1) e `xssValidator: false` (rifiutava testo legittimo di chat/nickname;
+  l'output è escapato da Vue e gli input validati da Zod). CSP/headers lasciati ai default del
+  modulo in modo consapevole (la CSP non-strict non blocca il WSS realtime).
 
-- [ ] **B4 — CI GitHub Actions mai eseguita.** I workflow CI/Security risultano attivi ma con
-      0 run nella storia del repo (`TODO.md:127`): lint/typecheck/build/test non sono mai stati
-      verificati in pipeline. **Fix:** abilitare Actions e ottenere almeno un run verde pre-go-live.
+- [ ] **B4 — CI GitHub Actions mai eseguita.** **Azione umana:** abilitare in Settings → Actions
+  e ottenere un run verde. I guard-rail sono pronti (vedi M8): `db:types:check`, `db:bootstrap:check`.
 
-- [ ] **B5 — Indicizzazione bloccata mentre SEO è configurato.** `robots: { disallow: ['/'] }`
-      in `nuxt.config.ts` + `public/_robots.txt` bloccano tutti i crawler, ma `@nuxtjs/seo`
-      (sitemap/schema-org/og-image) è attivo (scelta QA voluta, `TODO.md:129`).
-      **Fix:** riabilitare l'indicizzazione al go-live (Site Config `indexable`).
+- [ ] **B5 — Indicizzazione bloccata.** **Scelta deliberata pre-go-live** (QA): NON va riabilitata
+  ora. Al go-live: Site Config `indexable` + rimuovere il blocco da `public/_robots.txt`.
 
 ## 🟡 Medi
 
-- [ ] **M1 — JWT anonimo 1h vs sessione 8h.** `config.toml` → `jwt_expiry = 3600`, ma le
-      `table_sessions` durano 8h. Per una serata lunga il token va rinnovato via refresh: se il
-      realtime non recepisce il nuovo token, dopo ~1h il channel privato può perdere
-      l'autorizzazione. **Fix:** verificare il refresh token sul realtime in una sessione >1h
-      (test dedicato) e, se serve, forzare `realtime.setAuth()` sul refresh.
+- [x] **M1 — JWT 1h vs sessione 8h.** **Verificato non problematico:** supabase-js
+  (`_handleTokenChanged`) chiama `realtime.setAuth(token)` su `TOKEN_REFRESHED`/`SIGNED_IN`,
+  quindi l'auth del channel si rinnova da sola. Nessun codice da aggiungere.
 
-- [ ] **M2 — Cleanup pg_cron 1 volta/giorno (06:00 UTC) vs TTL 8h.** Sessioni scadute e
-      dati correlati (`games`/`votes`/`dating_messages`) restano fino a ~24h+. Funzionalmente
-      innocuo (le query filtrano `expires_at > now()`), ma accumula dati effimeri e indebolisce
-      la promessa "privacy-first". **Fix:** schedulare il cleanup ogni ora.
+- [x] **M2 — Cleanup 1/giorno → orario.** Migration `20260617120000`: cron a `0 * * * *`.
+  Ritenzione post-scadenza da ~24h a ~1h.
 
-- [ ] **M3 — Moderazione dating simbolica + errori non i18n.** `server/utils/dating.ts`:
-      blacklist di 3 parole solo IT, nessun anti-link/PII; i motivi di rifiuto sono stringhe IT
-      hardcoded mostrate anche all'utente EN. **Fix:** filtro più robusto + chiavi i18n per gli errori.
+- [~] **M3 — Moderazione dating.** **Fatto:** blacklist ampliata + blocco link (anti-spam/phishing)
+  + unit test (`test/unit/dating.test.ts`). **Resta:** la i18n dei messaggi d'errore è un tema
+  *trasversale* (tutta l'API server ritorna stringhe IT): localizzare solo il dating sarebbe
+  incoerente → da affrontare come pattern unico (mappatura code→i18n lato client).
 
-- [ ] **M4 — `dating_messages` ritenuti a lungo.** Cancellati solo per cascade alla scadenza
-      della sessione (~24h+). Contenuto utente in chiaro conservato oltre il necessario.
-      **Fix:** includere i messaggi nel cleanup (es. TTL breve dedicato).
+- [x] **M4 — Ritenzione `dating_messages`.** Mitigato da M2: con cleanup orario i messaggi delle
+  sessioni scadute spariscono entro ~1h (prima ~24h). Un TTL dedicato più aggressivo
+  cancellerebbe la chat di sessioni ancora attive → non desiderabile.
 
-- [ ] **M5 — Nessuna osservabilità server.** Nessun error tracking (Sentry/simili) né logging
-      strutturato sulle API: i `createError(500)` spariscono nei log Vercel grezzi. **Fix:** aggiungere
-      error tracking + log strutturato sulle route critiche.
+- [x] **M5 — Osservabilità server.** Aggiunto `server/plugins/error-logger.ts`: logga i 5xx con
+  metodo/path/status via `consola` (sopravvive a `removeLoggers`). Primo livello, niente nuove
+  dipendenze; un error tracker (Sentry) resta in roadmap.
 
-- [ ] **M6 — Copertura test solo su logica pura.** 65 unit test ok, ma `test/nuxt` e `test/e2e`
-      sono vuoti: l'intero livello autoritativo (endpoint, RLS, broadcast) è verificato solo da
-      script live manuali. **Fix:** test d'integrazione su join/vote/claim-host/dating + e2e Playwright.
+- [~] **M6 — Copertura test.** **Fatto:** test della moderazione dating. **Resta:** test
+  d'integrazione su API route/RLS/realtime + e2e Playwright (sforzo ampio, da pianificare).
 
-- [ ] **M7 — PWA monolingue + icone raster.** `manifest.lang: it` anche su `/en/`, icone raster
-      ereditate da rigenerare (`TODO.md:131,201`). **Fix:** manifest per-locale + rigenerare icone dal SVG.
+- [~] **M7 — PWA.** **Fatto:** manifest arricchito (`lang`/`description`/`categories`). **Resta:**
+  manifest davvero per-locale (limite di @vite-pwa, serve più lavoro) e rigenerazione icone raster
+  dal SVG (richiede l'asset generator a build-time).
 
-- [ ] **M8 — `shared/types/database.ts` mantenuto a mano.** Rischio drift schema↔tipi.
-      **Fix:** check `db:types` in CI (diff fallisce la build se i tipi sono disallineati).
+- [x] **M8 — db types a mano.** Aggiunti `db:types:check` (diff schema↔tipi) e `db:bootstrap:check`
+  (anti-drift del bootstrap) come guard-rail per la CI (attivi quando B4 sarà abilitato).
 
 ## 🔵 Edge case / Future-proof
 
-- [ ] **E1 — Banner "partita in corso" mostra l'id grezzo del gioco** invece dell'etichetta
-      i18n (`lobby.vue:338` → `{{ gameSelection.selectedGame }}`).
+- [x] **E1 — Label gioco grezza in lobby.** Il banner mostra l'etichetta i18n (`selectedGameLabel`).
 
-- [ ] **E2 — `leave` non riallinea `games.host_player_id`.** Quando l'host esce, azzera solo
-      `table_sessions.host_player_id`; la riga `games` resta col vecchio host fino al successivo
-      `claim-host`. Coperto dal fallback client `isHost`, ma è una finestra di incoerenza.
+- [ ] **E2 — `leave` non riallinea `games.host_player_id`.** **Rinviato:** working-as-intended,
+  la rielezione passa da `/session/claim-host`; toccarla cambierebbe la semantica di host-election
+  per una finestra di incoerenza già coperta dal fallback client. Basso valore, rischio non nullo.
 
-- [ ] **E3 — Lock join durante partita attiva.** Chi entra a partita in corso viene trascinato
-      e (in thumbs) può votare pur non essendo in `scores`/`total_count` iniziale; manca una UX
-      "spettatore/attendi prossima partita" (`TODO.md:163,202`).
+- [ ] **E3 — Lock join durante partita attiva.** **Rinviato (feature roadmap "Now"):** richiede una
+  UX spettatore/attesa, non un fix puntuale.
 
-- [ ] **E4 — `duello`/`word-blitz` bloccano la sessione senza stato server condiviso.** Sono
-      giochi non-`solo` (categoria `both`/`preserata`) quindi passano da `game/select` (lock +
-      broadcast) e trascinano tutti i device, ma `duello` è "2 su 1 device" e `word-blitz` è un
-      prototipo locale: nessuna riga `games`. Coerenza semantica da rivedere (es. categoria
-      "device" o flusso dedicato).
+- [ ] **E4 — Semantica `duello`/`word-blitz`.** **Rinviato:** decisione di prodotto (categoria
+  "device" o flusso dedicato).
 
-- [ ] **E5 — Dispatch motore di gioco hardcoded.** `game/start.post.ts` assume `thumbs`: debito
-      dichiarato, da sciogliere all'arrivo del 2° gioco realtime con engine server.
+- [ ] **E5 — Dispatch engine hardcoded `thumbs`.** **Rinviato:** astrazione speculativa finché non
+  arriva un 2° gioco realtime con engine server (coerente con "no abstractions speculative").
 
-- [ ] **E6 — `games.phase` senza CHECK constraint.** I giochi a turni usano `phase='turn'` (non
-      previsto dal commento `voting|reveal|finished`). Funziona, ma un typo non verrebbe intercettato.
-      **Fix:** valutare un CHECK constraint allineato a tutte le fasi reali.
+- [x] **E6 — `games.phase` senza CHECK.** Migration `20260617120000`: `check (phase in
+  ('voting','reveal','finished','turn'))`.
 
-- [ ] **E7 — RLS realtime: EXISTS per-messaggio su `player_sessions`.** Le policy su
-      `realtime.messages` valutano un EXISTS a ogni messaggio (indicizzato su `user_id`):
-      monitorare il costo a scala.
+- [ ] **E7 — Costo RLS realtime per-messaggio.** **Solo monitoraggio:** EXISTS indicizzato su
+  `user_id`; nessuna azione finché non emerge un problema di scala.
 
-- [ ] **E8 — `bootstrap_all.sql` è una seconda fonte di verità dello schema.** Anche una volta
-      riallineato (B2), duplica le migration e può ridivergere. **Fix:** generarlo in CI dalle
-      migration, oppure rimuoverlo.
+- [x] **E8 — `bootstrap_all.sql` doppia fonte di verità.** Ora generato (B2) + `db:bootstrap:check`
+  in CI per impedire la divergenza.
 
 ---
 
-## Priorità consigliata verso il go-live
+## Cosa resta prima del go-live
 
-1. **B1** (limiti per-IP) — è ciò che rompe l'uso reale in un locale.
-2. **B2** (bootstrap_all / `turn_state`) + **B3** (config esplicita `nuxt-security`).
-3. **B4** (CI verde) + **B5** (indicizzazione al lancio).
-4. **M1** (token 1h su serate lunghe) + **M2** (cleanup orario).
-5. **M5/M6** (osservabilità + test d'integrazione) e il resto in coda.
+1. **B4** — abilitare GitHub Actions (umano) e far girare la CI verde.
+2. **B1 (prod)** — impostare `anonymous_users` in Dashboard Supabase; valutare CAPTCHA/edge limiter.
+3. **B5** — riabilitare l'indicizzazione al lancio.
+4. **M6** — test d'integrazione su API/RLS/realtime.
+5. Roadmap: M3 (i18n errori server), M7 (icone/manifest per-locale), E3 (spettatore), E5 (engine dispatch).
