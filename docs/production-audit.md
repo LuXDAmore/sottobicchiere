@@ -9,12 +9,12 @@
 
 ## Stato implementazione (2026-06-17)
 
-Smarcati in questa sessione: **B1, B2, B3, M1, M2, M3, M5, M7, M8, E1, E6, E8**
-(M3/M6/M7 parziali). Restano azioni **umane/infra** (B4, valore prod di B1) o **scelte
-deliberate** (B5 indicizzazione pre-go-live) e **rinvii motivati** (E2, E3, E4, E5, E7).
+Smarcati: **B1, B2, B3, M1, M2, M3, M4, M5, M8, E1, E6, E8** + guard-rail CI; **M6/M7 parziali**.
+Restano azioni **umane/infra** (B4, valore prod di B1) o **scelte deliberate** (B5 indicizzazione
+pre-go-live) e **rinvii motivati** (E2, E3, E4, E5, E7).
 
-Tutto verificato verde: `typecheck` · `test:unit` (71/71, +6 sul dating) · `build` di
-produzione · `eslint` (0 errori).
+Tutto verificato verde: `typecheck` · `test:unit` (84 test) · `build` di produzione · `eslint`
+(0 errori) · parità i18n IT/EN (322/322).
 
 ---
 
@@ -59,10 +59,12 @@ produzione · `eslint` (0 errori).
 - [x] **M2 — Cleanup 1/giorno → orario.** Migration `20260617120000`: cron a `0 * * * *`.
   Ritenzione post-scadenza da ~24h a ~1h.
 
-- [~] **M3 — Moderazione dating.** **Fatto:** blacklist ampliata + blocco link (anti-spam/phishing)
-  + unit test (`test/unit/dating.test.ts`). **Resta:** la i18n dei messaggi d'errore è un tema
-  *trasversale* (tutta l'API server ritorna stringhe IT): localizzare solo il dating sarebbe
-  incoerente → da affrontare come pattern unico (mappatura code→i18n lato client).
+- [x] **M3 — Moderazione dating + i18n errori server.** **Fatto:** blacklist ampliata + blocco
+  link (anti-spam/phishing) + unit test; **i18n degli errori server come pattern unico** — resolver
+  client `serverErrorMessage` (convenzione `error.codes.<CODE>`, fallback al messaggio server e poi
+  a `error.generic`), **55 codici localizzati IT/EN**, wiring in `useActionToast` e `useTableSocket`
+  + unit test (`test/unit/server-error.test.ts`). Restano sul messaggio server (IT) solo i 3 codici
+  con testo dinamico (`NOT_ENOUGH_PLAYERS`/`TOO_MANY_PLAYERS`/`MESSAGE_REJECTED`).
 
 - [x] **M4 — Ritenzione `dating_messages`.** Mitigato da M2: con cleanup orario i messaggi delle
   sessioni scadute spariscono entro ~1h (prima ~24h). Un TTL dedicato più aggressivo
@@ -119,4 +121,4 @@ produzione · `eslint` (0 errori).
 2. **B1 (prod)** — impostare `anonymous_users` in Dashboard Supabase; valutare CAPTCHA/edge limiter.
 3. **B5** — riabilitare l'indicizzazione al lancio.
 4. **M6** — test d'integrazione su API/RLS/realtime.
-5. Roadmap: M3 (i18n errori server), M7 (icone/manifest per-locale), E3 (spettatore), E5 (engine dispatch).
+5. Roadmap: M7 (icone/manifest per-locale), E3 (spettatore), E5 (engine dispatch).
