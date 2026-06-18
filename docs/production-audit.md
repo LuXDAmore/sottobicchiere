@@ -72,8 +72,11 @@ produzione · `eslint` (0 errori).
   metodo/path/status via `consola` (sopravvive a `removeLoggers`). Primo livello, niente nuove
   dipendenze; un error tracker (Sentry) resta in roadmap.
 
-- [~] **M6 — Copertura test.** **Fatto:** test della moderazione dating. **Resta:** test
-  d'integrazione su API route/RLS/realtime + e2e Playwright (sforzo ampio, da pianificare).
+- [~] **M6 — Copertura test.** **Fatto:** test della moderazione dating + **test d'integrazione
+  degli handler API** (`test/unit/api-handlers.test.ts`): branch di autorizzazione/validazione di
+  `game/vote`, `game/select`, `game/turn/advance`, `dating/message` montando gli handler reali con
+  `#supabase/server` mockato e un client Supabase scriptabile (suite a 79 test). **Resta:** test
+  RLS/realtime end-to-end (richiedono uno stack Supabase locale) + e2e Playwright del flusso core.
 
 - [~] **M7 — PWA.** **Fatto:** manifest arricchito (`lang`/`description`/`categories`). **Resta:**
   manifest davvero per-locale (limite di @vite-pwa, serve più lavoro) e rigenerazione icone raster
