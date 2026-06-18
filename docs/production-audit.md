@@ -43,7 +43,9 @@ produzione · `eslint` (0 errori).
   modulo in modo consapevole (la CSP non-strict non blocca il WSS realtime).
 
 - [ ] **B4 — CI GitHub Actions mai eseguita.** **Azione umana:** abilitare in Settings → Actions
-  e ottenere un run verde. I guard-rail sono pronti (vedi M8): `db:types:check`, `db:bootstrap:check`.
+  e ottenere un run verde. I guard-rail sono pronti e cablati: aggiunto il job CI `db-bootstrap`
+  (`db:bootstrap:check`, anti-drift del bootstrap, non serve un DB); `db:types:check` disponibile
+  per uno step con DB.
 
 - [ ] **B5 — Indicizzazione bloccata.** **Scelta deliberata pre-go-live** (QA): NON va riabilitata
   ora. Al go-live: Site Config `indexable` + rimuovere il blocco da `public/_robots.txt`.
