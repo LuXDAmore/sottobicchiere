@@ -115,9 +115,17 @@ const _useTableSocket = createGlobalState( () => {
 
         } catch( exception ) {
 
-            const e = exception as { data?: { message?: string }; statusMessage?: string };
+            const i18n = tryUseNuxtApp()?.$i18n;
 
-            wsError.value = e?.data?.message ?? e?.statusMessage ?? translateError( 'error.generic', 'Si è verificato un errore. Riprova.' );
+            // Messaggio localizzato dal codice d'errore del server (serverErrorMessage),
+            // con fallback al messaggio server e poi a un testo generico. In SSR (nessuna
+            // app risolvibile) si usa direttamente il messaggio del server.
+            wsError.value = i18n
+                ? serverErrorMessage( exception, {
+                    t: ( key: string ) => i18n.t( key ),
+                    te: ( key: string ) => i18n.te?.( key ) ?? false,
+                } )
+                : ( exception as { data?: { message?: string } } )?.data?.message ?? 'Si è verificato un errore. Riprova.';
             return null;
 
         }
