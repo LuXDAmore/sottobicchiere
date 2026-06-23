@@ -42,7 +42,7 @@ interface QueryResult { data?: unknown; error?: unknown; count?: number }
  *
  * @param script
  */
-function makeClient( script: Record<string, QueryResult[]> ): ServiceClient {
+function makeClient( script: Record<string, QueryResult[]>, onInsert?: ( table: string, payload: unknown ) => void ): ServiceClient {
 
     const cursors: Record<string, number> = {}
 
@@ -78,6 +78,14 @@ function makeClient( script: Record<string, QueryResult[]> ): ServiceClient {
                 ];
 
             for( const method of passthrough ) chain[ method ] = () => chain;
+
+            // insert registra il payload (per asserire cosa scrive l'handler) e resta chainable.
+            chain.insert = ( payload: unknown ) => {
+
+                onInsert?.( table, payload );
+                return chain;
+
+            };
 
             chain.maybeSingle = () => Promise.resolve( nextResult( table ) );
             chain.single = () => Promise.resolve( nextResult( table ) );
@@ -431,6 +439,122 @@ describe( 'POST dating/message', () => {
             statusCode: 422,
             statusMessage: 'MESSAGE_REJECTED',
         } );
+
+    } );
+
+} );
+
+describe( 'POST join', () => {
+
+    // Tavolo ad-hoc risolto da resolveTableRow (kind 'adhoc').
+    const adhocTable = () => ( {
+        data: {
+            id: 'table-1',
+            table_number: 1,
+            short_code: 'ABCD',
+            venues: {
+                name: 'Festa',
+                slug: 'r-xyz',
+                kind: 'adhoc',
+            },
+        },
+    } )
+
+        // Coda player_sessions comune al percorso "nuovo giocatore": elenco colori,
+        // controllo idempotenza (nessuna riga) e insert del giocatore.
+        , newPlayerQueue = ( insertResult: QueryResult ) => [
+            { data: [] },
+            { data: null },
+            insertResult,
+        ];
+
+    it( 'su una stanza ad-hoc "crea" converge sulla sessione esistente (niente doppione, non host)', async() => {
+
+        baseSetup();
+        context.params = {
+            venue: 'r-xyz',
+            token: 'tok',
+        };
+        context.body = {
+            nickname: 'Bob',
+            createSession: true,
+        };
+
+        const inserts: Array<{ table: string; payload: unknown }> = [];
+
+        context.client = makeClient( {
+            tables: [ adhocTable() ],
+            // Reuse: esiste già una sessione attiva sul tavolo.
+            table_sessions: [
+                {
+                    data: {
+                        id: 'session-existing',
+                        expires_at: '2099-01-01T00:00:00Z',
+                        locked_at: null,
+                        selected_game: null,
+                    },
+                },
+            ],
+            player_sessions: newPlayerQueue( { data: { id: 'player-2', color: '#fff', is_host: false } } ),
+        }, ( table, payload ) => inserts.push( {
+            table,
+            payload,
+        } ) );
+
+        const handler = ( await import( '../../server/api/[venue]/table/[token]/join.post' ) ).default as ( e: never ) => Promise<{ tableSessionId: string; isHost: boolean }>
+            , result = await handler( event )
+
+            , playerInsert = inserts.find( i => i.table === 'player_sessions' )?.payload as { is_host?: boolean } | undefined;
+
+        // Converge sulla sessione esistente invece di crearne una nuova…
+        expect( result.tableSessionId ).toBe( 'session-existing' );
+        // …e chi si unisce a una sessione esistente non diventa host.
+        expect( result.isHost ).toBe( false );
+        expect( playerInsert?.is_host ).toBe( false );
+        // Nessuna nuova table_session creata.
+        expect( inserts.some( i => i.table === 'table_sessions' ) ).toBe( false );
+
+    } );
+
+    it( 'su un locale fisico "crea" genera una nuova sessione e rende host', async() => {
+
+        baseSetup();
+        context.body = {
+            nickname: 'Alice',
+            createSession: true,
+        };
+
+        const inserts: Array<{ table: string; payload: unknown }> = [];
+
+        context.client = makeClient( {
+            tables: [ resolvedTable() ],
+            // [0] insert nuova sessione, [1] update host_player_id.
+            table_sessions: [
+                {
+                    data: {
+                        id: 'session-new',
+                        expires_at: '2099-01-01T00:00:00Z',
+                        locked_at: null,
+                        selected_game: null,
+                    },
+                },
+                { data: null },
+            ],
+            player_sessions: newPlayerQueue( { data: { id: 'player-1', color: '#fff', is_host: true } } ),
+        }, ( table, payload ) => inserts.push( {
+            table,
+            payload,
+        } ) );
+
+        const handler = ( await import( '../../server/api/[venue]/table/[token]/join.post' ) ).default as ( e: never ) => Promise<{ tableSessionId: string; isHost: boolean }>
+            , result = await handler( event )
+
+            , playerInsert = inserts.find( i => i.table === 'player_sessions' )?.payload as { is_host?: boolean } | undefined;
+
+        expect( result.tableSessionId ).toBe( 'session-new' );
+        expect( result.isHost ).toBe( true );
+        expect( playerInsert?.is_host ).toBe( true );
+        expect( inserts.some( i => i.table === 'table_sessions' ) ).toBe( true );
 
     } );
 

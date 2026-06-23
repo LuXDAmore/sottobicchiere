@@ -49,7 +49,8 @@ export default defineEventHandler( async event => {
 
     const nowIso = new Date().toISOString();
 
-    let session: { id: string; expires_at: string; locked_at: string | null; selected_game: string | null } | null = null;
+    let session: { id: string; expires_at: string; locked_at: string | null; selected_game: string | null } | null = null
+        , createdNewSession = false;
 
     if( requestedSessionId ) {
 
@@ -73,8 +74,17 @@ export default defineEventHandler( async event => {
 
         }
 
-    } else if( ! createSession ) {
+    } else if( ! createSession || table.venueKind === 'adhoc' ) {
 
+        // Riusa la sessione attiva più recente quando:
+        //  • il client chiede esplicitamente di unirsi (createSession false), oppure
+        //  • è una stanza ad-hoc: queste sono pensate come UN'UNICA stanza condivisa,
+        //    quindi anche un "crea" deve convergere sulla sessione già esistente invece
+        //    di duplicarla. Senza questo, due persone che premono "crea" sul tavolo
+        //    appena nato — prima che la lista sessioni lato client si aggiorni — finiscono
+        //    in sessioni diverse e l'host resta da solo. I locali fisici, al contrario,
+        //    ammettono più gruppi per tavolo: lì un "crea" resta una sessione nuova.
+        //    (Resta una finestra minima di vera concorrenza sull'INSERT, accettabile.)
         const { data } = await client
             .from( 'table_sessions' )
             .select( 'id, expires_at, locked_at, selected_game' )
@@ -107,6 +117,7 @@ export default defineEventHandler( async event => {
         }
 
         session = data;
+        createdNewSession = true;
 
     }
 
@@ -198,8 +209,10 @@ export default defineEventHandler( async event => {
 
     }
 
-    // is_host è possibile solo creando una sessione nuova; entrare in una esistente non rende host.
-    const isHost = ! requestedSessionId && createSession
+    // is_host è possibile solo creando una sessione nuova in questa richiesta; entrare
+    // in una esistente — anche su una stanza ad-hoc su cui si è chiesto "crea" ma si è
+    // convergiuti sulla sessione già attiva — non rende host.
+    const isHost = createdNewSession && createSession
 
         , { data: player, error: playerError } = await client
             .from( 'player_sessions' )
