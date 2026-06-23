@@ -308,9 +308,15 @@
 
         // Resta sulla pagina di join: idrata di nuovo le sessioni dal client e avvia
         // il polling finché l'utente non entra (la pagina si smonta alla navigazione,
-        // e useIntervalFn si ferma da sé allo smontaggio dello scope).
-        refreshSessions();
-        resumeSessionsPoll();
+        // e useIntervalFn si ferma da sé allo smontaggio dello scope). Se la tab è già
+        // in background al mount non avviare il polling: ci penserà il watch su
+        // `visibility` quando tornerà in primo piano.
+        if( visibility.value === 'visible' ) {
+
+            refreshSessions();
+            resumeSessionsPoll();
+
+        }
 
     } );
 
