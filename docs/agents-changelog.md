@@ -5,6 +5,33 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-23 — Fix config ESLint dopo l'aggiornamento di eslint + plugin
+
+Dopo l'aggiornamento di ESLint e dei suoi plugin, `pnpm lint` andava in errore già
+in fase di caricamento della config (regole rinominate/rimosse e opzioni non più
+ammesse), quindi non girava affatto.
+
+### File modificati
+- `eslint.constants.mjs`:
+  - Regole `unicorn` rinominate: `no-array-for-each`→`no-for-each`,
+    `no-array-instanceof`→`no-instanceof-array`,
+    `prefer-starts-ends-with`→`prefer-string-starts-ends-with`,
+    `prefer-text-content`→`prefer-dom-node-text-content`. Rimossa
+    `unicorn/prefer-exponentiation-operator` (duplicato della regola core, già attiva).
+  - `unicorn/better-regex` e `unicorn/prevent-abbreviations` non accettano più opzioni:
+    la prima resta `warn` senza opzioni, la seconda è messa `off` (senza la allowList
+    segnalerebbe nomi intenzionali come `props`/`obj`/`e2e`).
+  - Riallineate a `warn` (convenzione warn-only del file) le regole nuove/inasprite a
+    `error` dal preset aggiornato (unicorn: `prefer-await`, `prefer-early-return`,
+    `require-array-sort-compare`, `no-this-outside-of-class`, … e
+    `@typescript-eslint/array-type`). `name-replacements` e `consistent-boolean-name`
+    restano `off` perché in conflitto con le convenzioni di naming del progetto.
+
+### Esito
+- `pnpm lint` torna a uscire 0 (0 errori, ~395 warning, tollerati per convenzione).
+
+---
+
 ## 2026-06-23 — Fix: tavolo appena creato non visibile a chi entra dall'invito
 
 Bug report: dopo aver creato un tavolo e condiviso l'invito, l'host restava "da

@@ -574,8 +574,7 @@ export const sharedRules = {
     'template-curly-spacing': [ 'warn', 'always' ],
     'template-tag-spacing': [ 'warn', 'never' ],
     'unicode-bom': [ 'warn', 'never' ],
-    // FIXME: Da riattivare quando aggiornano i vari plugins
-    'unicorn/better-regex': [ 'warn', { sortCharacterClasses: false }],
+    'unicorn/better-regex': 'warn',
     'unicorn/catch-error-name': [ 'warn', { name: 'exception' }],
     'unicorn/consistent-destructuring': 'warn',
     'unicorn/consistent-function-scoping': 'off',
@@ -595,8 +594,8 @@ export const sharedRules = {
     'unicorn/import-style': 'off',
     'unicorn/no-abusive-eslint-disable': 'warn',
     'unicorn/no-array-callback-reference': 'off',
-    'unicorn/no-array-for-each': 'warn',
-    'unicorn/no-array-instanceof': 'off',
+    'unicorn/no-for-each': 'warn',
+    'unicorn/no-instanceof-array': 'off',
     'unicorn/no-array-push-push': 'warn',
     'unicorn/no-array-reduce': 'off',
     'unicorn/no-array-reverse': 'warn',
@@ -622,7 +621,6 @@ export const sharedRules = {
     'unicorn/prefer-date-now': 'warn',
     'unicorn/prefer-dom-node-append': 'warn',
     'unicorn/prefer-dom-node-remove': 'warn',
-    'unicorn/prefer-exponentiation-operator': 'off',
     'unicorn/prefer-export-from': 'warn',
     'unicorn/prefer-includes': 'warn',
     'unicorn/prefer-logical-operator-over-ternary': 'warn',
@@ -633,24 +631,49 @@ export const sharedRules = {
     'unicorn/prefer-query-selector': 'warn',
     'unicorn/prefer-set-has': 'warn',
     'unicorn/prefer-spread': 'warn',
-    'unicorn/prefer-starts-ends-with': 'off',
+    'unicorn/prefer-string-starts-ends-with': 'off',
     'unicorn/prefer-string-replace-all': 'warn',
     'unicorn/prefer-string-slice': 'warn',
     'unicorn/prefer-ternary': 'warn',
-    'unicorn/prefer-text-content': 'off',
-    'unicorn/prevent-abbreviations': [
-        'warn',
-        {
-            allowList: {
-                assetsDir: true,
-                e2e: true,
-                obj: true,
-                props: true,
-            },
-            ignore: [ String.raw`\.e2e`, /^ignore/i ],
-        },
-    ],
+    'unicorn/prefer-dom-node-text-content': 'off',
+    // La versione aggiornata del plugin non accetta più opzioni per questa regola:
+    // senza la allowList (props, obj, e2e, assetsDir) segnalerebbe identificatori
+    // intenzionali e idiomatici (soprattutto in Vue). La disattiviamo finché non
+    // tornerà configurabile, invece di inondare di warning falsi positivi.
+    'unicorn/prevent-abbreviations': 'off',
     'unicorn/text-encoding-identifier-case': 'off',
+
+    // ── Regole introdotte/inasprite dall'aggiornamento di eslint-plugin-unicorn ──
+    // Il preset "recommended" le attiva a `error`, ma la convenzione di questo file è
+    // warn-only (mai `error`). Le riallineiamo a `warn` per non spezzare `pnpm lint`
+    // (exit 0, warning tollerati), lasciando i suggerimenti visibili per la pulizia
+    // incrementale. Due regole restano `off` perché in conflitto con scelte di naming
+    // volute dal progetto (era ciò che gestiva la allowList di prevent-abbreviations):
+    'unicorn/name-replacements': 'off', // props/e/obj sono nomi intenzionali qui
+    'unicorn/consistent-boolean-name': 'off', // booleani senza prefisso is/has voluti
+    'unicorn/no-computed-property-existence-check': 'warn',
+    'unicorn/no-declarations-before-early-exit': 'warn',
+    'unicorn/no-return-array-push': 'warn',
+    'unicorn/no-this-outside-of-class': 'warn',
+    'unicorn/no-top-level-assignment-in-function': 'warn',
+    'unicorn/no-top-level-side-effects': 'warn',
+    'unicorn/no-unnecessary-global-this': 'warn',
+    'unicorn/no-unreadable-array-destructuring': 'warn',
+    'unicorn/no-unreadable-for-of-expression': 'warn',
+    'unicorn/no-unreadable-object-destructuring': 'warn',
+    'unicorn/no-unused-array-method-return': 'warn',
+    'unicorn/prefer-await': 'warn',
+    'unicorn/prefer-early-return': 'warn',
+    'unicorn/prefer-global-number-constants': 'warn',
+    'unicorn/prefer-https': 'warn',
+    'unicorn/prefer-includes-over-repeated-comparisons': 'warn',
+    'unicorn/prefer-iterator-to-array': 'warn',
+    'unicorn/prefer-minimal-ternary': 'warn',
+    'unicorn/prefer-object-iterable-methods': 'warn',
+    'unicorn/prefer-split-limit': 'warn',
+    'unicorn/prefer-string-repeat': 'warn',
+    'unicorn/prefer-uint8array-base64': 'warn',
+    'unicorn/require-array-sort-compare': 'warn',
     'use-isnan': 'warn',
     'valid-typeof': [ 'warn', { requireStringLiterals: false }],
     'wrap-iife': [
@@ -665,6 +688,8 @@ export const sharedRules = {
 // Typescript
 export const typescriptRules = {
     '@typescript-eslint/adjacent-overload-signatures': 'warn',
+    // Attivata a `error` dal preset aggiornato: riallineata a `warn` come il resto del file.
+    '@typescript-eslint/array-type': 'warn',
     '@typescript-eslint/ban-ts-comment': [
         'warn',
         {
