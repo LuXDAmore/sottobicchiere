@@ -227,7 +227,10 @@
               () => $fetch( `/api/${ venueSlug }/table/${ qrToken }` ),
           )
 
-          , { data: sessionsData } = await useLazyAsyncData(
+          , {
+              data: sessionsData,
+              refresh: refreshSessions,
+          } = await useLazyAsyncData(
               `table-sessions-${ venueSlug }-${ qrToken }`,
               () => $fetch<{ sessions: ActiveSessionSummary[] }>( `/api/${ venueSlug }/table/${ qrToken }/sessions` ),
               { default: () => ( { sessions: [] } ) },
@@ -266,6 +269,29 @@
 
     }
 
+    // La lista delle sessioni attive è idratata in SSR e poi riusata dalla cache di
+    // useLazyAsyncData: un tavolo creato DOPO il primo render non comparirebbe mai
+    // senza un reload manuale. Chi apre il link d'invito mentre l'host sta ancora
+    // creando la sessione resterebbe quindi "da solo" (creerebbe una sessione a parte
+    // invece di unirsi a quella esistente). Teniamo la lista viva lato client: un
+    // refresh al mount sconfigge l'eventuale payload SSR vuoto/stale, un polling
+    // leggero fa comparire la sessione appena creata in tempo reale.
+    const { pause: pauseSessionsPoll, resume: resumeSessionsPoll } = useIntervalFn( () => refreshSessions(), 5000, { immediate: false } )
+          , visibility = useDocumentVisibility();
+
+    // Tab in primo piano: riprendi il polling (e aggiorna subito); in background
+    // mettilo in pausa per non sprecare richieste.
+    watch( visibility, value => {
+
+        if( value === 'visible' ) {
+
+            refreshSessions();
+            resumeSessionsPoll();
+
+        } else pauseSessionsPoll();
+
+    } );
+
     onMounted( () => {
 
         // Sessione scaduta rimasta in localStorage (es. browser riaperto il giorno
@@ -273,8 +299,24 @@
         // dietro dati morti nei flussi successivi.
         if( playerStore.isJoined && playerStore.isExpired ) playerStore.leave();
 
-        if( playerStore.isJoined && ! playerStore.isExpired && playerStore.venueSlug === venueSlug && playerStore.qrToken === qrToken )
+        if( playerStore.isJoined && ! playerStore.isExpired && playerStore.venueSlug === venueSlug && playerStore.qrToken === qrToken ) {
+
             navigateTo( localePath( `/${ venueSlug }/table/${ qrToken }/lobby` ) );
+            return;
+
+        }
+
+        // Resta sulla pagina di join: idrata di nuovo le sessioni dal client e avvia
+        // il polling finché l'utente non entra (la pagina si smonta alla navigazione,
+        // e useIntervalFn si ferma da sé allo smontaggio dello scope). Se la tab è già
+        // in background al mount non avviare il polling: ci penserà il watch su
+        // `visibility` quando tornerà in primo piano.
+        if( visibility.value === 'visible' ) {
+
+            refreshSessions();
+            resumeSessionsPoll();
+
+        }
 
     } );
 

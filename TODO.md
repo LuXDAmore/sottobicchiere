@@ -1,6 +1,17 @@
 # TODO — Sottobicchiere MVP Sprint Plan
 
-Aggiornato: 2026-06-14
+Aggiornato: 2026-06-23
+
+## Bug report tavolo & interattività (2026-06-23)
+
+- [x] **Tavolo invisibile all'invitato** — la lista sessioni in `index.vue` (join)
+      era idratata in SSR e mai più aggiornata: chi apriva l'invito mentre l'host
+      creava la sessione restava "da solo" finché non ricaricava. Ora la lista è
+      viva lato client (refresh al mount + polling 5s + refresh al focus della tab)
+- [x] **Hardening server** — su una stanza ad-hoc `join` converge sulla sessione
+      attiva esistente anche con `createSession: true` (niente sessioni doppione in
+      caso di "crea" concorrenti); `is_host` legato alla reale creazione della
+      sessione. Locali fisici invariati (multi-gruppo). Test su `POST join` aggiunti.
 
 ## Bug report tavolo & interattività (2026-06-14)
 

@@ -5,6 +5,42 @@ Non modificare CHANGELOG.md — è gestito dagli npm scripts.
 
 ---
 
+## 2026-06-23 — Fix: tavolo appena creato non visibile a chi entra dall'invito
+
+Bug report: dopo aver creato un tavolo e condiviso l'invito, l'host restava "da
+solo"; il tavolo compariva (e diventava raggiungibile) solo dopo un refresh o dopo
+il logout dell'utente invitato.
+
+### Root cause
+La lista delle sessioni attive sulla pagina di join (`index.vue`) è idratata in SSR
+e poi riusata dalla cache di `useLazyAsyncData`: il client non rifà mai il fetch.
+Chi apriva il link mentre l'host stava ancora creando la sessione (il pannello di
+condivisione in `new.vue` appare prima che l'host entri al tavolo) catturava una
+lista vuota/stale che non si aggiornava più. Senza una sessione da selezionare,
+l'invitato ne creava una a parte (`createSession: true`) e finiva da solo in una
+sessione diversa da quella dell'host. Solo un reload completo (refresh manuale o
+re-auth dopo logout) ri-eseguiva l'SSR e mostrava finalmente la sessione esistente.
+
+### Fix
+- `app/pages/[venue]/table/[token]/index.vue`: la lista sessioni resta viva lato
+  client — refresh al mount (sconfigge il payload SSR vuoto/stale), polling leggero
+  (5s) finché l'utente non entra (avviato solo se la tab è in primo piano), e refresh
+  al ritorno in primo piano della tab (`useDocumentVisibility`, polling in pausa quando
+  la tab è in background). Così la sessione appena creata appare in tempo reale e
+  l'invitato si unisce a quella esistente invece di crearne una nuova.
+- `server/api/[venue]/table/[token]/join.post.ts`: hardening lato server della stessa
+  causa. Sulle stanze **ad-hoc** (per definizione un'unica stanza condivisa) anche un
+  `createSession: true` converge sulla sessione attiva esistente invece di duplicarla:
+  chiude la finestra di race in cui due persone premono "crea" sul tavolo appena nato
+  prima che la lista si aggiorni. I locali fisici restano multi-gruppo (un "crea" =
+  sessione nuova). `is_host` ora è legato all'aver effettivamente creato la sessione in
+  quella richiesta, così chi converge su una sessione esistente non diventa host.
+- `test/unit/api-handlers.test.ts`: il client finto registra i payload di `insert`;
+  due nuovi test su `POST join` coprono la convergenza ad-hoc (niente doppione, non
+  host) e il create multi-gruppo sui locali fisici (sessione nuova + host).
+
+---
+
 ## 2026-06-14 — Giochi a turni interattivi (categorie, dares) multi-dispositivo
 
 Bug 3 del report: i giochi "passa il telefono" diventano interattivi, ognuno dal
